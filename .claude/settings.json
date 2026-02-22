@@ -1,0 +1,23 @@
+{
+  "ordering": "auto",
+  "model": "opusplan",
+  "effortLevel": "medium",
+  "permissions": {
+    "allow": [
+      "WebSearch",
+      "Bash(ls:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(gh pr view:*)",
+      "Bash(gh pr diff:*)",
+      "Bash(gh pr list:*)",
+      "Bash(pytest:*)",
+      "Bash(pre-commit run:*)",
+      "Bash(python -m pytest:*)",
+      "Bash(python -m doctest:*)",
+      "Bash(python -m pre_commit run:*)",
+      "WebFetch(domain:github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)"
+    ]
+  }
+}
