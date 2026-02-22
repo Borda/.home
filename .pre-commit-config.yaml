@@ -1,0 +1,54 @@
+# This pre-commit configuration is specifically designed for sanitizing
+# generic template files in this repository. The majority of files are
+# Markdown templates, so the hooks are focused on basic file hygiene
+# and Markdown formatting.
+
+# This configuration is NOT intended for use in production projects -
+# it exists solely to maintain the consistency and quality of the template
+# files in this repository.
+
+ci:
+  autofix_prs: true
+  autoupdate_commit_msg: "[pre-commit.ci] bump ⬆ suggestions"
+  autoupdate_schedule: quarterly
+  # submodules: true
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: end-of-file-fixer
+      - id: trailing-whitespace
+      - id: check-json
+      - id: check-yaml
+      - id: check-toml
+      - id: check-executables-have-shebangs
+      - id: check-case-conflict
+      - id: check-added-large-files
+        args: ["--maxkb=100", "--enforce-all"]
+      - id: detect-private-key
+
+  - repo: https://github.com/JoC0de/pre-commit-prettier
+    rev: v3.8.1 # using tag; previously pinned SHA when tags were not persistent
+    hooks:
+      - id: prettier
+        files: \.(html|yml|yaml|toml)
+        # https://prettier.io/docs/en/options.html#print-width
+        args: ["--print-width=120"]
+
+  - repo: https://github.com/codespell-project/codespell
+    rev: v2.4.1
+    hooks:
+      - id: codespell
+        args: ["--write-changes"]
+
+  - repo: https://github.com/executablebooks/mdformat
+    rev: 1.0.0
+    hooks:
+      - id: mdformat
+        args: ["--number"]
+        additional_dependencies:
+          - mdformat-gfm
+          - mdformat-ruff
+          - mdformat-frontmatter
+          - mdformat-config
