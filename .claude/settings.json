@@ -29,6 +29,7 @@
       "Bash(git diff:*)",
       "Bash(git show:*)",
       "Bash(git rev-list:*)",
+      "Bash(diff:*)",
       "Bash(pytest:*)",
       "Bash(pre-commit run:*)",
       "Bash(python -m pytest:*)",

@@ -52,6 +52,7 @@ Workflow orchestrators invoked via slash commands (`/review`, `/security`, etc.)
 | **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan via ai-researcher agent            |
 | **analyse**  | `/analyse [#\|health]` | Issue/PR analysis, repo health, duplicate detection, contributor activity          |
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                 |
+| **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync    |
 
 ### Status Line
 
@@ -62,6 +63,29 @@ claude-sonnet-4-6 │ Borda.local │ ████░░░░░░ 38%
 ```
 
 Shows the active model name, current project directory, and a 10-segment context usage bar (green → yellow → red). Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
+
+### Config Sync
+
+This repo is the **source of truth** for all `.claude/` configuration. Home (`~/.claude/`) is a downstream copy kept in sync via the `/sync` skill.
+
+```
+Borda.local/.claude/   →   ~/.claude/
+  agents/ (11)               agents/ (11)
+  skills/ (8)                skills/ (8)
+  hooks/statusline.js        hooks/statusline.js
+  settings.json              settings.json  (statusLine path rewritten to absolute)
+```
+
+Two files are intentionally **not synced**: `CLAUDE.md` (project-specific rules) and `settings.local.json` (machine-local overrides).
+
+**Workflow:**
+
+```bash
+/sync          # dry-run: show drift report (MISSING / DIFFERS / IDENTICAL per file)
+/sync apply    # apply: copy all differing files and verify outcome
+```
+
+Run `/sync` after editing any agent, skill, hook, or `settings.json` in this repo to propagate the change to the home config.
 
 ## 💡 Design Principles
 
