@@ -161,8 +161,6 @@ Canonical: #[oldest open issue] — suggest closing others as duplicates
 - #[N]: [title] — [why it's distinct]
 ```
 
-</workflow>
-
 ## Mode: Contributor Activity
 
 ```bash
@@ -190,8 +188,6 @@ Produce:
 - Last release: [date] ([tag])
 - Overdue? [yes/no based on cadence]
 ```
-
-</workflow>
 
 ## Mode: Ecosystem Impact (for library maintainers)
 
@@ -226,6 +222,8 @@ Produce:
 ### Recommended Communication
 - [create migration guide / add deprecation warning / notify maintainers directly]
 ```
+
+</workflow>
 
 <notes>
 - Always use `gh` CLI — never hardcode repo URLs

@@ -109,36 +109,35 @@ For each candidate agent/skill:
 [pattern]: already handled by [existing agent/skill]
 ```
 
-</workflow>
+## Decision Criteria
 
-\<decision_criteria>
-
-## When to Create a New Agent (specialist role)
+### When to Create a New Agent (specialist role)
 
 - Has a distinct persona, expertise, or decision-making style
 - Would be invoked for a class of tasks, not a single workflow
 - Benefits from deep domain knowledge in its system prompt
 - Examples: `benchmark-runner`, `migration-guide`, `dependency-auditor`
 
-## When to Create a New Skill (workflow)
+### When to Create a New Skill (workflow)
 
 - Has a fixed multi-step process that spawns sub-agents or runs commands
 - Is invoked ad-hoc for a specific task type
 - Benefits from structured output format
 - Examples: `analyse-issue`, `review`, `release`
 
-## When to Do Nothing
+### When to Do Nothing
 
 - Task is handled well by an existing agent with slight prompt adjustment
 - Too project-specific to be reusable
 - One-off task that won't recur
 
-## Anti-patterns to Avoid
+### Anti-patterns to Avoid
 
 - Creating an agent for every different topic (agents are roles, not tasks)
 - Duplicating an existing agent with a slightly different name
 - Creating a skill that just calls one agent with fixed args (not enough value)
-  \</decision_criteria>
+
+</workflow>
 
 <notes>
 - This skill is introspective: it looks at the tooling itself, not just the code

@@ -87,7 +87,7 @@ git diff HEAD~1 HEAD -- "src/**/__init__.py"
 git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 ```
 
-## Step 5: Consolidate findings
+## Step 6: Consolidate findings
 
 ```
 ## Code Review: [target]

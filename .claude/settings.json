@@ -2,26 +2,43 @@
   "ordering": "auto",
   "model": "opusplan",
   "effortLevel": "high",
-  "autoCompactThreshold": 0.6,
+  "autoCompactThreshold": 0.7,
   "permissions": {
     "allow": [
       "WebSearch",
-      "Bash(ls:*)",
+      "Bash(curl:*)",
+      "Bash(echo:*)",
       "Bash(find:*)",
       "Bash(grep:*)",
+      "Bash(ls:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr list:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
       "Bash(gh run rerun:*)",
+      "Bash(gh issue view:*)",
+      "Bash(gh issue list:*)",
+      "Bash(gh release view:*)",
+      "Bash(gh release list:*)",
       "Bash(pytest:*)",
       "Bash(pre-commit run:*)",
       "Bash(python -m pytest:*)",
       "Bash(python -m doctest:*)",
       "Bash(python -m pre_commit run:*)",
       "WebFetch(domain:github.com)",
-      "WebFetch(domain:raw.githubusercontent.com)"
+      "WebFetch(domain:docs.github.com)",
+      "WebFetch(domain:raw.githubusercontent.com)",
+      "WebFetch(domain:pypi.org)",
+      "WebFetch(domain:pre-commit.ci)",
+      "WebFetch(domain:claude.ai)",
+      "WebFetch(domain:claude.com)",
+      "WebFetch(domain:*.anthropic.com)",
+      "WebFetch(domain:arxiv.org)"
     ]
+  },
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/hooks/statusline.js"
   }
 }

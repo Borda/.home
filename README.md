@@ -6,11 +6,12 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 
 ```
 borda.local/
-├── .claude/                    # Claude Code (Claude by Anthropic)
+├── .claude/                # Claude Code (Claude by Anthropic)
 │   ├── CLAUDE.md           # workflow rules and core principles
 │   ├── settings.json       # permissions and model preferences
-│   ├── agents/             # 10 specialist agents
-│   └── skills/             # 7 workflow skills (slash commands)
+│   ├── agents/             # specialist agents
+│   ├── skills/             # workflow skills (slash commands)
+│   └── hooks/              # UI extensions
 ├── .pre-commit-config.yaml
 ├── .gitignore
 └── README.md
@@ -50,6 +51,16 @@ Workflow orchestrators invoked via slash commands (`/review`, `/security`, etc.)
 | **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan via ai-researcher agent            |
 | **analyse**  | `/analyse [#\|health]` | Issue/PR analysis, repo health, duplicate detection, contributor activity          |
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                 |
+
+### Status Line
+
+A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
+
+```
+claude-sonnet-4-6 │ Borda.local │ ████░░░░░░ 38%
+```
+
+Shows the active model name, current project directory, and a 10-segment context usage bar (green → yellow → red). Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
 
 ## 💡 Design Principles
 
