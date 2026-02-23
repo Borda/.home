@@ -1,7 +1,8 @@
 {
   "ordering": "auto",
   "model": "opusplan",
-  "effortLevel": "medium",
+  "effortLevel": "high",
+  "autoCompactThreshold": 0.6,
   "permissions": {
     "allow": [
       "WebSearch",
@@ -11,6 +12,9 @@
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr list:*)",
+      "Bash(gh run list:*)",
+      "Bash(gh run view:*)",
+      "Bash(gh run rerun:*)",
       "Bash(pytest:*)",
       "Bash(pre-commit run:*)",
       "Bash(python -m pytest:*)",

@@ -1,0 +1,148 @@
+---
+name: observe
+description: Analyzes ongoing work patterns and the existing agent/skill roster to suggest creating new agents or skills for specialized or repetitive tasks. Continuously monitors what tasks are being done repeatedly or where specialist knowledge would help. Avoids recommending duplicates.
+argument-hint: "optional: 'review' to check existing setup, or describe a recurring task pattern"
+disable-model-invocation: true
+allowed-tools: Read, Bash, Grep, Glob
+---
+
+<objective>
+Analyze how Claude Code is being used in this project and suggest new agents or skills that would reduce repetition, improve quality, or handle specialized domains — without duplicating what already exists.
+</objective>
+
+<inputs>
+- **$ARGUMENTS**: optional. If provided, use as context for the suggestion (e.g. "I keep doing X manually").
+  If omitted, analyze the project's existing patterns and agents to generate suggestions proactively.
+</inputs>
+
+<workflow>
+
+## Step 1: Inventory existing agents and skills
+
+```bash
+ls .claude/agents/*.md 2>/dev/null || ls ~/.claude/agents/*.md 2>/dev/null
+ls .claude/skills/*/SKILL.md 2>/dev/null || ls ~/.claude/skills/*/SKILL.md 2>/dev/null
+```
+
+For each agent/skill found, extract: name, description, tools, purpose.
+
+## Step 2: Analyze work patterns
+
+Look for signals of repetitive or specialist work:
+
+```bash
+# Recent git history — what kinds of changes are common?
+git log --oneline -50
+
+# What file types are being worked on?
+git log --name-only --pretty="" -30 | sort | uniq -c | sort -rn | head -20
+
+# Commit message patterns — what verbs appear most?
+git log --oneline -100 | awk '{print $2}' | sort | uniq -c | sort -rn | head -15
+
+# CLAUDE.md and tasks/ — what has been documented as recurring?
+cat tasks/todo.md tasks/lessons.md 2>/dev/null
+
+# Check conversation hints from $ARGUMENTS
+echo "$ARGUMENTS"
+```
+
+### Frequency Heuristics
+
+- **3+ occurrences** of a pattern in recent history → candidate for automation
+- **2+ different projects** using the same manual process → cross-project skill
+- **> 10 minutes** of manual work per occurrence → high-value automation target
+- **Domain-specific knowledge** required → candidate for a specialist agent (not just a skill)
+
+## Step 3: Gap analysis
+
+For each identified pattern, check:
+
+1. **Is it already covered?** — search existing agent/skill descriptions for overlap
+2. **Is it frequent enough?** — recurring ≥ 3 times or clearly domain-specialized
+3. **Would a specialist add quality?** — does it require deep domain knowledge?
+4. **Is it too narrow?** — a single-use task doesn't warrant a persistent agent
+
+Thresholds for recommendation:
+
+- **New agent**: recurring specialist role, complex decision-making, 5+ distinct capabilities
+- **New skill**: workflow orchestration, multi-step process with fixed structure
+- **No new file needed**: one-off or already covered by existing agent
+
+## Step 4: Check for duplication
+
+Before recommending anything:
+
+```
+For each candidate agent/skill:
+- Does any existing agent cover >50% of its scope? → enhance existing instead
+- Is the name/description confusingly similar to an existing one? → rename existing
+- Does it overlap with a GitHub Copilot agent? → acceptable if serving different tool
+```
+
+## Step 5: Report
+
+```
+## Agent/Skill Suggestions
+
+### Existing Coverage (no gaps found)
+- [agent/skill]: covers [pattern] well — no new file needed
+
+### Recommend: New Agent — [name]
+**Trigger**: [what recurring pattern or gap justifies this]
+**Gap**: [what existing agents don't cover]
+**Scope**: [what it would do — 3-5 bullet points]
+**Suggested tools**: [Read, Write, Edit, Bash, etc.]
+**Draft description**: "[one-line description for frontmatter]"
+
+### Recommend: New Skill — [name]
+**Trigger**: [what repetitive workflow justifies this]
+**Gap**: [why existing skills don't cover it]
+**Scope**: [what workflow steps it would orchestrate]
+**Draft description**: "[one-line description for frontmatter]"
+
+### Recommend: Enhance Existing — [agent/skill name]
+**Add**: [specific capability missing from current version]
+**Why**: [what recurring task would benefit]
+
+### No Action Needed
+[pattern]: already handled by [existing agent/skill]
+```
+
+</workflow>
+
+\<decision_criteria>
+
+## When to Create a New Agent (specialist role)
+
+- Has a distinct persona, expertise, or decision-making style
+- Would be invoked for a class of tasks, not a single workflow
+- Benefits from deep domain knowledge in its system prompt
+- Examples: `benchmark-runner`, `migration-guide`, `dependency-auditor`
+
+## When to Create a New Skill (workflow)
+
+- Has a fixed multi-step process that spawns sub-agents or runs commands
+- Is invoked ad-hoc for a specific task type
+- Benefits from structured output format
+- Examples: `analyse-issue`, `review`, `release`
+
+## When to Do Nothing
+
+- Task is handled well by an existing agent with slight prompt adjustment
+- Too project-specific to be reusable
+- One-off task that won't recur
+
+## Anti-patterns to Avoid
+
+- Creating an agent for every different topic (agents are roles, not tasks)
+- Duplicating an existing agent with a slightly different name
+- Creating a skill that just calls one agent with fixed args (not enough value)
+  \</decision_criteria>
+
+<notes>
+- This skill is introspective: it looks at the tooling itself, not just the code
+- Run periodically (e.g., monthly) or after noticing repetitive manual work
+- Suggestions are proposals — always review before creating new files
+- After creating a new agent/skill based on a suggestion, re-run this skill to verify coverage improved
+</notes>
