@@ -22,15 +22,27 @@ Prepare release communication based on what changed. The output format adapts to
 ## Step 1: Gather changes
 
 ```bash
-# Commits in range
-git log $ARGUMENTS --oneline --no-merges
+# Determine range: use $ARGUMENTS or fall back to last-tag..HEAD
+RANGE="${ARGUMENTS:-$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)..HEAD}"
 
-# Fallback: last tag to HEAD
-git log $(git describe --tags --abbrev=0)..HEAD --oneline --no-merges
+# One-liner overview (navigation index)
+git log $RANGE --oneline --no-merges
 
-# PR titles and labels if available
-gh pr list --state merged --base main --limit 50 --json number,title,labels 2>/dev/null
+# Full commit messages — read these to catch BREAKING CHANGE footers,
+# co-authors, and details omitted from the subject line
+git log $RANGE --no-merges --format="--- %H%n%B"
+
+# File-level diff stat — confirms what areas actually changed
+git diff --stat $(echo $RANGE | tr '..' ' ' | awk '{print $1, $NF}')
+
+# PR titles, bodies, and labels for merged PRs (richer context than commits)
+gh pr list --state merged --base main --limit 100 \
+  --json number,title,body,labels,mergedAt 2>/dev/null
 ```
+
+Cross-reference commit bodies against PR descriptions — the canonical source of
+truth for *why* a change was made. If a commit footer contains `BREAKING CHANGE:`,
+it is a breaking change regardless of how it was labelled in the PR.
 
 ## Step 2: Classify each change
 

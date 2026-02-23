@@ -134,13 +134,6 @@ extensions = [
 napoleon_numpy_docstring = True
 napoleon_google_docstring = True
 autoclass_content = "both"  # include __init__ docstring in class docs
-
-# intersphinx for cross-library links
-intersphinx_mapping = {
-    "python": ("https://docs.python.org/3", None),
-    "numpy": ("https://numpy.org/doc/stable", None),
-    "torch": ("https://pytorch.org/docs/stable", None),
-}
 ```
 
 ## mkdocs + mkdocstrings (modern alternative)
@@ -153,76 +146,21 @@ plugins:
         python:
           options:
             docstring_style: numpy
-            show_source: true
-            show_signature_annotations: true
             merge_init_into_class: true
 ```
 
 Build & serve: `mkdocs serve` / `mkdocs build`
 \</sphinx_mkdocs>
 
-\<readme_structure>
+## OSS README Structure
 
-## OSS README Template
+1. Badges (PyPI version, CI status, coverage, license, Python versions)
+2. One-sentence description + who it's for
+3. Quick Start — minimal working example (< 10 lines)
+4. Installation (`pip install mypackage` + extras)
+5. Usage, Configuration, Contributing, License
 
-```markdown
-# Project Name
-[![PyPI](https://img.shields.io/pypi/v/mypackage)](https://pypi.org/project/mypackage/)
-[![CI](https://github.com/org/repo/actions/workflows/ci.yml/badge.svg)](...)
-[![Coverage](https://codecov.io/gh/org/repo/badge.svg)](...)
-[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-[![Python](https://img.shields.io/pypi/pyversions/mypackage)](...)
-
-One-sentence description of what it does and who it's for.
-
-## Quick Start
-Minimal working example (< 10 lines).
-
-## Installation
-pip install mypackage
-# or with extras:
-pip install mypackage[gpu]
-
-## Usage
-## Configuration
-## Contributing
-## License
-```
-
-## Shields.io Badges Worth Adding
-
-- PyPI version: `https://img.shields.io/pypi/v/<package>`
-- Python versions: `https://img.shields.io/pypi/pyversions/<package>`
-- License: `https://img.shields.io/github/license/<org>/<repo>`
-- CI status: from GitHub Actions
-- Coverage: from Codecov or similar
-  \</readme_structure>
-
-\<changelog_format>
-
-## Keep a Changelog Format
-
-```markdown
-## [Unreleased]
-### Added
-### Changed
-### Deprecated
-### Removed
-### Fixed
-### Security
-
-## [1.2.0] — 2024-01-15
-### Added
-- `compute_iou_batch()` for vectorized IoU computation (#42)
-
-### Deprecated
-- `compute_iou()` — use `compute_iou_batch()` for consistency. Removed in 2.0.
-
-### Fixed
-- `BoundingBox.area` returned 0 for unit boxes (#38)
-```
-
-\</changelog_format>
+Badge URLs: `https://img.shields.io/pypi/v/<pkg>`, `https://img.shields.io/pypi/pyversions/<pkg>`, `https://img.shields.io/github/license/<org>/<repo>`
 
 \<changelog_automation>
 
@@ -243,14 +181,6 @@ title_format = "## [{version}] — {project_date}"
 [[tool.towncrier.type]]
 directory = "feature"
 name = "Features"
-
-[[tool.towncrier.type]]
-directory = "bugfix"
-name = "Bug Fixes"
-
-[[tool.towncrier.type]]
-directory = "breaking"
-name = "Breaking Changes"
 ```
 
 Usage: `towncrier create 42.feature.md --content "Add batch processing"` per PR, then `towncrier build --version 1.3.0` at release time.
@@ -292,12 +222,6 @@ from mypackage import new_function
 result = new_function(data, new_param=True)
 ```
 
-### What Changed
-
-- `legacy_param` renamed to `new_param` for clarity
-- Return type changed from `list` to `tuple` (immutable)
-- `old_function` still works in v2.x but emits `DeprecationWarning`
-
 ### Argument Mapping
 
 | Old            | New         | Notes                            |
@@ -305,59 +229,19 @@ result = new_function(data, new_param=True)
 | `legacy_param` | `new_param` | Same semantics, renamed          |
 | `verbose`      | _(removed)_ | Use `logging.setLevel()` instead |
 
-````
+```
 
-Rules:
-- Always show **before** and **after** code side by side
-- Include the exact version timeline (deprecated in, removed in)
-- If argument names changed, provide a mapping table
-- Add to docs AND CHANGELOG — users find migration guides in both places
+Always show before/after side by side, include the version timeline, add a mapping table for renamed args, and add to both docs and CHANGELOG.
 </deprecation_migration_guides>
 
-<cv_docstring_conventions>
-## Computer Vision & Medical Imaging Docstring Conventions
-When documenting functions that handle images or tensors, always specify:
-
-```python
-def resize_volume(
-    volume: torch.Tensor,
-    target_size: tuple[int, int, int],
-    mode: str = "trilinear",
-) -> torch.Tensor:
-    """Resize a 3D volume to target spatial dimensions.
-
-    Parameters
-    ----------
-    volume : torch.Tensor
-        Input volume. Shape ``(C, D, H, W)`` or ``(B, C, D, H, W)``.
-        Values expected in ``[0, 1]`` float range.
-    target_size : tuple[int, int, int]
-        Target ``(D, H, W)`` spatial dimensions.
-    mode : str, optional
-        Interpolation mode: ``"trilinear"`` or ``"nearest"``.
-        Default is ``"trilinear"``.
-
-    Returns
-    -------
-    torch.Tensor
-        Resized volume with shape ``(C, D', H', W')`` or ``(B, C, D', H', W')``.
-
-    Notes
-    -----
-    - Channel dimension is preserved; only spatial dims are resized.
-    - For label/mask volumes, use ``mode="nearest"`` to avoid interpolation artifacts.
-    - Input orientation assumed to be RAS (Right-Anterior-Superior).
-    """
-````
-
-Always document:
-
-- **Shape**: exact tensor dimensions with named axes (B, C, D, H, W)
+## CV/Tensor Docstring Checklist
+When documenting image/tensor functions, always specify:
+- **Shape**: exact dims with named axes (B, C, D, H, W) — e.g., `Shape: (B, C, H, W)`
 - **Value range**: [0, 1], [0, 255], or [-1, 1]
-- **Channel convention**: channel-first (PyTorch) or channel-last (TensorFlow/NumPy)
-- **Spatial convention**: orientation (RAS/LPS), coordinate system (pixel vs world)
-- **dtype**: expected dtype (float32, uint8, etc.)
-  \</cv_docstring_conventions>
+- **Channel convention**: channel-first (PyTorch) vs channel-last (NumPy/TF)
+- **Spatial convention**: orientation (RAS/LPS), pixel vs world coordinates
+- **dtype**: expected dtype (float32, uint8, int64)
+- **Batch handling**: document if function accepts both batched/unbatched inputs
 
 <workflow>
 1. Read the code to understand what it actually does (don't trust existing docs)
@@ -405,3 +289,4 @@ Always document:
 - Missing migration guide for breaking changes
 - Type info only in docstring, not in annotation (use both — annotation for tooling, docstring for description)
   \</antipatterns_to_avoid>
+```

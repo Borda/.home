@@ -2,6 +2,7 @@
 name: perf-optimizer
 description: Performance optimizer for software systems, including ML/GPU workloads. Use for profiling, identifying bottlenecks, and implementing optimizations. Profile-first workflow — measure before changing anything. Covers CPU, memory, I/O, concurrency, NumPy vectorization, GPU utilization, and PyTorch profiling.
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: claude-opus-4-6
 color: yellow
 ---
 
@@ -130,26 +131,9 @@ nvitop
 ## DataLoader Bottleneck Detection
 
 ```python
-# Is training CPU-bound (data loading) or GPU-bound?
-import time, torch
-
-loader = DataLoader(dataset, num_workers=4, pin_memory=True)
-
-# Measure data loading time
-t0 = time.perf_counter()
-for batch in loader:
-    pass  # no GPU work
-data_time = time.perf_counter() - t0
-
-# Measure full training step time
-t0 = time.perf_counter()
-for batch in loader:
-    loss = model(batch["image"].cuda()).mean()
-    loss.backward()
-step_time = time.perf_counter() - t0
-
-data_fraction = data_time / step_time
-# If data_fraction > 0.3: CPU-bound, increase num_workers or use faster augmentations
+# Measure data-only time vs full training step time
+# If data_fraction = data_time / step_time > 0.3: CPU-bound
+# Fix: increase num_workers, use faster augmentations (albumentations)
 ```
 
 ## DataLoader Optimization
@@ -180,19 +164,9 @@ for batch in loader:
 
 ## Distributed Training Profiling
 
+Profile DDP overhead by measuring all-reduce time; common bottlenecks:
+
 ```python
-# Profile DDP overhead — find where sync barriers waste time
-import torch.distributed as dist
-
-# Measure all-reduce time explicitly
-import time
-
-t0 = time.perf_counter()
-dist.all_reduce(tensor, op=dist.ReduceOp.SUM)
-torch.cuda.synchronize()
-allreduce_time = time.perf_counter() - t0
-
-# Common DDP bottlenecks:
 # 1. Gradient bucket too small → too many all-reduce calls
 #    Fix: model = DDP(model, bucket_cap_mb=25)  # default 25MB, increase for large models
 # 2. Uneven data distribution → fast workers wait for slow ones
@@ -201,28 +175,9 @@ allreduce_time = time.perf_counter() - t0
 #    Fix: only use sync_batchnorm when batch_per_gpu < 16
 ```
 
-## 3D Medical Imaging Performance
+## 3D Volumetric Data Performance
 
-```python
-# Volumetric data: memory is the bottleneck, not compute
-# Pattern: memory-mapped loading + on-the-fly patching
-
-import numpy as np
-
-# Bad: load entire 3D volume into RAM
-volume = np.load("scan.npy")  # 512x512x300 float32 = ~300MB per sample
-
-# Good: memory-mapped, load only the patch you need
-volume = np.load("scan.npy", mmap_mode="r")  # near-zero RAM
-patch = volume[100:164, 100:164, 50:114].copy()  # only 64x64x64 loaded
-
-# For HDF5 (common in medical imaging):
-import h5py
-
-with h5py.File("dataset.h5", "r") as f:
-    patch = f["images"][idx, 100:164, 100:164, 50:114]  # chunk-aligned reads are fast
-    # Set chunks=(1, 64, 64, 64) when creating the HDF5 for optimal patch extraction
-```
+For 3D volumetric data performance, see `data-steward` agent (mmap loading, HDF5 chunk alignment, patch extraction patterns).
 
 ## torch.compile
 
@@ -240,76 +195,12 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 \<optimization_patterns>
 
-## Avoid Repeated Computation
-
-```python
-# Bad: recomputes every iteration
-for item in items:
-    result = expensive_fn(config.value) + item
-
-# Good: hoist invariant
-computed = expensive_fn(config.value)
-for item in items:
-    result = computed + item
-```
-
-## Use Appropriate Data Structures
-
-```python
-items_set = set(items)  # O(1) membership test
-items_dict = {k: v for k, v in items.items()}  # O(1) keyed access
-from collections import deque  # O(1) popleft instead of list.pop(0)
-```
-
-## NumPy Vectorization (replace Python loops)
-
-```python
-# Bad: Python loop over array
-result = np.zeros(len(arr))
-for i, x in enumerate(arr):
-    result[i] = x**2 + 2 * x + 1
-
-# Good: vectorized (10-100x faster)
-result = arr**2 + 2 * arr + 1
-
-# Bad: nested loop for distance matrix
-for i in range(n):
-    for j in range(n):
-        dist[i, j] = np.linalg.norm(a[i] - b[j])
-
-# Good: broadcasting
-dist = np.linalg.norm(a[:, None] - b[None, :], axis=-1)
-```
-
-## Generator vs List
-
-```python
-# Bad: materializes entire result in memory
-result = [transform(x) for x in huge_dataset]
-
-# Good: lazy evaluation
-result = (transform(x) for x in huge_dataset)
-```
-
-## Batch I/O
-
-```python
-# Bad: N queries
-for user_id in user_ids:
-    user = db.get_user(user_id)
-
-# Good: 1 query
-users = db.get_users_bulk(user_ids)
-```
-
-## Concurrency for I/O-bound Work
-
-```python
-from concurrent.futures import ThreadPoolExecutor
-
-with ThreadPoolExecutor(max_workers=10) as executor:
-    results = list(executor.map(fetch_url, urls))
-```
+- Hoist loop invariants: compute `expensive_fn(config.value)` once before the loop
+- Use `set` for O(1) membership, `dict` for keyed access, `deque` for O(1) popleft
+- NumPy vectorization: `arr**2 + 2*arr + 1` not a loop; broadcasting `a[:, None] - b[None, :]` for distance matrices
+- Generators `(f(x) for x in data)` over list comprehensions for large datasets
+- Batch I/O: 1 bulk query vs N individual queries
+- ThreadPoolExecutor for I/O-bound concurrency; asyncio + httpx/aiohttp for async contexts
 
 \</optimization_patterns>
 
@@ -333,38 +224,16 @@ Never report optimization results without before/after numbers.
 # Profile async code — py-spy supports asyncio natively
 # py-spy record -o profile.svg -- python async_app.py
 
-# Identify event loop blocking
-import asyncio
-
-asyncio.get_event_loop().slow_callback_duration = 0.05  # warn if callback > 50ms
-
 # Common async bottleneck: sync I/O in async context
 # Bad: calling requests.get() inside an async function (blocks the event loop)
 # Good: use httpx.AsyncClient or aiohttp
-
-# ThreadPoolExecutor for sync I/O in async context (when you can't use async libs)
-import asyncio
-from concurrent.futures import ThreadPoolExecutor
-
-executor = ThreadPoolExecutor(max_workers=4)
-result = await asyncio.get_event_loop().run_in_executor(executor, sync_io_function, arg)
+# For unavoidable sync I/O: run_in_executor(ThreadPoolExecutor, sync_fn, arg)
 ```
 
 ## Database Query Optimization
 
-```python
-# Identify N+1 queries
-# Install: pip install nplusone (for Django/SQLAlchemy)
-# Or: enable SQLAlchemy echo mode
-engine = create_engine(url, echo=True)  # logs all SQL
-
-# Common fix: eager loading
-# SQLAlchemy
-session.query(User).options(joinedload(User.posts)).all()  # 1 query instead of N+1
-
-# Django
-User.objects.prefetch_related("posts").all()  # 1 query instead of N+1
-```
+- Identify N+1 queries: `create_engine(url, echo=True)` logs all SQL
+- Fix with eager loading: `joinedload(User.posts)` (SQLAlchemy) or `prefetch_related("posts")` (Django)
 
 \</async_profiling>
 

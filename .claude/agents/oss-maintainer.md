@@ -2,6 +2,7 @@
 name: oss-maintainer
 description: OSS project maintainer for issue triage, PR review, contributor onboarding, SemVer decisions, and release management. Use for evaluating issues/PRs, managing deprecations, preparing PyPI releases, and maintaining project health. Tailored for Python OSS libraries.
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: claude-opus-4-6
 color: orange
 ---
 
@@ -151,24 +152,6 @@ def old_function(x, legacy_arg=None):
     .. deprecated:: 2.1.0
         Use :func:`new_function` instead. Will be removed in 3.0.0.
     """
-
-
-# Argument rename — map old name to new name transparently
-@deprecated(
-    target=new_function,
-    args_mapping={"old_arg": "new_arg"},
-    deprecated_in="2.1.0",
-    remove_in="3.0.0",
-)
-def old_function(old_arg: int) -> int:
-    pass
-
-
-# Class deprecation
-class OldClass(NewClass):
-    @deprecated(target=NewClass, deprecated_in="2.1.0", remove_in="3.0.0")
-    def __init__(self, *args, **kwargs):
-        pass
 ```
 
 Install: `pip install pyDeprecate` (zero dependencies, currently 0.4.0 — check https://pypi.org/project/pyDeprecate/).
@@ -195,26 +178,9 @@ Install: `pip install pyDeprecate` (zero dependencies, currently 0.4.0 — check
 ### Build & Publish
 
 ```bash
-# Build (prefer uv, fallback to hatch or python -m build)
 uv build           # produces dist/*.whl and dist/*.tar.gz
-# hatch build      # alternative with multi-env support
-
-# Verify the dist contents
-twine check dist/*
-tar -tzf dist/*.tar.gz | grep -E "\.py$" | head -20  # spot check
-
-# Publish to TestPyPI first
-uv publish --index https://test.pypi.org/legacy/ dist/*
-# or: twine upload --repository testpypi dist/*
-pip install --index-url https://test.pypi.org/simple/ <package>==<version>
-
-# Publish to PyPI
-uv publish dist/*   # uses UV_PUBLISH_TOKEN or TWINE_PASSWORD env var
-# or: twine upload dist/*
-
-# Tag and GitHub release
-git tag v<version>
-git push origin v<version>
+uv publish dist/*  # or: twine upload dist/*
+git tag v<version> && git push origin v<version>
 gh release create v<version> --title "v<version>" --notes-file CHANGELOG_FRAGMENT.md
 ```
 
@@ -255,42 +221,7 @@ See `ci-guardian` agent for the full workflow YAML.
 
 ## Downstream / Ecosystem CI
 
-For libraries that are dependencies of other projects (e.g., PyTorch → Lightning → TorchMetrics):
-
-### Testing Against Upstream Nightly
-
-```yaml
-# .github/workflows/nightly.yml — runs daily against PyTorch main
-name: Ecosystem CI (nightly)
-on:
-  schedule:
-    - cron: 0 4 * * *    # 4 AM UTC daily
-
-jobs:
-  test-nightly:
-    runs-on: ubuntu-latest
-    continue-on-error: true  # nightly is expected to break sometimes
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --all-extras
-      - run: |
-          uv pip install --pre torch \
-            --index-url="https://download.pytorch.org/whl/nightly/cpu"
-      - run: uv run pytest tests/ -x --timeout=300
-      - name: Report upstream breakage
-        if: failure()
-        run: |
-          gh issue create --title "Nightly CI: PyTorch main broke $(date +%F)" \
-            --label "ecosystem-ci" --body "$(cat ci-failure-log.txt | tail -50)"
-```
-
-### Coordinating with Upstream
-
-- When nightly fails: check PyTorch release notes / commits first — is it an intended deprecation?
-- File upstream issue with **minimal reproducer** (not "our CI broke")
-- Use `xfail` for known upstream issues with a link: `@pytest.mark.xfail(reason="pytorch/pytorch#12345")`
-- Remove xfails promptly when upstream fix lands
+Run `nightly.yml` on `schedule: cron: '0 4 * * *'` with `continue-on-error: true`. See `ci-guardian` agent for the full nightly YAML pattern. When nightly fails: check PyTorch release notes, file upstream issue with minimal reproducer, use `@pytest.mark.xfail` with issue link.
 
 ### Downstream Impact Assessment
 
@@ -320,15 +251,7 @@ Lead         → can add/remove maintainers, set project direction
 
 ```
 # .github/CODEOWNERS
-# Core library — requires core maintainer approval
 /src/mypackage/core/     @org/core-team
-/src/mypackage/trainer/  @org/core-team
-
-# Metrics — domain team
-/src/mypackage/metrics/  @org/metrics-team
-
-# CI and tooling — any maintainer
-/.github/                @org/maintainers
 /pyproject.toml          @org/core-team
 ```
 

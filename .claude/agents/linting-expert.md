@@ -58,14 +58,13 @@ ruff format .               # format (like black)
 
 ```toml
 [tool.mypy]
-python_version = "3.10"     # Python 3.9 EOL was Oct 2025 — use 3.10+ minimum
+python_version = "3.10"
 strict = true
 warn_return_any = true
 warn_unused_configs = true
 warn_unused_ignores = true
 no_implicit_reexport = true
 
-# Per-module overrides for third-party libs without stubs
 [[tool.mypy.overrides]]
 module = ["cv2.*", "albumentations.*"]
 ignore_missing_imports = true
@@ -73,7 +72,7 @@ ignore_missing_imports = true
 
 ```bash
 mypy src/ --ignore-missing-imports
-mypy src/ --strict           # full strict mode
+mypy src/ --strict
 ```
 
 > **Alternative type checkers**:
@@ -122,7 +121,7 @@ repos:
       - id: check-yaml
       - id: check-toml
       - id: check-merge-conflict
-      - id: debug-statements        # no leftover breakpoint()/pdb
+      - id: debug-statements
       - id: check-added-large-files
         args: [--maxkb=1000]
 ```
@@ -136,64 +135,13 @@ pre-commit autoupdate           # bump all hook revs to latest — run this regu
 > **Tip**: Enable [pre-commit.ci](https://pre-commit.ci) to auto-run and auto-fix hooks on every PR without any local setup burden.
 > </toolchain>
 
-\<pytorch_linting>
+## PyTorch API Migration
 
-## PyTorch API Migration Checks
+- Grep for deprecated `torch.cuda.amp` usage: `rg "torch\.cuda\.amp" --type py`
+- Grep for unsafe `torch.load`: `rg "torch\.load\(" --type py | grep -v "weights_only"`
+- For AMP migration and tensor shape annotations, see `perf-optimizer` and `sw-engineer` agents.
 
-Common deprecated patterns to catch (as of PyTorch 2.4+):
-
-```python
-# DEPRECATED: torch.cuda.amp (since PyTorch 2.4)
-# Bad
-from torch.cuda.amp import autocast, GradScaler
-
-with autocast():
-    ...
-
-# Good — device-agnostic API
-from torch.amp import autocast, GradScaler
-
-with autocast("cuda"):
-    ...
-scaler = GradScaler("cuda")
-```
-
-Grep for these in CI:
-
-```bash
-# Find deprecated torch.cuda.amp usage
-rg "torch\.cuda\.amp" --type py
-rg "from torch\.cuda\.amp" --type py
-
-# Find unsafe torch.load (pickle-based, security risk)
-rg "torch\.load\(" --type py | grep -v "weights_only"
-# Fix: torch.load(path, weights_only=True)  # PyTorch 2.0+
-```
-
-## Tensor Shape Annotations
-
-While Python's type system can't enforce tensor shapes at lint time, establish conventions:
-
-```python
-from typing import TypeAlias
-
-# Document shape contracts as type aliases
-BatchedImages: TypeAlias = torch.Tensor  # [B, C, H, W] float32 [0,1]
-ClassLogits: TypeAlias = torch.Tensor  # [B, num_classes] float32
-SegmentationMask: TypeAlias = torch.Tensor  # [B, 1, H, W] int64 {0..num_classes-1}
-
-
-def predict(images: BatchedImages) -> ClassLogits:
-    """Forward pass. See type aliases for shape contracts."""
-    ...
-```
-
-Benefits:
-
-- Grep-able shape documentation (`grep "TypeAlias" src/`)
-- IDE shows shape info on hover
-- Can add runtime checks with `beartype` + custom validators for development
-  \</pytorch_linting>
+For the CI quality gate workflow YAML, see `ci-guardian` agent (`quality` job with ruff + mypy steps).
 
 \<common_fixes>
 
@@ -259,64 +207,7 @@ def process(items: list[str] | None = None) -> list[str]:
         items = []
 ```
 
-### B007 — unused loop variable
-
-```python
-# Bad
-for i in range(10):  # i unused
-    do_something()
-
-# Good
-for _ in range(10):
-    do_something()
-```
-
-### SIM — simplifications
-
-```python
-# SIM108: ternary
-# Bad
-if condition:
-    x = a
-else:
-    x = b
-# Good
-x = a if condition else b
-
-# SIM117: nested with
-# Bad
-with open(a) as f:
-    with open(b) as g:
-        ...
-# Good
-with open(a) as f, open(b) as g:
-    ...
-```
-
 \</common_fixes>
-
-\<ci_quality_gates>
-
-## GitHub Actions
-
-```yaml
-# .github/workflows/quality.yml
-name: Code Quality
-on: [push, pull_request]
-
-jobs:
-  lint:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv sync --dev
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy src/
-```
-
-\</ci_quality_gates>
 
 <workflow>
 1. Run `ruff check . --output-format=concise` to see all violations

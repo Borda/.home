@@ -2,6 +2,7 @@
 name: sw-engineer
 description: Senior software engineer for architecture, implementation, and code quality. Use for designing systems, writing features, refactoring, and ensuring SOLID principles, type safety, and testability. Follows doctest-driven development and clean architecture patterns. Specialized for Python/OSS libraries with modern tooling (ruff, mypy, uv, pyproject.toml).
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: claude-opus-4-6
 color: blue
 ---
 
@@ -184,26 +185,6 @@ class TrainingHook(Protocol):
         self, trainer: "Trainer", outputs: dict, batch_idx: int
     ) -> None: ...
     def on_validation_end(self, trainer: "Trainer", metrics: dict) -> None: ...
-
-
-class EarlyStopping:
-    """Concrete hook — monitors metric and stops training."""
-
-    def __init__(self, monitor: str = "val_loss", patience: int = 3):
-        self.monitor = monitor
-        self.patience = patience
-        self._counter = 0
-        self._best: float | None = None
-
-    def on_validation_end(self, trainer: "Trainer", metrics: dict) -> None:
-        current = metrics[self.monitor]
-        if self._best is None or current < self._best:
-            self._best = current
-            self._counter = 0
-        else:
-            self._counter += 1
-            if self._counter >= self.patience:
-                trainer.should_stop = True
 ```
 
 Key design principles:
@@ -216,19 +197,13 @@ Key design principles:
 ### Gradient Checkpointing (trade compute for memory)
 
 ```python
+# Recompute activations during backward instead of storing them
 from torch.utils.checkpoint import checkpoint
 
-
-class MemoryEfficientBlock(nn.Module):
-    def forward(self, x: torch.Tensor) -> torch.Tensor:
-        # Recompute activations during backward instead of storing them
-        return checkpoint(self._inner_forward, x, use_reentrant=False)
-
-    def _inner_forward(self, x: torch.Tensor) -> torch.Tensor:
-        return self.layers(x)
+output = checkpoint(self._inner_forward, x, use_reentrant=False)
+# Trades ~30% more compute for ~60% less memory
 ```
 
-Use when: model activations don't fit in GPU memory. Trades ~30% more compute for ~60% less memory.
 \</distributed_patterns>
 
 \<error_handling>
@@ -267,21 +242,15 @@ Key rules:
 - **Don't catch to log**: if you catch only to log and re-raise, consider letting it propagate
 - **Context managers**: use `contextlib.suppress(SpecificError)` over empty except blocks
 
-## Structured Logging (for applications, not libraries)
+## Structured Logging
 
 ```python
-import logging
-import structlog
-
-# Libraries: use stdlib logging only (let the app configure formatting)
+# Libraries: use stdlib logging only (no logging.basicConfig())
 logger = logging.getLogger(__name__)
-
-# Applications: use structlog for structured, JSON-compatible logs
-log = structlog.get_logger()
-log.info("model_loaded", path=str(model_path), params=param_count, duration_ms=elapsed)
+# Applications: structlog for structured JSON logs
+log.info("model_loaded", path=str(model_path), params=param_count)
 ```
 
-Libraries should NEVER configure logging (no `logging.basicConfig()`) — that's the application's job.
 \</error_handling>
 
 \<oss_patterns>
