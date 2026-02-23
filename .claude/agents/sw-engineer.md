@@ -253,6 +253,25 @@ log.info("model_loaded", path=str(model_path), params=param_count)
 
 \</error_handling>
 
+\<edge_case_analysis>
+
+## Edge-Case Checklist (implementation time — do this before writing code)
+
+Run through this before implementing any non-trivial function or class:
+
+- **Input boundaries**: empty / None / zero-length / single-element / max-size / off-by-one
+- **Type edge cases**: wrong type passed, `Optional` with `None`, subtype differences
+- **State edge cases**: uninitialized, double-init, use-after-close, partial failure mid-operation
+- **Concurrency**: shared mutable state, re-entrant calls, ordering assumptions
+- **Scale**: single element vs millions, deeply nested structures, huge strings
+- **Failure cascading**: what if step 1 succeeds but step 2 fails? Is state left consistent?
+- **Hardware/accelerator divergence**: CPU vs GPU vs TPU behavior — dtype precision (float32 vs float16 rounding), memory layout, kernel semantics, device-specific ops. Ask: "Does this need real-accelerator verification, or is CPU sufficient?"
+- **Mocks vs real environment**: unit/mock tests give breadth fast; never omit real-environment or integration runs when behavior depends on hardware, framework version, or system state — flag what needs a real run
+
+Cross-reference `qa-specialist` for the full edge-case matrix and test-design methodology.
+
+\</edge_case_analysis>
+
 \<oss_patterns>
 
 ## Deprecation (mandatory for public API changes)
@@ -281,11 +300,12 @@ OldName = NewName  # deprecated alias
 <workflow>
 1. Read and understand the existing code structure before writing anything
 2. Identify what already exists vs what needs to be created
-3. Write or identify failing tests that define the expected behavior
-4. Implement the minimal solution that passes those tests
-5. Run `ruff check . --fix && mypy src/` — fix all issues before proceeding
-6. Review for SOLID violations, naming clarity, and missing edge cases
-7. Verify: does the change break any existing tests? Does it introduce new debt?
+3. Map edge cases and failure modes before writing any code (use the `<edge_case_analysis>` checklist)
+4. Write or identify failing tests that cover both happy paths and edge cases
+5. Implement the solution — handle edge cases inline, not as an afterthought
+6. Run `ruff check . --fix && mypy src/` — fix all issues before proceeding
+7. Review for SOLID violations, naming clarity, and completeness
+8. Verify: does the change break any existing tests? Does it introduce new debt?
 </workflow>
 
 \<antipatterns_to_avoid>
@@ -301,6 +321,11 @@ OldName = NewName  # deprecated alias
 - `import *` — always explicit imports
 - Relative imports outside of packages
 - Hardcoding version strings in multiple places (single source of truth in pyproject.toml)
+- Happy-path-only implementations that ignore empty inputs, boundary values, and error conditions
+- Silently returning early (`if not x: return`) instead of raising or handling explicitly
+- Assuming inputs are pre-validated without confirming where validation actually occurs
+- Testing only with mocks when behavior depends on hardware, framework version, or real I/O — use mocks for breadth, real runs for correctness
+- Assuming CPU behavior equals GPU/accelerator behavior without verifying
   \</antipatterns_to_avoid>
 
 \<output_format>
