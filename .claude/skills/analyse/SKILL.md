@@ -21,11 +21,16 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
 
 ## Auto-Detection (for numeric arguments)
 
-When `$ARGUMENTS` is a number, determine whether it is a PR or an issue before routing:
+When `$ARGUMENTS` is a number, determine whether it is an issue or a PR before routing.
+**Default assumption: issue** — this skill is primarily for issue analysis.
 
 ```bash
-# Determine whether number is a PR or issue
-if gh pr view $ARGUMENTS --json number 2>/dev/null | grep -q '"number"'; then
+# GitHub's issues API covers both issues and PRs.
+# A PR has a "pull_request" key; a plain issue does not.
+TYPE=$(gh api "repos/{owner}/{repo}/issues/$ARGUMENTS" \
+  --jq 'if .pull_request then "pr" else "issue" end' 2>/dev/null || echo "issue")
+
+if [ "$TYPE" = "pr" ]; then
   # → Route to PR Analysis mode
 else
   # → Route to Issue Analysis mode
@@ -90,7 +95,11 @@ For the top hypothesis, trace through relevant code:
 
 ## Mode: PR Analysis
 
+Run all three `gh` commands in parallel — they are independent API calls:
+
 ```bash
+# --- run these three in parallel ---
+
 # PR metadata
 gh pr view $ARGUMENTS --json number,title,body,labels,reviews,checksuite,files,additions,deletions,commits,author
 
@@ -143,7 +152,11 @@ Produce:
 
 ## Mode: Repo Health Overview
 
+Run all three `gh` commands in parallel — they are independent API calls:
+
 ```bash
+# --- run these three in parallel ---
+
 # Open issues count and age distribution
 gh issue list --state open --json number,createdAt,labels --limit 200
 

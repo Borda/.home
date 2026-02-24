@@ -34,7 +34,11 @@ Before searching, read the current project to extract constraints:
 - Task being solved (classification, detection, generation, regression)?
 - Constraints (latency, memory, dataset size, compute budget)?
 
-## Step 2: Spawn ai-researcher agent
+## Step 2: Research & codebase check (run in parallel)
+
+Launch both tasks simultaneously — they are independent.
+
+### 2a: Spawn ai-researcher agent (background subagent)
 
 Task the ai-researcher with:
 
@@ -61,14 +65,14 @@ Task the ai-researcher with:
    - Training recipe (if applicable)
    - Common failure modes and how to avoid them
 
-## Step 3: Check for existing implementations
+### 2b: Check for existing implementations (main context)
 
 ```bash
 # Search the codebase for any existing related code
 grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 ```
 
-## Step 4: Report
+## Step 3: Report
 
 ```
 ## Survey: $ARGUMENTS

@@ -3,7 +3,7 @@ name: release
 description: Prepare release communication from git history, PRs, or a diff. Adapts output to context — user-facing release notes, CHANGELOG entry, internal release summary, or migration guide. Groups changes by type, filters noise, writes in plain language for the audience.
 argument-hint: [tag, branch, or commit range — e.g. v1.2.0..v1.3.0]
 disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob
+allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>

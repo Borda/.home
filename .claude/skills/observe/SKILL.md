@@ -28,9 +28,11 @@ For each agent/skill found, extract: name, description, tools, purpose.
 
 ## Step 2: Analyze work patterns
 
-Look for signals of repetitive or specialist work:
+Look for signals of repetitive or specialist work. The first three git commands are independent — run them in parallel:
 
 ```bash
+# --- run these three in parallel ---
+
 # Recent git history — what kinds of changes are common?
 git log --oneline -50
 
@@ -39,11 +41,11 @@ git log --name-only --pretty="" -30 | sort | uniq -c | sort -rn | head -20
 
 # Commit message patterns — what verbs appear most?
 git log --oneline -100 | awk '{print $2}' | sort | uniq -c | sort -rn | head -15
+```
 
-# CLAUDE.md and tasks/ — what has been documented as recurring?
+```bash
+# Then read task history and conversation hints
 cat tasks/todo.md tasks/lessons.md 2>/dev/null
-
-# Check conversation hints from $ARGUMENTS
 echo "$ARGUMENTS"
 ```
 

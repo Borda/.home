@@ -55,6 +55,90 @@ Workflow orchestrators invoked via slash commands (`/review`, `/security`, etc.)
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                             |
 | **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
 
+<details>
+<summary><strong>Skill usage examples</strong></summary>
+
+- **`/optimize` — Performance deep-dive**
+
+  ```bash
+  # Profile a specific Python module
+  /optimize src/mypackage/dataloader.py
+
+  # Profile a whole package entry point
+  /optimize src/mypackage/train.py
+
+  # Target a slow test suite
+  /optimize tests/test_heavy_integration.py
+  ```
+
+- **`/review` — Parallel code review**
+
+  ```bash
+  # Review a PR by number
+  /review 42
+
+  # Review specific files
+  /review src/mypackage/transforms.py
+
+  # Review latest commit (no argument)
+  /review
+  ```
+
+- **`/security` — Security audit**
+
+  ```bash
+  # Audit a specific module
+  /security src/mypackage/api/auth.py
+
+  # Audit an entire directory
+  /security src/mypackage/
+  ```
+
+- **`/analyse` — Issue and repo health**
+
+  ```bash
+  # Analyze an issue or PR by number
+  /analyse 123
+
+  # Repo health overview
+  /analyse health
+
+  # Find duplicate issues
+  /analyse dupes memory leak
+  ```
+
+- **`/survey` — SOTA literature search**
+
+  ```bash
+  # Survey a topic
+  /survey efficient transformers for long sequences
+
+  # Survey a specific method
+  /survey knowledge distillation for object detection
+  ```
+
+- **`/release` — Release notes from git history**
+
+  ```bash
+  # Notes since last tag
+  /release
+
+  # Notes for a specific range
+  /release v1.2.0..HEAD
+  ```
+
+- **`/sync` — Config drift detection**
+
+  ```bash
+  # Dry-run: show what differs between project and home .claude/
+  /sync
+
+  # Apply: copy differing files to ~/.claude/
+  /sync apply
+  ```
+
+</details>
+
 ### Status Line
 
 A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
@@ -71,8 +155,8 @@ This repo is the **source of truth** for all `.claude/` configuration. Home (`~/
 
 ```
 Borda.local/.claude/   →   ~/.claude/
-  agents/ (12)               agents/ (12+)
-  skills/ (8)                skills/ (8+)
+  agents/                    agents/
+  skills/                    skills/
   hooks/statusline.js        hooks/statusline.js
   settings.json              settings.json  (statusLine path rewritten to absolute)
 ```

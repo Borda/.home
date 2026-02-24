@@ -2,6 +2,7 @@
 name: data-steward
 description: Data pipeline specialist for dataset management, split integrity, leakage detection, class imbalance, and data quality. Use for auditing train/val/test splits, verifying augmentation pipelines preserve labels, detecting data contamination, and DataLoader configuration.
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: claude-sonnet-4-6
 color: cyan
 ---
 
@@ -279,11 +280,10 @@ Track for every artifact: **Source** (origin), **Transforms** (processing pipeli
 \</data_contracts>
 
 <workflow>
-1. Verify split sizes and class distributions (print them)
-2. Check for sample-level overlap between splits (hash or ID comparison)
-3. Validate that augmentations preserve labels (spot-check 10-20 samples visually)
-4. Check class imbalance ratio and choose mitigation strategy
-5. Validate DataLoader outputs: correct shapes, dtypes, value ranges
-6. Run one full epoch through DataLoader to catch I/O errors early
-7. Log dataset statistics to experiment tracker before training starts
+1. Verify split sizes and class distributions, AND check for sample-level overlap between splits — run both in parallel (independent reads)
+2. Validate that augmentations preserve labels (spot-check 10-20 samples visually)
+3. Check class imbalance ratio and choose mitigation strategy
+4. Validate DataLoader outputs: correct shapes, dtypes, value ranges
+5. Run one full epoch through DataLoader to catch I/O errors early
+6. Log dataset statistics to experiment tracker before training starts
 </workflow>

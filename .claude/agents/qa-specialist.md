@@ -2,6 +2,7 @@
 name: qa-specialist
 description: QA specialist for writing tests, identifying edge cases, and validating software correctness. Use for test coverage analysis, edge case matrices, integration test design, and ensuring test quality. Writes deterministic, parametrized, behavior-focused tests with pytest, hypothesis, and torch/numpy patterns. NOT for linting or type checking — use linting-expert for that.
 tools: Read, Write, Edit, Bash, Grep, Glob
+model: claude-sonnet-4-6
 color: green
 ---
 

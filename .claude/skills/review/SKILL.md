@@ -19,12 +19,14 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
 
 <workflow>
 
-## Step 1: Identify scope
+## Step 1: Identify scope and context (run in parallel for PR mode)
 
 ```bash
-# If $ARGUMENTS is a PR number:
+# If $ARGUMENTS is a PR number — run all four in parallel:
 gh pr diff $ARGUMENTS --name-only   # files changed in PR
 gh pr view $ARGUMENTS               # PR description and metadata
+gh pr checks $ARGUMENTS             # CI status — don't review if CI is red
+gh pr view $ARGUMENTS --json reviews,labels,milestone
 
 # If $ARGUMENTS is a path: use it directly
 
@@ -32,16 +34,9 @@ gh pr view $ARGUMENTS               # PR description and metadata
 git diff --name-only HEAD~1 HEAD
 ```
 
-## Step 2: Context check (PR mode)
+If CI is red, report that without full review.
 
-If reviewing a PR, also check:
-
-```bash
-gh pr checks $ARGUMENTS             # CI status — don't review if CI is red
-gh pr view $ARGUMENTS --json reviews,labels,milestone
-```
-
-## Step 3: Spawn sub-agents in parallel
+## Step 2: Spawn sub-agents in parallel
 
 Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional):
 
@@ -59,7 +54,11 @@ Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional)
 
 **Agent 7 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
-## Step 4: Ecosystem impact check (for libraries with downstream users)
+## Step 3: Post-agent checks (run in parallel)
+
+While agents from Step 3 are completing, run these two independent checks simultaneously:
+
+### 3a: Ecosystem impact check (for libraries with downstream users)
 
 ```bash
 # Check if changed APIs are used by downstream projects
@@ -73,7 +72,7 @@ done
 git diff HEAD~1 HEAD | grep -A2 "deprecated"
 ```
 
-## Step 5: OSS checks (run in main context)
+### 3b: OSS checks
 
 ```bash
 # Check for new dependencies — license compatibility
@@ -89,7 +88,7 @@ git diff HEAD~1 HEAD -- "src/**/__init__.py"
 git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 ```
 
-## Step 6: Consolidate findings
+## Step 4: Consolidate findings
 
 ```
 ## Code Review: [target]

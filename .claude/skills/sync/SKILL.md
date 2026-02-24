@@ -30,10 +30,10 @@ Compare the project-level `.claude/` (source of truth) against home `~/.claude/`
 Collect the set of syncable files from the project:
 
 ```bash
-# Agents (11 files)
+# Agents
 ls /Users/jirka/Workspace/Borda.local/.claude/agents/*.md
 
-# Skills (7 SKILL.md files)
+# Skills
 ls /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md
 
 # Hooks
@@ -172,8 +172,8 @@ Print a final outcome table:
 
 | Step            | Result  |
 |-----------------|---------|
-| agents (11)     | ✅ copied |
-| skills (8)      | ✅ copied |
+| agents          | ✅ copied |
+| skills          | ✅ copied |
 | hooks           | ✅ copied |
 | settings.json   | ✅ merged |
 | JSON validity   | ✅ valid  |
