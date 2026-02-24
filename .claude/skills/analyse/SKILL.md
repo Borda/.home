@@ -1,7 +1,7 @@
 ---
 name: analyse
 description: Analyze GitHub issues, PRs, and repo health for an OSS project. Summarizes long threads, assesses PR readiness, detects duplicates, extracts reproduction steps, and generates repo health stats. Uses gh CLI for GitHub API access. Complements oss-maintainer agent.
-argument-hint: [issue number, PR number, or 'health' for repo overview]
+argument-hint: [number, health, or 'dupes keyword']
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
@@ -12,15 +12,27 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
 
 <inputs>
 - **$ARGUMENTS**: one of:
-  - Issue number (e.g. `42`) — analyze a single issue
-  - PR number with `pr` prefix (e.g. `pr 42`) — analyze a PR
+  - Number (e.g. `42`) — auto-detects issue vs PR
   - `health` — generate repo issue/PR health overview
   - `dupes [keyword]` — find potential duplicate issues
 </inputs>
 
 <workflow>
 
-## Mode: Single Issue Analysis
+## Auto-Detection (for numeric arguments)
+
+When `$ARGUMENTS` is a number, determine whether it is a PR or an issue before routing:
+
+```bash
+# Determine whether number is a PR or issue
+if gh pr view $ARGUMENTS --json number 2>/dev/null | grep -q '"number"'; then
+  # → Route to PR Analysis mode
+else
+  # → Route to Issue Analysis mode
+fi
+```
+
+## Mode: Issue Analysis
 
 ```bash
 # Fetch issue details
@@ -32,48 +44,62 @@ gh issue view $ARGUMENTS --comments
 
 Produce:
 
-```
+````
 ## Issue #[number]: [title]
 
 **State**: [open/closed] | **Author**: @[author] | **Age**: [X days]
 **Labels**: [current labels]
 
 ### Summary
-[2-3 sentence summary of the issue in plain language]
+[2-3 sentence plain-language summary of the issue]
 
-### Type
-[Bug / Feature Request / Question / Documentation / Duplicate]
+### Thread Verdict
+[If thread contains a verified/confirmed solution: extract it here with attribution]
+[If no verified solution: "No confirmed solution in thread." — skip thread detail]
 
-### Reproduction Steps (if bug)
-1. [extracted from issue body/comments]
-2. ...
-Minimal reproduction: [yes/no — if no, flag as needs-repro]
+### Root Cause Hypotheses
 
-### Root Cause Hypothesis
-[If enough info exists: likely location in codebase]
+| # | Hypothesis | Probability | Reasoning |
+|---|-----------|-------------|-----------|
+| 1 | [most likely cause] | [high/medium/low] | [why — reference specific code paths] |
+| 2 | [alternative cause] | [medium/low] | [why] |
+| 3 | [less likely] | [low] | [why] |
+
+### Code Evidence
+
+For the top hypothesis, trace through relevant code:
+
+```[language]
+# [file:line] — [what this code does and why it relates to the hypothesis]
+[relevant code snippet]
+````
 
 ### Suggested Labels
+
 [labels to add/remove based on analysis]
 
 ### Suggested Response
-[draft response to post, or "close as duplicate of #X"]
+
+[draft reply — or "close as duplicate of #X"]
 
 ### Priority
+
 [Critical / High / Medium / Low] — [rationale]
-```
+
+````
 
 ## Mode: PR Analysis
 
 ```bash
 # PR metadata
-gh pr view $ARGUMENTS --json number,title,body,labels,reviews,checksuite,files,additions,deletions,commits
+gh pr view $ARGUMENTS --json number,title,body,labels,reviews,checksuite,files,additions,deletions,commits,author
 
 # CI status
 gh pr checks $ARGUMENTS
 
 # Files changed
 gh pr diff $ARGUMENTS --name-only
-```
+````
 
 Produce:
 
@@ -82,25 +108,37 @@ Produce:
 
 **Author**: @[author] | **Size**: +[additions]/-[deletions] lines, [N] files
 **CI**: [passing/failing/pending]
-**Reviews**: [approved by X / changes requested by Y]
-
-### Summary
-[What this PR does in 2-3 sentences]
-
-### Readiness Checklist
-[ ] CI passing
-[ ] Tests added for new functionality
-[ ] CHANGELOG updated
-[ ] Docstrings on new public APIs
-[ ] No breaking changes without deprecation (or breaking changes are intentional and versioned)
-[ ] PR description explains WHY, not just WHAT
-
-### Concerns
-- [blocking]: [specific issue]
-- [nit]: [suggestion]
 
 ### Recommendation
-[Approve / Request changes / Close] — [one-sentence rationale]
+[🟢 Approve / 🟡 Minor Suggestions / 🟠 Request Changes / 🔴 Block] — [one-sentence justification]
+
+### Completeness
+- [✅/⚠️/❌/🔵] Clear description of what changed and why
+- [✅/⚠️/❌/🔵] Linked to a related issue (`Fixes #NNN` or `Relates to #NNN`)
+- [✅/⚠️/❌/🔵] Tests added/updated (happy path, failure path, edge cases)
+- [✅/⚠️/❌/🔵] Google-style docstrings for all new/changed public APIs
+- [✅/⚠️/❌/🔵] No secrets or credentials introduced
+- [✅/⚠️/❌/🔵] Linting and CI checks pass
+
+### Quality Scores
+- Code: n/5 [emoji] — [reason]
+- Testing: n/5 [emoji] — [reason]
+- Documentation: n/5 [emoji] — [reason]
+
+### Risk: n/5 [emoji] — [brief description]
+- Breaking changes: [none / detail]
+- Performance: [none / detail]
+- Security: [none / detail]
+- Compatibility: [none / detail]
+
+### Must Fix
+1. [blocking issue]
+
+### Suggestions (non-blocking)
+1. [improvement]
+
+### Next Steps
+1. [clear action for the author]
 ```
 
 ## Mode: Repo Health Overview

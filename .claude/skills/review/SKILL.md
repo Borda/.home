@@ -1,6 +1,6 @@
 ---
 name: review
-description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, and doc-scribe agents in parallel. Produces structured findings across architecture, test coverage, performance, and documentation. Supports PR review mode and includes OSS-specific checks.
+description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, security, and solution-architect agents in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
 argument-hint: [file, directory, or PR number to review]
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
@@ -43,7 +43,7 @@ gh pr view $ARGUMENTS --json reviews,labels,milestone
 
 ## Step 3: Spawn sub-agents in parallel
 
-Launch all five agents simultaneously with the Task tool:
+Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional):
 
 **Agent 1 — sw-engineer**: Review architecture, SOLID adherence, type safety, error handling, and code structure. Check for Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking issues vs suggestions.
 
@@ -56,6 +56,8 @@ Launch all five agents simultaneously with the Task tool:
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
 **Agent 6 — security (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — run the security skill's Python-specific vulnerability scan and OWASP checks. Skip if the PR is purely internal refactoring.
+
+**Agent 7 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
 ## Step 4: Ecosystem impact check (for libraries with downstream users)
 
@@ -115,6 +117,11 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 
 ### Static Analysis
 - [linting-expert findings — ruff violations, mypy errors, annotation gaps]
+
+### API Design (if applicable)
+- [solution-architect findings — coupling, API surface, backward compat]
+- Public API changes: [intentional / accidental leak]
+- Deprecation path: [provided / missing]
 
 ### OSS Checks
 - New dependencies: [list, license status]
