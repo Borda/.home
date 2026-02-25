@@ -259,13 +259,16 @@ def test_normalize_idempotent(values):
 
 \</property_based_testing>
 
-<coverage>
+\<coverage>
+
 ## Coverage Anti-patterns
+
 - Don't write tests just to hit coverage numbers
 - 100% coverage with bad assertions is worse than 80% with good ones
 - Mark intentionally uncovered code: `# pragma: no cover`
 - Focus coverage on complex logic and error paths, not trivial getters
-</coverage>
+
+\</coverage>
 
 <workflow>
 1. Read the code under test — understand its contract and dependencies

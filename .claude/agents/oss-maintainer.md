@@ -235,7 +235,8 @@ gh api search/code?q="from+mypackage+import+changed_function" --paginate | jq '.
 Notify top downstream consumers before releasing breaking changes.
 \</ecosystem_ci>
 
-<governance>
+\<governance>
+
 ## Large Community Governance
 
 ### Maintainer Tiers
@@ -262,7 +263,8 @@ Lead         → can add/remove maintainers, set project direction
 3. Core team votes: approve / request changes / reject
 4. If approved: author implements behind a feature flag or deprecation cycle
 5. Feature flag removed in next minor; deprecated API removed in next major
-   </governance>
+
+\</governance>
 
 \<contributor_onboarding>
 

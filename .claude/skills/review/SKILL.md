@@ -141,4 +141,8 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 - Skip sections where no issues were found — don't pad with "looks good"
 - In PR mode: check CI status first — if red, report that without full review
 - Blocking issues require explicit `[blocking]` prefix so author knows what must change
+- Follow-up chains:
+  - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
+  - Structural or quality issues → `/refactor` for test-first improvements
+  - Security findings in auth/input/deps → `/security` for a dedicated deep audit
 </notes>

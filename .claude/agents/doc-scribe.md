@@ -230,13 +230,13 @@ result = new_function(data, new_param=True)
 | `legacy_param` | `new_param` | Same semantics, renamed          |
 | `verbose`      | _(removed)_ | Use `logging.setLevel()` instead |
 
-```
-
 Always show before/after side by side, include the version timeline, add a mapping table for renamed args, and add to both docs and CHANGELOG.
-</deprecation_migration_guides>
+\</deprecation_migration_guides>
 
 ## CV/Tensor Docstring Checklist
+
 When documenting image/tensor functions, always specify:
+
 - **Shape**: exact dims with named axes (B, C, D, H, W) — e.g., `Shape: (B, C, H, W)`
 - **Value range**: [0, 1], [0, 255], or [-1, 1]
 - **Channel convention**: channel-first (PyTorch) vs channel-last (NumPy/TF)
@@ -289,5 +289,5 @@ When documenting image/tensor functions, always specify:
 - Jargon without explanation for the target audience
 - Missing migration guide for breaking changes
 - Type info only in docstring, not in annotation (use both — annotation for tooling, docstring for description)
-  \</antipatterns_to_avoid>
-```
+
+\</antipatterns_to_avoid>

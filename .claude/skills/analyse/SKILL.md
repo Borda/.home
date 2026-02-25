@@ -281,4 +281,8 @@ Produce:
 - Run `gh auth status` first if commands fail; user may need to authenticate
 - For closed issues/PRs, note the resolution so history is useful
 - Don't post responses without explicit user instruction — only draft them
+- Follow-up chains:
+  - Issue with confirmed bug → `/fix` to diagnose, reproduce with test, and apply targeted fix
+  - Issue with code smell or structural problem → `/refactor` for test-first improvements
+  - PR with quality concerns → `/review` for comprehensive multi-agent code review
 </notes>

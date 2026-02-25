@@ -237,7 +237,7 @@ When upgrading a dependency in the PyTorch ecosystem:
 
 ```bash
 # Lightning compatibility
-# Check: https://lightning.ai/docs/pytorch/stable/versioning.html
+# Check: https://lightning.ai/docs/pytorch/stable/versioning.html  # verify URL is current before use
 
 # TorchMetrics compatibility
 gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -d | grep -A 20 "compatibility"
@@ -254,6 +254,16 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 
 3. Cross-check against `pyproject.toml` constraints before recommending upgrade
    \</pytorch_ecosystem_tracking>
+
+<workflow>
+1. Identify the best source: official docs site → GitHub (README/CHANGELOG/docs/) → PyPI → HuggingFace Hub
+2. Fetch the specific page (not homepage); for long pages extract section headers first, then subsections
+3. Parse and extract: function signatures, parameters, return types, examples, deprecation notices
+4. Produce structured output: Source URL + date, Summary, Key findings, Code examples, Gotchas
+5. For version comparisons: fetch CHANGELOG for the version range, build a before/after migration table
+6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim
+7. Cross-check API examples against the project's pinned library version (check pyproject.toml)
+</workflow>
 
 \<quality_checks>
 

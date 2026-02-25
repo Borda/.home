@@ -55,8 +55,8 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                             |
 | **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
 | **manage**   | `/manage <op> <type>`  | Create, update, or delete agents/skills with cross-ref propagation                             |
-| **refactor** | `/refactor <target>`   | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor       |
-| **fix**      | `/fix <bug>`           | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks              |
+| **refactor** | `/refactor <target>`   | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
+| **fix**      | `/fix <bug>`           | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -178,15 +178,78 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 
 </details>
 
+<details>
+<summary><strong>Common workflow sequences</strong></summary>
+
+Skills chain naturally — the output of one becomes the input for the next. Here are the most common sequences:
+
+- **Bug report → fix → validate**
+
+  ```
+  /analyse 42            # understand the issue, extract root cause hypotheses
+  /fix 42                # reproduce with test, apply targeted fix
+  /review                # validate the fix meets quality standards
+  ```
+
+- **Security audit → remediate → verify**
+
+  ```
+  /security src/api/     # audit for vulnerabilities
+  /fix "SQL injection in user query endpoint"  # apply specific remediation
+  /security src/api/     # re-verify no new issues introduced
+  ```
+
+- **Performance investigation → optimize → refactor**
+
+  ```
+  /optimize src/mypackage/dataloader.py   # profile and fix top bottleneck
+  /refactor src/mypackage/dataloader.py "extract caching layer"  # structural improvement
+  /review                                 # full quality pass on changes
+  ```
+
+- **Code review → fix blocking issues**
+
+  ```
+  /review 55             # parallel review across 7 dimensions
+  /fix "race condition in cache invalidation"  # fix blocking issue from review
+  /review 55             # re-review after fix
+  ```
+
+- **New capability → survey → implement**
+
+  ```
+  /survey "efficient attention for long sequences"  # find SOTA methods
+  # implement recommended method using sw-engineer agent
+  /review                                           # validate implementation
+  ```
+
+- **Observe → create → sync**
+
+  ```
+  /observe               # analyze work patterns, suggest new agents/skills
+  /manage create agent security-auditor "..."  # scaffold suggested agent
+  /sync apply            # propagate to ~/.claude/
+  ```
+
+- **Release preparation**
+
+  ```
+  /security src/         # pre-release vulnerability scan
+  /release v1.2.0..HEAD  # generate release notes from git history
+  ```
+
+</details>
+
 ### Status Line
 
 A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
 
 ```
-claude-sonnet-4-6 │ Borda.local │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ Sub │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ $0.42 API │ ████░░░░░░ 38%
 ```
 
-Shows the active model name, current project directory, and a 10-segment context usage bar (green → yellow → red). Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
+Shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red). The billing indicator shows **Sub** (cyan) for subscription plans (Pro/Max/Team) or **$X.XX API** (yellow) for pay-per-token API usage — so you know whether to keep working or wait for the next subscription reset window. Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
 
 ### Config Sync
 

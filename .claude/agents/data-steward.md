@@ -131,19 +131,16 @@ loader = DataLoader(dataset, sampler=sampler, batch_size=32)
 
 ## Recommended Configuration
 
-See `perf-optimizer` agent for the full DataLoader performance tuning reference.
+See `perf-optimizer` agent for performance tuning (`num_workers`, `pin_memory`, `prefetch_factor`, `persistent_workers`).
 Core DataLoader integrity settings:
 
 ```python
 DataLoader(
     dataset,
     batch_size=32,
-    num_workers=4,
-    pin_memory=True,
-    prefetch_factor=2,
-    persistent_workers=True,
     drop_last=True,  # prevent variable-size last batch issues
     collate_fn=None,  # specify if default collation doesn't work
+    worker_init_fn=...,  # set per-worker seed for reproducibility
 )
 ```
 

@@ -9,16 +9,24 @@ process.stdin.setEncoding('utf8');
 process.stdin.on('data', d => (raw += d));
 process.stdin.on('end', () => {
   try {
-    const { model, workspace, context_window } = JSON.parse(raw);
+    const { model, workspace, context_window, cost } = JSON.parse(raw);
 
     const modelName = model?.display_name || model?.id || '';
     const dir = path.basename(workspace?.current_dir || process.cwd());
     const remaining = context_window?.remaining_percentage ?? null;
+    const usd = cost?.total_cost_usd ?? 0;
 
     const parts = [];
 
     if (modelName) parts.push(`\x1b[2m${modelName}\x1b[0m`);
     if (dir)       parts.push(`\x1b[2m${dir}\x1b[0m`);
+
+    // Billing indicator: API (pay-per-token) vs Sub (subscription plan)
+    if (usd > 0) {
+      parts.push(`\x1b[33m$${usd.toFixed(2)} API\x1b[0m`);   // yellow — costs money
+    } else {
+      parts.push(`\x1b[36mSub\x1b[0m`);                       // cyan — subscription
+    }
 
     if (remaining !== null) {
       const pct = Math.max(0, Math.min(100, 100 - remaining));

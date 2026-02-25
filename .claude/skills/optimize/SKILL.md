@@ -80,4 +80,7 @@ time python $ARGUMENTS
 - The perf-optimizer agent has the full optimization knowledge base — this skill only orchestrates the measure-change-measure loop
 - Never skip the baseline measurement — unmeasured optimization is guessing
 - For ML-specific optimization (DataLoader, mixed precision, torch.compile), the perf-optimizer agent has dedicated sections
+- Follow-up chains:
+  - Bottleneck is architectural (not just a hot loop) → `/refactor` for structural changes with test safety net
+  - Optimization changes non-trivial code paths → `/review` for quality validation
 </notes>

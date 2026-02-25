@@ -168,3 +168,12 @@ gh release create v<version> --title "v<version>" \
 ```
 
 </workflow>
+
+<notes>
+- Always cross-reference commit bodies with PR descriptions — PRs are the canonical source of *why*
+- `BREAKING CHANGE:` in a commit footer is a breaking change regardless of PR labels
+- Filter noise (CI config, dep bumps, typos) unless they are user-impacting
+- Follow-up chains:
+  - Release includes breaking changes → `/analyse` for downstream ecosystem impact assessment
+  - Pre-release audit → `/security` for dependency vulnerability scan before publishing
+</notes>

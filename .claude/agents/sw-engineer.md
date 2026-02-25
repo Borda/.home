@@ -69,8 +69,10 @@ dev = ["pytest", "ruff", "mypy"]
 
 \</python_tooling>
 
-<packaging>
+\<packaging>
+
 ## src Layout (mandatory for libraries)
+
 ```
 mypackage/
 ├── src/
@@ -100,7 +102,8 @@ Only export what's intentional. Everything else is private by convention.
 - Prefix with underscore: `_internal_helper()`
 - No SemVer guarantees for private API
 - Document in docstring if intended for subclass override: `# subclass hook`
-  </packaging>
+
+\</packaging>
 
 \<modern_python>
 

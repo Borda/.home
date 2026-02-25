@@ -22,22 +22,24 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 - Descriptions must be quoted when they contain spaces
 
 **Agent examples:**
+
 - `/manage create agent security-auditor "Security specialist for vulnerability scanning and OWASP compliance"`
 - `/manage update agent ci-guardian ci-specialist`
 - `/manage delete agent web-explorer`
 
 **Skill examples:**
+
 - `/manage create skill benchmark "Benchmark orchestrator for measuring and comparing performance across commits"`
 - `/manage update skill optimize perf-audit`
 - `/manage delete skill observe`
-</inputs>
+  </inputs>
 
 <constants>
 - AGENTS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/agents`
 - SKILLS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/skills`
 - MEMORY_FILE: `/Users/jirka/.claude/projects/-Users-jirka-Workspace-Borda-local/memory/MEMORY.md`
-- USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta
-- AVAILABLE_COLORS: pink, coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
+- USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta, pink
+- AVAILABLE_COLORS: coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
 </constants>
 
 <workflow>
@@ -47,6 +49,7 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 Extract operation, type, name, and optional arguments from `$ARGUMENTS`.
 
 **Validation rules:**
+
 - Name must match `^[a-z][a-z0-9-]*$` (kebab-case)
 - For `create`: name must NOT already exist on disk
 - For `update`/`delete`: name MUST already exist on disk
@@ -204,6 +207,7 @@ grep -rn "<name>" /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md
 **For update:** Use the Edit tool to replace every occurrence of `<old-name>` with `<new-name>` in each file that references it.
 
 **For delete:** Review each reference. If the deleted name appears in:
+
 - A cross-reference suggestion (e.g., "use X agent") — remove or replace with the closest alternative
 - An inventory list — remove the entry
 - A workflow spawn directive — flag for manual review
@@ -223,10 +227,22 @@ ls -d /Users/jirka/Workspace/Borda.local/.claude/skills/*/ | xargs -n1 basename 
 ```
 
 Use the Edit tool to update these two lines in MEMORY.md:
+
 - `- Agents: oss-maintainer, sw-engineer, ...` (the roster line, not the path line)
 - `- Skills: review, security, ...`
 
-## Step 7: Verify integrity
+## Step 7: Update README.md
+
+Update the agent or skill table in `/Users/jirka/Workspace/Borda.local/README.md`:
+
+- **create agent**: add a new row to the `### Agents` table — columns: `| **name** | Short tagline | Key capabilities |`
+- **create skill**: add a new row to the `### Skills` table — columns: `| **name** | \`/name\` | Description |\`
+- **update (rename)**: find and replace the old name in the table row with the new name
+- **delete**: remove the row for the deleted name
+
+The README tables are self-documenting — keep descriptions concise (one line) and consistent in tone with the surrounding rows. Do not add/remove table columns.
+
+## Step 8: Verify integrity
 
 Confirm no broken references remain:
 
@@ -241,22 +257,25 @@ ls -d /Users/jirka/Workspace/Borda.local/.claude/skills/*/ | xargs -n1 basename
 ```
 
 Use Grep to search for the specific changed name and confirm:
+
 - **Update**: zero hits for old name, appropriate hits for new name
 - **Delete**: zero hits for deleted name (or flagged references noted)
 - **Create**: new file exists with valid structure
 
-## Step 8: Audit
+## Step 9: Audit
 
 Spawn the `self-mentor` agent to audit the created/modified file(s):
+
 - For `create`: audit the new file for structural completeness, cross-ref validity, and content quality
 - For `update`: audit the renamed file and verify no stale references remain
 - For `delete`: audit remaining files for broken references to the deleted name
 
 Include the audit findings in the final report.
 
-## Step 9: Summary report
+## Step 10: Summary report
 
 Output a structured report containing:
+
 - **Operation**: what was done (create/update/delete + type + name)
 - **Files Changed**: table of file paths and actions (created/renamed/deleted/cross-ref updated)
 - **Cross-References**: count of files updated, broken refs cleaned
@@ -269,8 +288,11 @@ Output a structured report containing:
 <notes>
 - **Atomic updates**: always write-before-delete to prevent data loss on interruption
 - **No settings.json auto-edit**: this skill only mentions when new permissions might be needed — it does not mutate JSON files to avoid risky structural edits
-- **No README.md handling**: if a README.md with agent/skill tables exists in the future, add it to the propagation steps
+- **README.md tables**: Step 7 updates the agent/skill tables in the project README.md — keep the row format consistent with existing rows
 - **Color pool**: the AVAILABLE_COLORS list provides unused colors for new agents; if exhausted, reuse colors with a note
 - **Cross-ref grep is broad**: searches bare kebab-case names across all markdown files — catches backtick references, prose mentions, spawn directives, and inventory lists
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
+- Follow-up chains:
+  - After any create/update/delete → `/sync` to propagate changes to `~/.claude/`
+  - After creating a new agent/skill → `/review` to validate generated content quality
 </notes>

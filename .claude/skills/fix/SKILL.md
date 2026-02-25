@@ -36,6 +36,7 @@ python -m pytest <test_path> -v --tb=long 2>&1 | tail -40
 ```
 
 Spawn a **sw-engineer** agent to analyze the failing code path and identify:
+
 - The root cause (not just the symptom)
 - The minimal code surface that needs to change
 - Any related code that might be affected by the fix
@@ -53,6 +54,7 @@ python -m pytest <test_file>::<test_name> -v --tb=short
 ```
 
 Spawn a **qa-specialist** agent to write the regression test if one doesn't exist:
+
 - The test must **fail** against the current code (proving the bug exists)
 - Use `pytest.mark.parametrize` if the bug affects multiple input patterns
 - Keep the test minimal — exercise exactly the broken behavior
@@ -128,5 +130,7 @@ Output a structured report:
 - The regression test is a permanent contribution — it prevents the bug from recurring
 - If the bug is in `.claude/` config files: run `self-mentor` audit + `/sync` after fixing
 - Related agents: `sw-engineer` (root cause analysis), `qa-specialist` (regression test), `linting-expert` (quality)
-- Related skills: `/refactor` (for structural improvements after the fix), `/review` (for a full quality pass)
+- Follow-up chains:
+  - Fix involves structural improvements beyond the bug → `/refactor` for test-first code quality pass
+  - Fix touches non-trivial code paths → `/review` for full multi-agent quality validation
 </notes>

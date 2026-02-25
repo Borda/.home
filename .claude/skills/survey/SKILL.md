@@ -110,3 +110,11 @@ grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 ```
 
 </workflow>
+
+<notes>
+- This skill orchestrates — it gathers context and delegates research to `ai-researcher`. For direct hypothesis/experiment work, use the agent directly.
+- All URLs in the report must be fetched and verified before inclusion (link integrity rule)
+- Follow-up chains:
+  - Survey recommends a method for implementation → hand off to `sw-engineer` agent or `/refactor` if integrating into existing code
+  - Survey reveals security concerns with a dependency → `/security` for deep audit
+</notes>

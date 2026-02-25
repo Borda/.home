@@ -237,3 +237,11 @@ When reporting results:
 ```
 
 \</output_format>
+
+<workflow>
+1. Gather context: read the codebase to understand task, framework, constraints, and existing implementations
+2. Literature search: find 3-5 relevant papers, verify links, cluster by approach, identify strongest baseline
+3. Deep analysis: for top candidates — extract method details, check reproducibility, assess compute requirements
+4. Experiment design: state hypothesis, define variables and controls, set success criteria, plan ablations, estimate compute
+5. Implement and validate: implement the method incrementally, reproduce baseline first, verify each component, report mean +/- std over multiple seeds
+</workflow>

@@ -32,6 +32,7 @@ wc -l <target>/**/*.py 2>/dev/null || wc -l <target>
 ```
 
 Spawn a **sw-engineer** agent to analyze the code and identify:
+
 - Public API surface (functions, classes, methods that external code calls)
 - Internal complexity hotspots (cyclomatic complexity, deep nesting, long functions)
 - Code smells relevant to the stated goal
@@ -53,6 +54,7 @@ python -m pytest --cov=<target_module> --cov-report=term-missing -q 2>/dev/null
 ```
 
 Classify each public function/method as:
+
 - **Covered**: has at least one test exercising its happy path and one edge case
 - **Partially covered**: has a test but missing edge cases or failure paths
 - **Uncovered**: no test at all
@@ -87,6 +89,7 @@ Now apply the refactoring changes. For each change:
 4. If tests fail: the refactoring broke behavior — revert and try a different approach
 
 **Refactoring categories** (apply what matches the goal):
+
 - **Logic simplification**: replace complex conditionals, flatten nesting, extract helper functions
 - **API cleanup**: rename for clarity, consolidate overloaded parameters, add type annotations
 - **Structural**: extract classes/modules, reduce coupling, apply design patterns
@@ -139,6 +142,7 @@ Output a structured report:
 - If the refactoring goal conflicts with existing tests, that's a signal to discuss with the user — don't silently change test expectations
 - Related agents: `sw-engineer` (code analysis), `qa-specialist` (test generation), `linting-expert` (post-refactor cleanup)
 - After refactoring: run `self-mentor` to audit any `.claude/` files if they were part of the target
-- Run `/sync` to propagate changes if `.claude/` config was modified
-- Run `/review` on the refactored code for a full quality pass
+- Follow-up chains:
+  - Refactored code needs quality validation → `/review` for full multi-agent code review
+  - Refactoring touched `.claude/` config files → `/sync` to propagate changes to home directory
 </notes>
