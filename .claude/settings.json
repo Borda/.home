@@ -11,6 +11,7 @@
       "Bash(find:*)",
       "Bash(grep:*)",
       "Bash(head:*)",
+      "Bash(tail:*)",
       "Bash(ls:*)",
       "Bash(wc:*)",
       "Bash(gh pr view:*)",

@@ -20,6 +20,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 - Has `<workflow>` block (required in all agents)
 - All XML opening tags have matching closing tags
 - No orphaned `</tag>` without a matching opener
+- **Known false positive**: the Read tool wraps its output in `<output>...</output>` XML — ignore any `</output>` that appears only at the very end of a Read result (verify with `tail -3 <file>` via Bash before reporting)
 
 ### Content Quality
 

@@ -23,7 +23,7 @@ Agents and skills for [Claude Code](https://claude.ai/code) (Anthropic's AI codi
 
 ### Agents
 
-Specialist roles with deep domain knowledge. Invoked automatically by Claude Code when a task matches their expertise, or explicitly via the Task tool.
+Specialist roles with deep domain knowledge. You can request a specific agent by name in your prompt (e.g., *"use the qa-specialist to write tests for this module"*). Claude Code also selects agents automatically when spawning subagents via the Task tool.
 
 | Agent                  | Purpose                          | Key Capabilities                                                                |
 | ---------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
@@ -42,18 +42,21 @@ Specialist roles with deep domain knowledge. Invoked automatically by Claude Cod
 
 ### Skills
 
-Workflow orchestrators invoked via slash commands (`/review`, `/security`, etc.). They coordinate agents and produce structured output.
+Skills are orchestrations of agents — invoked via slash commands (`/review`, `/security`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
 | Skill        | Command                | What It Does                                                                                   |
 | ------------ | ---------------------- | ---------------------------------------------------------------------------------------------- |
 | **review**   | `/review [file\|PR#]`  | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design) |
 | **security** | `/security [target]`   | OWASP Top 10 + Python-specific + ML supply chain audit                                         |
-| **optimize** | `/optimize [target]`   | Measure-change-measure performance loop via perf-optimizer agent                               |
+| **optimize** | `/optimize [target]`   | Measure-change-measure performance loop                                                        |
 | **release**  | `/release [range]`     | Release notes, CHANGELOG, or migration guide from git history                                  |
-| **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan via ai-researcher agent                        |
+| **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan                                                |
 | **analyse**  | `/analyse [#\|health]` | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                             |
 | **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
+| **manage**   | `/manage <op> <type>`  | Create, update, or delete agents/skills with cross-ref propagation                             |
+| **refactor** | `/refactor <target>`   | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor       |
+| **fix**      | `/fix <bug>`           | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks              |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -135,6 +138,42 @@ Workflow orchestrators invoked via slash commands (`/review`, `/security`, etc.)
 
   # Apply: copy differing files to ~/.claude/
   /sync apply
+  ```
+
+- **`/manage` — Agent/skill lifecycle**
+
+  ```bash
+  # Create a new agent
+  /manage create agent security-auditor "Security specialist for vulnerability scanning"
+
+  # Rename a skill (updates all cross-references)
+  /manage update skill optimize perf-audit
+
+  # Delete an agent (cleans broken refs)
+  /manage delete agent web-explorer
+  ```
+
+- **`/refactor` — Test-first refactoring**
+
+  ```bash
+  # Refactor a module with a specific goal
+  /refactor src/mypackage/transforms.py "replace manual loops with vectorized ops"
+
+  # General quality pass on a directory
+  /refactor src/mypackage/utils/
+  ```
+
+- **`/fix` — Bug fixing**
+
+  ```bash
+  # Fix a bug described in a GitHub issue
+  /fix 42
+
+  # Fix a specific error
+  /fix "TypeError when passing None to transform()"
+
+  # Fix a failing test
+  /fix tests/test_transforms.py::test_none_input
   ```
 
 </details>

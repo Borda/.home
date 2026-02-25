@@ -1,0 +1,144 @@
+---
+name: refactor
+description: Test-first refactoring orchestrator. Ensures test coverage exists before changing code — adds characterization tests if missing, then applies logic improvements, API cleanup, and structural changes with verified input/output consistency.
+argument-hint: <file, directory, or module to refactor> ["goal description"]
+disable-model-invocation: true
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
+---
+
+<objective>
+Safely refactor code by enforcing a test-first discipline. Before any logic change, verify that the target code has tests covering its current behavior. If tests are missing, generate characterization tests that capture existing input/output contracts. Only then proceed with the refactoring — running the test suite after each change to confirm nothing broke.
+</objective>
+
+<inputs>
+- **$ARGUMENTS**: required
+  - First token: file path, directory, or module to refactor
+  - Remaining tokens (optional): quoted goal description — what to improve (e.g., `"replace manual loops with vectorized ops"`, `"simplify error handling"`, `"extract common logic into shared util"`)
+  - If no goal given: perform a general quality pass (dead code, complexity, naming, structure)
+</inputs>
+
+<workflow>
+
+## Step 1: Scope and understand
+
+Read the target code and build a mental model before touching anything:
+
+```bash
+# If directory: find all Python files
+find <target> -name "*.py" -not -path "*/__pycache__/*" | head -50
+
+# Measure current state
+wc -l <target>/**/*.py 2>/dev/null || wc -l <target>
+```
+
+Spawn a **sw-engineer** agent to analyze the code and identify:
+- Public API surface (functions, classes, methods that external code calls)
+- Internal complexity hotspots (cyclomatic complexity, deep nesting, long functions)
+- Code smells relevant to the stated goal
+- Dependencies and coupling between modules
+
+## Step 2: Audit test coverage
+
+Find existing tests for the target code:
+
+```bash
+# Locate test files — common patterns
+find . -name "test_*.py" -o -name "*_test.py" | xargs grep -l "<module_name>" 2>/dev/null
+
+# Check if pytest is available and run coverage on the target
+python -m pytest --co -q 2>/dev/null | grep -i "<module_name>" || echo "No tests found"
+
+# If coverage tool available
+python -m pytest --cov=<target_module> --cov-report=term-missing -q 2>/dev/null
+```
+
+Classify each public function/method as:
+- **Covered**: has at least one test exercising its happy path and one edge case
+- **Partially covered**: has a test but missing edge cases or failure paths
+- **Uncovered**: no test at all
+
+## Step 3: Add characterization tests (if needed)
+
+For every **uncovered** or **partially covered** public API, spawn a **qa-specialist** agent to generate characterization tests:
+
+- Import the function, call it with representative inputs, and assert the **current** output
+- These tests document existing behavior — they are not aspirational, they capture reality
+- Use `pytest.mark.parametrize` for multiple input/output pairs
+- For side-effectful code: mock external dependencies, assert call patterns
+- Name tests `test_<function>_characterization_*` so they're easy to identify later
+
+```bash
+# Run the new tests to confirm they pass against current code
+python -m pytest <test_file> -v
+```
+
+**Gate**: all characterization tests must pass before proceeding. If any fail, the test is wrong — fix the test, not the code.
+
+## Step 4: Refactor with safety net
+
+Now apply the refactoring changes. For each change:
+
+1. Make one focused change (single responsibility per edit)
+2. Run the full test suite for the target:
+   ```bash
+   python -m pytest <test_files> -v --tb=short
+   ```
+3. If tests pass: commit mentally, move to the next change
+4. If tests fail: the refactoring broke behavior — revert and try a different approach
+
+**Refactoring categories** (apply what matches the goal):
+- **Logic simplification**: replace complex conditionals, flatten nesting, extract helper functions
+- **API cleanup**: rename for clarity, consolidate overloaded parameters, add type annotations
+- **Structural**: extract classes/modules, reduce coupling, apply design patterns
+- **Performance**: replace loops with vectorized ops, reduce allocations, batch I/O
+- **Dead code removal**: remove unused imports, unreachable branches, commented-out code
+
+## Step 5: Verify and report
+
+Run the complete test suite one final time:
+
+```bash
+# Full test run
+python -m pytest <test_files> -v
+
+# If coverage available — compare before/after
+python -m pytest --cov=<target_module> --cov-report=term-missing -q
+```
+
+Output a structured report:
+
+```
+## Refactor Report: <target>
+
+### Goal
+[stated goal or "general quality pass"]
+
+### Test Coverage Before
+- Covered: N functions | Partially: N | Uncovered: N
+- Characterization tests added: N
+
+### Changes Made
+| File | Change | Lines |
+|------|--------|-------|
+| path/to/file.py | extracted helper function | -12/+8 |
+
+### Test Results
+- All tests passing: yes/no
+- Coverage: before% → after%
+
+### Follow-up
+- [any remaining items that need manual review]
+```
+
+</workflow>
+
+<notes>
+- **Never refactor without tests**: this is the core invariant — if tests don't exist, add them first
+- Characterization tests capture *current* behavior, not *desired* behavior — they're a safety net, not a spec
+- One change at a time: each edit should be independently verifiable by the test suite
+- If the refactoring goal conflicts with existing tests, that's a signal to discuss with the user — don't silently change test expectations
+- Related agents: `sw-engineer` (code analysis), `qa-specialist` (test generation), `linting-expert` (post-refactor cleanup)
+- After refactoring: run `self-mentor` to audit any `.claude/` files if they were part of the target
+- Run `/sync` to propagate changes if `.claude/` config was modified
+- Run `/review` on the refactored code for a full quality pass
+</notes>
