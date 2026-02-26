@@ -1,6 +1,13 @@
 #!/usr/bin/env node
-// Minimal statusline: model | cwd | context bar
+// Minimal statusline: model | cwd | billing | context bar
 // Receives session JSON via stdin from Claude Code
+//
+// Billing detection:
+//   - ANTHROPIC_API_KEY set → API key billing → show real cost in yellow ($X.XX)
+//   - No API key          → OAuth subscription → show "<Plan> ~$X.XX" in cyan
+//   Plan name inferred from context_window_size: ≥1M → Max, ≥200k → Pro, else Sub.
+//   Note: cost.total_cost_usd is tokens × API rates — NOT actual subscription charge.
+//   Subscription quota % is not exposed in hook data. Check /status for monthly usage.
 
 const path = require('path');
 
@@ -15,17 +22,26 @@ process.stdin.on('end', () => {
     const dir = path.basename(workspace?.current_dir || process.cwd());
     const remaining = context_window?.remaining_percentage ?? null;
     const usd = cost?.total_cost_usd ?? 0;
+    const isApiKey = !!process.env.ANTHROPIC_API_KEY;
+
+    const ctxSize = context_window?.context_window_size ?? 0;
+    // Infer plan from context window size: 1M tokens → Max, 200k → Pro, unknown → Sub
+    const planName = ctxSize >= 1_000_000 ? 'Max' : ctxSize >= 200_000 ? 'Pro' : 'Sub';
 
     const parts = [];
 
     if (modelName) parts.push(`\x1b[2m${modelName}\x1b[0m`);
     if (dir)       parts.push(`\x1b[2m${dir}\x1b[0m`);
 
-    // Billing indicator: API (pay-per-token) vs Sub (subscription plan)
-    if (usd > 0) {
-      parts.push(`\x1b[33m$${usd.toFixed(2)} API\x1b[0m`);   // yellow — costs money
+    if (isApiKey) {
+      // API key billing — every token costs real money, show actual spend
+      parts.push(`\x1b[33mAPI $${usd.toFixed(2)}\x1b[0m`);                      // yellow
     } else {
-      parts.push(`\x1b[36mSub\x1b[0m`);                       // cyan — subscription
+      // OAuth subscription (Pro / Max) — cost.total_cost_usd is theoretical API-rate
+      // cost (tokens × published rates), NOT actual subscription charge or quota consumption.
+      // Plan name inferred from context_window_size (1M = Max, 200k = Pro).
+      // Use /status for actual monthly quota.
+      parts.push(`\x1b[36m${planName} ~$${usd.toFixed(2)}\x1b[0m`);            // cyan plan + tilde
     }
 
     if (remaining !== null) {
@@ -36,5 +52,10 @@ process.stdin.on('end', () => {
     }
 
     process.stdout.write(parts.join(' \x1b[2m│\x1b[0m '));
-  } catch (_) {}
+  } catch (e) {
+    // Write error to temp file for debugging, show fallback statusline
+    require('fs').appendFileSync('/tmp/statusline-debug.log',
+      new Date().toISOString() + ' raw=' + JSON.stringify(raw.slice(0, 200)) + ' err=' + e.message + '\n');
+    process.stdout.write('\x1b[2m?\x1b[0m');
+  }
 });

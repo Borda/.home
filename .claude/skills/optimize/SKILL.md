@@ -7,11 +7,15 @@ allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Orchestrate a performance investigation using the perf-optimizer agent. This skill handles the measurement bookends (baseline → change → verify) while the agent handles the actual analysis and implementation.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: file, module, or directory to optimize.
+
 </inputs>
 
 <workflow>
@@ -77,10 +81,12 @@ time python $ARGUMENTS
 </workflow>
 
 <notes>
+
 - The perf-optimizer agent has the full optimization knowledge base — this skill only orchestrates the measure-change-measure loop
 - Never skip the baseline measurement — unmeasured optimization is guessing
 - For ML-specific optimization (DataLoader, mixed precision, torch.compile), the perf-optimizer agent has dedicated sections
 - Follow-up chains:
   - Bottleneck is architectural (not just a hot loop) → `/refactor` for structural changes with test safety net
   - Optimization changes non-trivial code paths → `/review` for quality validation
+
 </notes>

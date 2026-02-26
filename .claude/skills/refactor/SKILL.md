@@ -7,14 +7,18 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Safely refactor code by enforcing a test-first discipline. Before any logic change, verify that the target code has tests covering its current behavior. If tests are missing, generate characterization tests that capture existing input/output contracts. Only then proceed with the refactoring — running the test suite after each change to confirm nothing broke.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: required
   - First token: file path, directory, or module to refactor
   - Remaining tokens (optional): quoted goal description — what to improve (e.g., `"replace manual loops with vectorized ops"`, `"simplify error handling"`, `"extract common logic into shared util"`)
   - If no goal given: perform a general quality pass (dead code, complexity, naming, structure)
+
 </inputs>
 
 <workflow>
@@ -136,6 +140,7 @@ Output a structured report:
 </workflow>
 
 <notes>
+
 - **Never refactor without tests**: this is the core invariant — if tests don't exist, add them first
 - Characterization tests capture *current* behavior, not *desired* behavior — they're a safety net, not a spec
 - One change at a time: each edit should be independently verifiable by the test suite
@@ -145,4 +150,5 @@ Output a structured report:
 - Follow-up chains:
   - Refactored code needs quality validation → `/review` for full multi-agent code review
   - Refactoring touched `.claude/` config files → `/sync` to propagate changes to home directory
+
 </notes>

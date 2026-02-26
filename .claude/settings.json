@@ -3,6 +3,10 @@
   "model": "opusplan",
   "effortLevel": "high",
   "autoCompactThreshold": 0.7,
+  "statusLine": {
+    "type": "command",
+    "command": "node .claude/hooks/statusline.js"
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -38,8 +42,18 @@
       "Bash(python -m pytest:*)",
       "Bash(python -m doctest:*)",
       "Bash(python -m pre_commit run:*)",
+      "Bash(python -m cProfile:*)",
       "Bash(ruff:*)",
       "Bash(mypy:*)",
+      "Bash(pip show:*)",
+      "Bash(pip list:*)",
+      "Bash(pip index:*)",
+      "Bash(pip-audit:*)",
+      "Bash(time:*)",
+      "Bash(git add:*)",
+      "Bash(git status:*)",
+      "Bash(git checkout:*)",
+      "Bash(git stash:*)",
       "Bash(cp:*)",
       "Bash(mkdir:*)",
       "WebFetch(domain:github.com)",
@@ -52,9 +66,5 @@
       "WebFetch(domain:*.anthropic.com)",
       "WebFetch(domain:arxiv.org)"
     ]
-  },
-  "statusLine": {
-    "type": "command",
-    "command": "node .claude/hooks/statusline.js"
   }
 }

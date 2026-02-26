@@ -7,15 +7,19 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Fix software bugs with a disciplined reproduce-first workflow. Before touching any code, understand the root cause and capture the bug in a regression test. Then apply the minimal fix, verify all tests pass, and finish with linting and quality checks. The regression test stays in the codebase to prevent re-introduction.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: required — one of:
   - A bug description in plain text (e.g., `"TypeError when passing None to transform()"`)
   - A GitHub issue number (e.g., `123` — fetched via `gh issue view`)
   - An error message or traceback snippet
   - A failing test name (e.g., `tests/test_transforms.py::test_none_input`)
+
 </inputs>
 
 <workflow>
@@ -125,6 +129,7 @@ Output a structured report:
 </workflow>
 
 <notes>
+
 - **Reproduce first**: never fix a bug you can't demonstrate with a test — the test is the proof
 - **Minimal fix**: change only what's necessary to resolve the root cause — avoid incidental refactoring
 - The regression test is a permanent contribution — it prevents the bug from recurring
@@ -133,4 +138,5 @@ Output a structured report:
 - Follow-up chains:
   - Fix involves structural improvements beyond the bug → `/refactor` for test-first code quality pass
   - Fix touches non-trivial code paths → `/review` for full multi-agent quality validation
+
 </notes>

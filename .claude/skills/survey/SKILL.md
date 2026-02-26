@@ -7,21 +7,29 @@ allowed-tools: Read, Bash, Grep, Glob, Task, WebSearch, WebFetch
 ---
 
 <objective>
+
 Survey the literature on an AI/ML topic and return actionable findings: what SOTA methods exist, which fits best for the current use case, and a concrete implementation plan. This skill is an orchestrator — it gathers codebase context, delegates literature search and analysis to the ai-researcher agent, and packages results into a structured report.
 
 This skill is NOT for doing research or designing experiments — use the `ai-researcher` agent directly for hypothesis generation, ablation design, and experiment validation.
+
 </objective>
 
 \<link_integrity>
+
 **Never include a URL in output without fetching it first.**
 
 - Fetch every paper link, repo URL, and benchmark page before citing it
+
 - Do not hallucinate arXiv IDs, GitHub repo paths, or Papers With Code links — verify them
+
 - If a URL returns 404 or is inaccessible, say so and omit rather than guessing
+
   \</link_integrity>
 
 <inputs>
+
 - **$ARGUMENTS**: topic, method name, or problem description (e.g. "object detection for small objects", "efficient transformers", "self-supervised pretraining for medical images").
+
 </inputs>
 
 <workflow>
@@ -112,9 +120,11 @@ grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 </workflow>
 
 <notes>
+
 - This skill orchestrates — it gathers context and delegates research to `ai-researcher`. For direct hypothesis/experiment work, use the agent directly.
 - All URLs in the report must be fetched and verified before inclusion (link integrity rule)
 - Follow-up chains:
   - Survey recommends a method for implementation → hand off to `sw-engineer` agent or `/refactor` if integrating into existing code
   - Survey reveals security concerns with a dependency → `/security` for deep audit
+
 </notes>

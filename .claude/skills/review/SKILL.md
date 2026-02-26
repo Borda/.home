@@ -1,20 +1,24 @@
 ---
 name: review
-description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, security, and solution-architect agents in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
+description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, solution-architect agents plus the /security skill in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
 argument-hint: [file, directory, or PR number to review]
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Perform a comprehensive code review by spawning specialized sub-agents in parallel and consolidating their findings into structured feedback with severity levels.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: optional file path, directory, or PR number to review.
   - If a number is given (e.g. `42`): review the PR diff
   - If a path is given: review those files
   - If omitted: review recently changed files
+
 </inputs>
 
 <workflow>
@@ -50,13 +54,13 @@ Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional)
 
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
-**Agent 6 — security (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — run the security skill's Python-specific vulnerability scan and OWASP checks. Skip if the PR is purely internal refactoring.
+**Subagent 6 — `/security` skill (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — invoke the `/security` skill (via a Task subagent running that skill prompt) to run a Python-specific vulnerability scan and OWASP checks. Skip if the PR is purely internal refactoring.
 
 **Agent 7 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
 ## Step 3: Post-agent checks (run in parallel)
 
-While agents from Step 3 are completing, run these two independent checks simultaneously:
+While agents from Step 2 are completing, run these two independent checks simultaneously:
 
 ### 3a: Ecosystem impact check (for libraries with downstream users)
 
@@ -137,6 +141,7 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 </workflow>
 
 <notes>
+
 - Critical issues are always surfaced regardless of scope
 - Skip sections where no issues were found — don't pad with "looks good"
 - In PR mode: check CI status first — if red, report that without full review
@@ -145,4 +150,5 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
   - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
   - Structural or quality issues → `/refactor` for test-first improvements
   - Security findings in auth/input/deps → `/security` for a dedicated deep audit
+
 </notes>

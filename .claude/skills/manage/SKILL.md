@@ -7,10 +7,13 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob
 ---
 
 <objective>
+
 Manage the lifecycle of agents and skills in the `.claude/` directory. Handles creation with rich domain content, atomic updates (renames) with cross-reference propagation, and clean deletion with broken-reference cleanup. Keeps the MEMORY.md inventory in sync with what actually exists on disk.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: required, one of:
   - `create agent <name> "description"` — create a new agent with generated domain content
   - `create skill <name> "description"` — create a new skill with workflow scaffold
@@ -25,21 +28,24 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 
 - `/manage create agent security-auditor "Security specialist for vulnerability scanning and OWASP compliance"`
 - `/manage update agent ci-guardian ci-specialist`
-- `/manage delete agent web-explorer`
+- `/manage delete agent old-agent-name`
 
 **Skill examples:**
 
 - `/manage create skill benchmark "Benchmark orchestrator for measuring and comparing performance across commits"`
 - `/manage update skill optimize perf-audit`
 - `/manage delete skill observe`
-  </inputs>
+
+</inputs>
 
 <constants>
+
 - AGENTS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/agents`
 - SKILLS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/skills`
 - MEMORY_FILE: `/Users/jirka/.claude/projects/-Users-jirka-Workspace-Borda-local/memory/MEMORY.md`
 - USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta, pink
 - AVAILABLE_COLORS: coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
+
 </constants>
 
 <workflow>
@@ -99,7 +105,7 @@ Branch into one of six modes:
 ### Mode: Create Agent
 
 1. Pick the first unused color from the AVAILABLE_COLORS pool (compare against colors found in Step 3)
-2. Choose model: `claude-opus-4-6` for complex reasoning roles (architecture, maintenance, research, engineering), `claude-sonnet-4-6` for focused execution roles (linting, testing, data, CI)
+2. Choose model: `opus` (or `opusplan` for plan-gated roles like architect, maintainer, reviewer) for complex reasoning roles; `sonnet` for focused execution roles (linting, testing, data, CI)
 3. Write the agent file with real domain content derived from the description:
 
 **Agent template** — write to `AGENTS_DIR/<name>.md`:
@@ -110,11 +116,17 @@ name / description / tools / model / color (frontmatter)
 ---
 <role> — 2-3 sentences establishing expertise from description
 \<core_knowledge> — 2 subsections, 3-5 bullets each (domain-specific, not generic)
+
 \</core_knowledge>
+
 <workflow> — 5 numbered steps appropriate to the domain
+
 </workflow>
+
 \<notes> — 1-2 operational notes + cross-refs to related agents
+
 \</notes>
+
 ```
 
 **Content rules:** `<role>` and `<workflow>` use normal tags; all other sections use `\<escaped>` tags. Generate real domain content (80-120 lines total).
@@ -286,6 +298,7 @@ Output a structured report containing:
 </workflow>
 
 <notes>
+
 - **Atomic updates**: always write-before-delete to prevent data loss on interruption
 - **No settings.json auto-edit**: this skill only mentions when new permissions might be needed — it does not mutate JSON files to avoid risky structural edits
 - **README.md tables**: Step 7 updates the agent/skill tables in the project README.md — keep the row format consistent with existing rows
@@ -295,4 +308,5 @@ Output a structured report containing:
 - Follow-up chains:
   - After any create/update/delete → `/sync` to propagate changes to `~/.claude/`
   - After creating a new agent/skill → `/review` to validate generated content quality
+
 </notes>

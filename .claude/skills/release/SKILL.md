@@ -7,14 +7,18 @@ allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Prepare release communication based on what changed. The output format adapts to the audience and context — user-facing release notes, a CHANGELOG entry, an internal release summary, or a migration guide for breaking changes.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: git tag, branch, or commit range (e.g. `v1.2.0..HEAD`, `main..release/1.3`).
   If omitted, uses the range from the last tag to HEAD.
 - Optionally append the desired format: `release-notes`, `changelog`, `summary`, or `migration`.
   If not specified, infer from context (public library → release notes, internal tool → summary).
+
 </inputs>
 
 <workflow>
@@ -170,10 +174,12 @@ gh release create v<version> --title "v<version>" \
 </workflow>
 
 <notes>
+
 - Always cross-reference commit bodies with PR descriptions — PRs are the canonical source of *why*
 - `BREAKING CHANGE:` in a commit footer is a breaking change regardless of PR labels
 - Filter noise (CI config, dep bumps, typos) unless they are user-impacting
 - Follow-up chains:
   - Release includes breaking changes → `/analyse` for downstream ecosystem impact assessment
   - Pre-release audit → `/security` for dependency vulnerability scan before publishing
+
 </notes>

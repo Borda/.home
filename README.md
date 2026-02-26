@@ -178,65 +178,83 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 
 </details>
 
+### Common Workflow Sequences
+
+Skills chain naturally — the output of one becomes the input for the next.
+
 <details>
-<summary><strong>Common workflow sequences</strong></summary>
+<summary><strong>Bug report → fix → validate</strong></summary>
 
-Skills chain naturally — the output of one becomes the input for the next. Here are the most common sequences:
+```
+/analyse 42            # understand the issue, extract root cause hypotheses
+/fix 42                # reproduce with test, apply targeted fix
+/review                # validate the fix meets quality standards
+```
 
-- **Bug report → fix → validate**
+</details>
 
-  ```
-  /analyse 42            # understand the issue, extract root cause hypotheses
-  /fix 42                # reproduce with test, apply targeted fix
-  /review                # validate the fix meets quality standards
-  ```
+<details>
+<summary><strong>Security audit → remediate → verify</strong></summary>
 
-- **Security audit → remediate → verify**
+```
+/security src/api/     # audit for vulnerabilities
+/fix "SQL injection in user query endpoint"  # apply specific remediation
+/security src/api/     # re-verify no new issues introduced
+```
 
-  ```
-  /security src/api/     # audit for vulnerabilities
-  /fix "SQL injection in user query endpoint"  # apply specific remediation
-  /security src/api/     # re-verify no new issues introduced
-  ```
+</details>
 
-- **Performance investigation → optimize → refactor**
+<details>
+<summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
-  ```
-  /optimize src/mypackage/dataloader.py   # profile and fix top bottleneck
-  /refactor src/mypackage/dataloader.py "extract caching layer"  # structural improvement
-  /review                                 # full quality pass on changes
-  ```
+```
+/optimize src/mypackage/dataloader.py   # profile and fix top bottleneck
+/refactor src/mypackage/dataloader.py "extract caching layer"  # structural improvement
+/review                                 # full quality pass on changes
+```
 
-- **Code review → fix blocking issues**
+</details>
 
-  ```
-  /review 55             # parallel review across 7 dimensions
-  /fix "race condition in cache invalidation"  # fix blocking issue from review
-  /review 55             # re-review after fix
-  ```
+<details>
+<summary><strong>Code review → fix blocking issues</strong></summary>
 
-- **New capability → survey → implement**
+```
+/review 55             # parallel review across 7 dimensions
+/fix "race condition in cache invalidation"  # fix blocking issue from review
+/review 55             # re-review after fix
+```
 
-  ```
-  /survey "efficient attention for long sequences"  # find SOTA methods
-  # implement recommended method using sw-engineer agent
-  /review                                           # validate implementation
-  ```
+</details>
 
-- **Observe → create → sync**
+<details>
+<summary><strong>New capability → survey → implement</strong></summary>
 
-  ```
-  /observe               # analyze work patterns, suggest new agents/skills
-  /manage create agent security-auditor "..."  # scaffold suggested agent
-  /sync apply            # propagate to ~/.claude/
-  ```
+```
+/survey "efficient attention for long sequences"  # find SOTA methods
+# implement recommended method using sw-engineer agent
+/review                                           # validate implementation
+```
 
-- **Release preparation**
+</details>
 
-  ```
-  /security src/         # pre-release vulnerability scan
-  /release v1.2.0..HEAD  # generate release notes from git history
-  ```
+<details>
+<summary><strong>Observe → create → sync</strong></summary>
+
+```
+/observe               # analyze work patterns, suggest new agents/skills
+/manage create agent security-auditor "..."  # scaffold suggested agent
+/sync apply            # propagate to ~/.claude/
+```
+
+</details>
+
+<details>
+<summary><strong>Release preparation</strong></summary>
+
+```
+/security src/         # pre-release vulnerability scan
+/release v1.2.0..HEAD  # generate release notes from git history
+```
 
 </details>
 
@@ -245,11 +263,24 @@ Skills chain naturally — the output of one becomes the input for the next. Her
 A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
 
 ```
-claude-sonnet-4-6 │ Borda.local │ Sub │ ████░░░░░░ 38%
-claude-sonnet-4-6 │ Borda.local │ $0.42 API │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ Max ~$1.20 │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ Pro ~$1.20 │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ API $0.42  │ ████░░░░░░ 38%
 ```
 
-Shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red). The billing indicator shows **Sub** (cyan) for subscription plans (Pro/Max/Team) or **$X.XX API** (yellow) for pay-per-token API usage — so you know whether to keep working or wait for the next subscription reset window. Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
+Shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red).
+
+<details>
+<summary><strong>Billing indicator explained</strong></summary>
+
+- **Subscription (Pro/Max)**: `Max/Pro/Sub ~$X.XX` in cyan — plan name is inferred from context window size (≥1M tokens → Max, ≥200k → Pro, else Sub); `~$X.XX` is the session's theoretical API-rate cost (tokens × list price), not an actual charge. Use `/status` for real monthly quota.
+- **API key**: `API $X.XX` in yellow — actual spend at pay-per-token rates.
+
+`cost.total_cost_usd` (the source of `$X.XX`) is tokens × published API rates. For subscription users this is an estimate only — Anthropic's subscription quota uses internal accounting that doesn't map 1:1 to API list prices.
+
+</details>
+
+Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
 
 ### Config Sync
 

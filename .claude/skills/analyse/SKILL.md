@@ -7,14 +7,18 @@ allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Analyze GitHub issues and PRs to help maintainers triage, respond, and decide quickly. Produces actionable, structured output — not just summaries.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: one of:
   - Number (e.g. `42`) — auto-detects issue vs PR
   - `health` — generate repo issue/PR health overview
   - `dupes [keyword]` — find potential duplicate issues
+
 </inputs>
 
 <workflow>
@@ -122,10 +126,11 @@ Produce:
 [🟢 Approve / 🟡 Minor Suggestions / 🟠 Request Changes / 🔴 Block] — [one-sentence justification]
 
 ### Completeness
+_Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 - [✅/⚠️/❌/🔵] Clear description of what changed and why
 - [✅/⚠️/❌/🔵] Linked to a related issue (`Fixes #NNN` or `Relates to #NNN`)
 - [✅/⚠️/❌/🔵] Tests added/updated (happy path, failure path, edge cases)
-- [✅/⚠️/❌/🔵] Google-style docstrings for all new/changed public APIs
+- [✅/⚠️/❌/🔵] Docstrings (NumPy or Google style, consistent with project) for all new/changed public APIs
 - [✅/⚠️/❌/🔵] No secrets or credentials introduced
 - [✅/⚠️/❌/🔵] Linting and CI checks pass
 
@@ -277,6 +282,7 @@ Produce:
 </workflow>
 
 <notes>
+
 - Always use `gh` CLI — never hardcode repo URLs
 - Run `gh auth status` first if commands fail; user may need to authenticate
 - For closed issues/PRs, note the resolution so history is useful
@@ -285,4 +291,5 @@ Produce:
   - Issue with confirmed bug → `/fix` to diagnose, reproduce with test, and apply targeted fix
   - Issue with code smell or structural problem → `/refactor` for test-first improvements
   - PR with quality concerns → `/review` for comprehensive multi-agent code review
+
 </notes>

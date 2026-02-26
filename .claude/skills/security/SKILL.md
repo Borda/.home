@@ -7,11 +7,15 @@ allowed-tools: Read, Bash, Grep, Glob, Task
 ---
 
 <objective>
+
 Audit code for security vulnerabilities. Focus on issues that are exploitable by real attackers, ranked by severity. Provide specific, actionable fixes — not generic advice.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: file, endpoint definition, or directory to audit.
+
 </inputs>
 
 <workflow>
@@ -77,10 +81,12 @@ Results: [paste output or "clean"]
 </workflow>
 
 <notes>
+
 - Focus on exploitable issues, not theoretical risks — every finding must have a concrete attack scenario
 - Run `pip-audit` and `safety check` when dependency scanning; note if they're not installed
 - For ML code: always check `torch.load` for `weights_only=True` and flag pickle-based weight files
 - Follow-up chains:
   - Vulnerabilities found → `/fix` to apply specific remediations from the report
   - If fixes touch auth/input handling, re-run `/security` to verify the fix doesn't introduce new issues
+
 </notes>

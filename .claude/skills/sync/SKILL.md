@@ -7,20 +7,26 @@ allowed-tools: Read, Write, Bash, Glob, Grep
 ---
 
 <objective>
+
 Compare the project-level `.claude/` (source of truth) against home `~/.claude/` and report every file that is missing, differs, or is identical. When called with `apply`, perform the sync and report what changed.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: optional
   - Omitted → dry-run: show drift report only, no files written
   - `apply` → apply sync: copy files and report outcome
+
 </inputs>
 
 <constants>
+
 - PROJECT: `/Users/jirka/Workspace/Borda.local/.claude`
 - HOME: `/Users/jirka/.claude`
 - NEVER sync: `settings.local.json`, `CLAUDE.md` (intentionally differ per level)
 - statusLine path transform: project uses relative `node .claude/hooks/statusline.js` → home needs absolute `node /Users/jirka/.claude/hooks/statusline.js`
+
 </constants>
 
 <workflow>
@@ -184,9 +190,11 @@ Post-sync drift: 0 files differ
 </workflow>
 
 <notes>
+
 - NEVER copy `settings.local.json` or `CLAUDE.md` — these intentionally differ per level
 - The statusLine path MUST be absolute in home settings (`/Users/jirka/.claude/hooks/statusline.js`) — relative paths only work from the project directory
 - The project `.claude/` is always the source of truth; never sync home → project
 - Run `/sync` (dry-run) first to review changes before running `/sync apply`
 - After applying, the self-mentor agent can audit for any drift the skill missed
+
 </notes>

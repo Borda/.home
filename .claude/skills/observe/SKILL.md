@@ -7,12 +7,16 @@ allowed-tools: Read, Bash, Grep, Glob
 ---
 
 <objective>
+
 Analyze how Claude Code is being used in this project and suggest new agents or skills that would reduce repetition, improve quality, or handle specialized domains — without duplicating what already exists.
+
 </objective>
 
 <inputs>
+
 - **$ARGUMENTS**: optional. If provided, use as context for the suggestion (e.g. "I keep doing X manually").
   If omitted, analyze the project's existing patterns and agents to generate suggestions proactively.
+
 </inputs>
 
 <workflow>
@@ -142,6 +146,7 @@ For each candidate agent/skill:
 </workflow>
 
 <notes>
+
 - This skill is introspective: it looks at the tooling itself, not just the code
 - Run periodically (e.g., monthly) or after noticing repetitive manual work
 - Suggestions are proposals — always review before creating new files
@@ -149,4 +154,5 @@ For each candidate agent/skill:
 - Follow-up chains:
   - Suggestion accepted for new agent/skill → `/manage create` to scaffold and register it
   - Suggestion to enhance existing → edit the agent/skill directly, then `/sync`
+
 </notes>

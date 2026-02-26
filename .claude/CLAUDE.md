@@ -57,7 +57,7 @@ When modifying any file under `.claude/` (agents, skills, settings, hooks, this 
 
 1. **Update all cross-references** — agents reference each other by name (e.g. `sw-engineer` → `linting-expert`); if a name, scope, or capability changes, update every file that mentions it
 2. **Update `memory/MEMORY.md`** — the agents/skills inventory line must stay in sync with what actually exists on disk
-3. **Update `README.md`** — the agent and skill tables are the human-facing index; keep descriptions and names accurate (no hardcoded counts — the tables are self-documenting)
+3. **Cross-check `README.md`** — after ANY change to a `.claude/` file, verify `README.md` reflects the change: agent/skill tables match files on disk, Status Line section matches `hooks/statusline.js` behavior, Config Sync section matches `skills/sync/SKILL.md`; keep descriptions and names accurate (no hardcoded counts — the tables are self-documenting)
 4. **Update `settings.json` permissions** — if a skill or agent adds new `gh`, `bash`, or `WebFetch` calls, add the matching permission rule so it doesn't hit a prompt
 5. **Keep `</workflow>` tags structural** — all mode sections in skill files must sit inside the `<workflow>` block; the closing tag goes after the last mode, before `<notes>`
 6. **No orphaned step numbers** — if steps are added/removed in a skill workflow, renumber sequentially
