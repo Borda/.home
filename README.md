@@ -16,6 +16,7 @@ borda.local/
 │   ├── AGENTS.md           # global instructions and subagent spawn rules
 │   ├── config.toml         # multi-agent config (gpt-5.3-codex baseline)
 │   └── agents/             # per-agent model and instruction overrides
+├── .mcp.json               # MCP server wiring (Codex headless via codex)
 ├── .pre-commit-config.yaml
 ├── .gitignore
 └── README.md
@@ -48,21 +49,22 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/security`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill        | Command                | What It Does                                                                                   |
-| ------------ | ---------------------- | ---------------------------------------------------------------------------------------------- |
-| **review**   | `/review [file\|PR#]`  | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design) |
-| **security** | `/security [target]`   | OWASP Top 10 + Python-specific + ML supply chain audit                                         |
-| **optimize** | `/optimize [target]`   | Measure-change-measure performance loop                                                        |
-| **release**  | `/release [range]`     | Release notes, CHANGELOG, or migration guide from git history                                  |
-| **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan                                                |
-| **analyse**  | `/analyse [#\|health]` | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
-| **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                             |
-| **audit**    | `/audit [fix]`         | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues     |
-| **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
-| **manage**   | `/manage <op> <type>`  | Create, update, or delete agents/skills with cross-ref propagation                             |
-| **feature**  | `/feature <desc>`      | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle     |
-| **refactor** | `/refactor <target>`   | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
-| **fix**      | `/fix <bug>`           | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
+| Skill        | Command                  | What It Does                                                                                   |
+| ------------ | ------------------------ | ---------------------------------------------------------------------------------------------- |
+| **review**   | `/review [file\|PR#]`    | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design) |
+| **security** | `/security [target]`     | OWASP Top 10 + Python-specific + ML supply chain audit                                         |
+| **optimize** | `/optimize [target]`     | Measure-change-measure performance loop                                                        |
+| **release**  | `/release [range]`       | Release notes, CHANGELOG, or migration guide from git history                                  |
+| **survey**   | `/survey [topic]`        | SOTA literature survey with implementation plan                                                |
+| **analyse**  | `/analyse [#\|health]`   | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
+| **observe**  | `/observe`               | Meta-skill: analyze work patterns and suggest new agents or skills                             |
+| **audit**    | `/audit [fix]`           | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues     |
+| **sync**     | `/sync [apply]`          | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
+| **manage**   | `/manage <op> <type>`    | Create, update, or delete agents/skills with cross-ref propagation                             |
+| **feature**  | `/feature <desc>`        | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle     |
+| **refactor** | `/refactor <target>`     | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
+| **fix**      | `/fix <bug>`             | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
+| **codex**    | `/codex <task> [target]` | Delegate mechanical coding tasks to Codex via MCP — Claude orchestrates, Codex executes        |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -191,6 +193,17 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   /feature "add batched predict() method to Classifier" "src/classifier"
   ```
 
+- **`/codex` — Delegate mechanical work to Codex**
+
+  ```bash
+  # Add docstrings to all undocumented public functions in a module
+  /codex "add NumPy-style docstrings to all undocumented public functions" "src/mypackage/transforms.py"
+  # Rename a symbol consistently across a directory
+  /codex "rename BatchLoader to DataBatcher throughout the package" "src/mypackage/"
+  # Add type annotations to a well-typed module
+  /codex "add return type annotations to all functions missing them" "src/mypackage/utils.py"
+  ```
+
 </details>
 
 ### Common Workflow Sequences
@@ -271,6 +284,17 @@ Skills chain naturally — the output of one becomes the input for the next.
 /manage create agent security-auditor "..."  # scaffold suggested agent
 /audit                 # verify config integrity — catch broken refs, dead loops
 /sync apply            # propagate clean config to ~/.claude/
+```
+
+</details>
+
+<details>
+<summary><strong>Delegate mechanical work to Codex</strong></summary>
+
+```
+/codex "add NumPy docstrings to all undocumented public functions" "src/mypackage/"
+# Codex executes; Claude validates with lint + tests
+/review                                   # full quality pass on Codex output
 ```
 
 </details>

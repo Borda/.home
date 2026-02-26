@@ -71,7 +71,10 @@ warn_unused_ignores = true
 no_implicit_reexport = true
 
 [[tool.mypy.overrides]]
-module = ["cv2.*", "albumentations.*"]
+module = [
+  "cv2.*",
+  "albumentations.*",
+] # replace with your third-party libs that lack type stubs
 ignore_missing_imports = true
 ```
 

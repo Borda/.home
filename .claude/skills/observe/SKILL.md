@@ -14,8 +14,10 @@ Analyze how Claude Code is being used in this project and suggest new agents or 
 
 <inputs>
 
-- **$ARGUMENTS**: optional. If provided, use as context for the suggestion (e.g. "I keep doing X manually").
-  If omitted, analyze the project's existing patterns and agents to generate suggestions proactively.
+- **$ARGUMENTS**: optional. Three modes:
+  - Omitted — analyze the project's existing patterns and agents to generate suggestions proactively.
+  - `review` — review the existing agent/skill roster for quality and gaps without suggesting new additions.
+  - Description of a recurring task — use the description as context when generating suggestions (e.g. "I keep doing X manually").
 
 </inputs>
 
@@ -130,7 +132,7 @@ For each candidate agent/skill:
 - Has a fixed multi-step process that spawns sub-agents or runs commands
 - Is invoked ad-hoc for a specific task type
 - Benefits from structured output format
-- Examples: `analyse-issue`, `review`, `release`
+- Examples: `analyse`, `review`, `release`
 
 ### When to Do Nothing
 

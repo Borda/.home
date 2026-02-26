@@ -78,6 +78,38 @@ Results: [paste output or "clean"]
 - Input validation: [present/missing]
 ```
 
+## Step 4: Delegate mechanical fixes (optional)
+
+For `critical` and `high` findings with an unambiguous, targeted fix, Codex can implement the mechanical parts without human judgment.
+
+**Delegate to Codex when the fix is specific and unambiguous:**
+
+- Dangerous API call replaced with a safe equivalent (e.g., `yaml.load` → `yaml.safe_load`, `torch.load` without → with `weights_only=True`)
+- Missing input validation guard added at a known entry point
+- Hardcoded secret replaced with a config/env lookup at a specific location
+
+**Do not delegate:**
+
+- Access control redesigns, auth system changes, or any fix requiring architectural judgment
+- Any finding where the correct fix is not immediately clear from the report
+
+For each finding, read the vulnerable code, form an accurate brief, then spawn:
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
+Task: use the <agent> to <fix description with file:line, the vulnerable pattern, and the safe replacement>.
+Target: <file>."
+)
+```
+
+Example prompt: `"use the qa-specialist to replace yaml.load(f) with yaml.safe_load(f) in src/loader.py:42 and add a test confirming that a crafted YAML with !!python/object tag raises SafeError instead of executing code"`
+
+The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully.
+
+Append a `### Codex Delegation` line to the audit output if this step ran.
+
 </workflow>
 
 <notes>
@@ -86,7 +118,8 @@ Results: [paste output or "clean"]
 - Run `pip-audit` and `safety check` when dependency scanning; note if they're not installed
 - For ML code: always check `torch.load` for `weights_only=True` and flag pickle-based weight files
 - Follow-up chains:
-  - Vulnerabilities found → `/fix` to apply specific remediations from the report
-  - If fixes touch auth/input handling, re-run `/security` to verify the fix doesn't introduce new issues
+  - Mechanical fixes (API substitutions, safe-flag additions) → Step 4 auto-delegates to Codex
+  - Complex fixes (auth redesign, access control changes) → `/fix` to apply with regression tests
+  - If fixes touch auth/input handling, re-run `/security` on the specific changed files only (once) to verify no new issues were introduced
 
 </notes>

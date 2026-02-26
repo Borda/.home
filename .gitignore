@@ -1,3 +1,6 @@
+# Agent handover artifacts (ephemeral patch files)
+.codex/handover/
+
 # JetBrains IDEs
 .idea/
 *.iml

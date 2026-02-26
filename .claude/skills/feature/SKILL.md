@@ -186,7 +186,39 @@ If the review (or any earlier step) surfaces issues:
 4. Re-run the full quality stack from Step 5
 5. Repeat until `/review` returns no `critical` or `high` findings
 
-## Step 7: Final report
+## Step 7: Delegate implementation follow-up (optional)
+
+Inspect what was built (`git diff HEAD --stat`) and identify real implementation tasks that Codex can complete — not style violations (those are handled by pre-commit hooks), but work that requires understanding the code and writing meaningful content.
+
+**Delegate to Codex when you can write an accurate, specific brief:**
+
+- New public functions/classes need full 6-section docstrings — read the implementation first, then describe what each one does, its arguments, return value, and any invariants
+- New functionality needs tests beyond what qa-specialist already wrote — describe the exact behaviour to be tested
+- New module or class needs a usage example that demonstrates the intended API contract
+
+**Do not delegate:**
+
+- Style or lint violations — run pre-commit hooks instead
+- Any task where you cannot write a precise description without guessing
+
+For each task, read the target code, form an accurate brief, then spawn:
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
+Task: use the <agent> to <specific task with accurate description of what the code does>.
+Target: <file>."
+)
+```
+
+Example prompt: `"use the doc-scribe to add a 6-section Google-style docstring to BatchTransform.apply() in src/transforms.py — the method applies per-sample normalization using a precomputed mean/std tensor and returns a tensor of the same shape as input"`
+
+The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
+
+Include a `### Codex Delegation` line in the Step 8 report only if this step ran.
+
+## Step 8: Final report
 
 Output a structured summary:
 
@@ -234,5 +266,6 @@ Output a structured summary:
   - Feature changes public API → `/release` to prepare CHANGELOG entry and migration guide
   - Feature is performance-sensitive → `/optimize` for baseline + bottleneck analysis
   - Feature touches `.claude/` config files → run `self-mentor` audit + `/sync` to propagate
+  - Mechanical follow-up needed beyond what Step 7 handled → `/codex` to delegate additional tasks
 
 </notes>

@@ -110,8 +110,10 @@ def tmp_data_dir(tmp_path):
 @pytest.fixture
 def monkeypatch_env(monkeypatch):
     """Monkeypatch environment variables for config tests."""
-    monkeypatch.setenv("API_KEY", "test-key-123")
-    monkeypatch.setenv("DEBUG", "false")
+    monkeypatch.setenv(
+        "API_KEY", "test-key-123"
+    )  # example env vars — replace with yours
+    monkeypatch.setenv("DEBUG", "false")  # example env vars — replace with yours
     return monkeypatch
 ```
 

@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Comprehensive config audit for the entire .claude/ directory. Orchestrates self-mentor across all agents, skills, settings, and hooks to detect correctness issues, broken cross-references, interoperability problems, dead loops, redundancy, and inefficiency. Reports findings by severity and auto-fixes everything except low (nit) findings.
+description: Comprehensive config audit for the entire .claude/ directory. Orchestrates self-mentor across all agents, skills, settings, and hooks to detect correctness issues, broken cross-references, interoperability problems, infinite loops, redundancy, and inefficiency. Reports findings by severity and auto-fixes everything except low (nit) findings.
 argument-hint: [agents|skills] [fix]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
@@ -8,7 +8,7 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 
 <objective>
 
-Run a full-sweep quality audit of the `.claude/` configuration: every agent file, every skill file, settings.json, and hooks. Spawns `self-mentor` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — dead loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings and auto-fixes critical, high, and medium issues (low/nit findings are reported only).
+Run a full-sweep quality audit of the `.claude/` configuration: every agent file, every skill file, settings.json, and hooks. Spawns `self-mentor` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — infinite loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings and auto-fixes critical, high, and medium issues (low/nit findings are reported only).
 
 </objective>
 
@@ -115,7 +115,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, dead loops, hardcoded paths
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths
 
 ### Findings by Severity
 
@@ -196,7 +196,7 @@ Output the complete audit summary:
 
 ### Remaining (low/nits — manual review optional)
 - [low findings that were not auto-fixed]
-- [any dead loops flagged for user decision]
+- [any infinite loops flagged for user decision]
 
 ### Next Step
 Run `/sync apply` to propagate clean config to ~/.claude/

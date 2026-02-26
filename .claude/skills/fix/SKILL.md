@@ -138,5 +138,6 @@ Output a structured report:
 - Follow-up chains:
   - Fix involves structural improvements beyond the bug → `/refactor` for test-first code quality pass
   - Fix touches non-trivial code paths → `/review` for full multi-agent quality validation
+  - Fix required consistent renames or annotation changes across many files → `/codex` to delegate the mechanical sweep
 
 </notes>

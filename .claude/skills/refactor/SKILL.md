@@ -100,7 +100,39 @@ Now apply the refactoring changes. For each change:
 - **Performance**: replace loops with vectorized ops, reduce allocations, batch I/O
 - **Dead code removal**: remove unused imports, unreachable branches, commented-out code
 
-## Step 5: Verify and report
+## Step 5: Delegate implementation follow-up (optional)
+
+Inspect the refactoring changes (`git diff HEAD --stat`) and identify real implementation tasks that Codex can complete — not style violations (those are handled by pre-commit hooks), but work that requires understanding the restructured code.
+
+**Delegate to Codex when you can write an accurate, specific brief:**
+
+- Renamed or moved functions whose docstrings now describe the wrong context — read the new implementation, then write a precise update brief
+- Extracted helpers that have no documentation — describe what the helper does and what invariants it relies on
+- Restructured public APIs where the old type annotations no longer reflect the actual contract
+
+**Do not delegate:**
+
+- Style or lint violations — run pre-commit hooks instead
+- Any task where you cannot write a precise description without guessing
+
+For each task, read the target code, form an accurate brief, then spawn:
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
+Task: use the <agent> to <specific task with accurate description of what the code does>.
+Target: <file>."
+)
+```
+
+Example prompt: `"use the doc-scribe to rewrite the docstring for DataPipeline.transform() in src/pipeline.py — the method was refactored to accept a list of transforms instead of a single callable; it now applies them sequentially and returns early on the first None result"`
+
+The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
+
+Include a `### Codex Delegation` line in the Step 6 report only if this step ran.
+
+## Step 6: Verify and report
 
 Run the complete test suite one final time:
 
@@ -135,6 +167,9 @@ Output a structured report:
 
 ### Follow-up
 - [any remaining items that need manual review]
+
+### Codex Delegation
+[Include only if Step 5 ran — list files and tasks delegated to Codex]
 ```
 
 </workflow>
@@ -151,5 +186,6 @@ Output a structured report:
   - Refactored code needs quality validation → `/review` for full multi-agent code review
   - Cleaned-up module is ready to extend → `/feature` to add new capability on the improved foundation
   - Refactoring touched `.claude/` config files → `/sync` to propagate changes to home directory
+  - Mechanical cleanup needed beyond what Step 5 handled → `/codex` to delegate additional tasks
 
 </notes>

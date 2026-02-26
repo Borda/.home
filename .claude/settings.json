@@ -18,6 +18,7 @@
       "Bash(tail:*)",
       "Bash(ls:*)",
       "Bash(wc:*)",
+      "Bash(gh api graphql:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",
       "Bash(gh pr list:*)",
@@ -54,6 +55,9 @@
       "Bash(git status:*)",
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
+      "Bash(git restore:*)",
+      "Bash(git clean:*)",
+      "Bash(git apply:*)",
       "Bash(cp:*)",
       "Bash(mkdir:*)",
       "WebFetch(domain:github.com)",
@@ -64,7 +68,14 @@
       "WebFetch(domain:claude.ai)",
       "WebFetch(domain:claude.com)",
       "WebFetch(domain:anthropic.com)",
-      "WebFetch(domain:arxiv.org)"
+      "WebFetch(domain:arxiv.org)",
+      "WebFetch(domain:developers.openai.com)",
+      "WebFetch(domain:platform.openai.com)",
+      "WebFetch(domain:openai.com)",
+      "Bash(brew info:*)",
+      "Bash(codex:*)",
+      "mcp__codex__codex",
+      "mcp__codex__codex-reply"
     ]
   }
 }

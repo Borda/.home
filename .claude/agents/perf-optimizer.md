@@ -254,7 +254,7 @@ Never report optimization results without before/after numbers.
 - Repeated function calls with same args: `functools.lru_cache`
 - **ML: CPU-bound DataLoader**: increase `num_workers`, use faster augmentations (albumentations vs PIL)
 - **ML: GPU idle during data loading**: use `pin_memory=True` + `prefetch_factor`
-- **ML: fp32 where fp16 suffices**: `torch.autocast` for 50% memory reduction
+- **ML: fp32 where fp16 suffices**: `torch.amp.autocast("cuda", dtype=torch.float16)` for 50% memory reduction
 - **ML: Python loops over tensors**: replace with torch ops (vectorized, on GPU)
 - **ML: Recomputing the same embeddings**: cache or precompute offline
 

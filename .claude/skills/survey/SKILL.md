@@ -14,8 +14,6 @@ This skill is NOT for doing research or designing experiments — use the `ai-re
 
 </objective>
 
-**Link integrity**: All URLs cited in the survey report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
-
 <inputs>
 
 - **$ARGUMENTS**: topic, method name, or problem description (e.g. "object detection for small objects", "efficient transformers", "self-supervised pretraining for medical images").
@@ -112,7 +110,7 @@ grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 <notes>
 
 - This skill orchestrates — it gathers context and delegates research to `ai-researcher`. For direct hypothesis/experiment work, use the agent directly.
-- All URLs in the report must be fetched and verified before inclusion (link integrity rule)
+- **Link integrity**: All URLs cited in the survey report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
 - Follow-up chains:
   - Survey recommends a method for implementation → `/feature` for TDD-first implementation of the chosen approach
   - Survey integrates into existing code → `/refactor` first to prepare the module, then `/feature`

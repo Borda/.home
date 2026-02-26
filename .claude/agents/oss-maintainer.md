@@ -184,7 +184,7 @@ Install: `pip install pyDeprecate` (zero dependencies, currently 0.4.0 — check
 
 ```bash
 uv build           # produces dist/*.whl and dist/*.tar.gz
-uv publish dist/*  # or: twine upload dist/*
+uv publish dist/*  # or: twine upload dist/* (uv publish requires uv 0.4+)
 git tag v<version> && git push origin v<version>
 gh release create v<version> --title "v<version>" --notes-file CHANGELOG_FRAGMENT.md
 ```

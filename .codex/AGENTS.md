@@ -162,6 +162,40 @@ ______________________________________________________________________
 - A PyPI release is being prepared (version bump, CHANGELOG, tag, publish)
 - Contributor onboarding or CONTRIBUTING.md needs attention
 
+______________________________________________________________________
+
+## Work Handover
+
+Use patch files in `.codex/handover/` to pass work between agents. Never use `git stash`, branches, or commits for mid-task handovers — patch files are named, parallel-safe, and fully reviewable.
+
+**Handing off:**
+
+```bash
+mkdir -p .codex/handover
+git diff > .codex/handover/<from>→<to>-$(date +%s).patch
+git restore .      # revert tracked changes
+git clean -fd      # remove any new untracked files
+```
+
+**Receiving:**
+
+```bash
+git apply .codex/handover/<patch-file>
+rm .codex/handover/<patch-file>    # remove after successful apply
+```
+
+**Final state — always leave in working tree.** When a task chain is fully complete, apply the final patch and leave changes unstaged. Never commit on behalf of the user. The human reviews `git diff` and decides when to commit.
+
+**When invoked via Claude Code `/codex` skill (MCP):** save the patch to `.codex/handover/` and restore the working tree. The parent Claude reviews and applies the patch — do not apply it yourself.
+
+**Naming convention:**
+
+```
+<from-role>→<to-role>-<unix-timestamp>.patch
+```
+
+Examples: `sw-engineer→qa-specialist-1735000000.patch` · `linting-expert→claude-1735000001.patch`
+
 ### Human-in-the-loop — always pause for approval before:
 
 - Architecture changes that affect public APIs

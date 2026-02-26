@@ -25,8 +25,8 @@ Prepare release communication based on what changed. The output format adapts to
 
 ## Mode Detection
 
-If `$ARGUMENTS` starts with `prep`, skip to **Mode: prep** below.
-Otherwise, run Steps 1–3 as normal.
+If `$ARGUMENTS` starts with `prep`, skip to **Mode: prep** (at the bottom of this workflow).
+Otherwise, run Steps 1–5 as normal.
 
 ## Step 1: Gather changes
 
@@ -128,7 +128,7 @@ Always include: any breaking change, any behavior change, any new API surface.
 
 See `oss-maintainer` agent for conda-forge feedstock updates and PyPI publish workflow.
 
-## Writing guidelines
+## Step 4: Writing guidelines
 
 Write for the reader, not the commit author.
 
@@ -142,7 +142,7 @@ For fixes, say what was broken, not just that it was fixed.
 
 For version bumping (`bump-my-version`, `commitizen`, manual tagging), see the `oss-maintainer` agent's release checklist.
 
-## PyPI + GitHub Release (after writing notes)
+## Step 5: PyPI + GitHub Release (after writing notes)
 
 See `oss-maintainer` agent for the full build → publish → verify checklist.
 Quick reference:

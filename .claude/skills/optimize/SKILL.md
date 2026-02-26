@@ -78,6 +78,37 @@ time python $ARGUMENTS
 - [next bottleneck to address]
 ```
 
+## Step 5: Delegate documentation follow-up (optional)
+
+After confirming improvements, inspect the applied changes (`git diff HEAD --stat`) and identify documentation tasks where Codex can add meaningful content.
+
+**Delegate to Codex when:**
+
+- Optimized code uses non-obvious techniques (pre-allocation, vectorized ops, batched I/O) that need inline explanation — read the code first, then describe the technique and why it is faster
+- A function signature changed due to optimization (e.g., added `batch_size` or `device` parameter) and the docstring no longer matches the actual contract
+
+**Do not delegate:**
+
+- Generic "add comments" requests — only delegate when you can describe the specific technique and its rationale
+- Any task where you cannot write a precise description without guessing
+
+For each task, read the optimized code, form an accurate brief, then spawn:
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
+Task: use the <agent> to <documentation task with accurate description of what the optimization does>.
+Target: <file>."
+)
+```
+
+Example prompt: `"use the doc-scribe to add an inline comment to the inner loop in src/batch_processor.py:87 explaining that the result tensor is pre-allocated before the loop to avoid repeated GPU memory allocation — the old version called torch.zeros() inside the loop"`
+
+The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully.
+
+Include a `### Codex Delegation` line in the Step 4 report only if this step ran.
+
 </workflow>
 
 <notes>
@@ -88,5 +119,6 @@ time python $ARGUMENTS
 - Follow-up chains:
   - Bottleneck is architectural (not just a hot loop) → `/refactor` for structural changes with test safety net
   - Optimization changes non-trivial code paths → `/review` for quality validation
+  - Optimized code needs documentation updates → Step 5 auto-delegates to Codex
 
 </notes>

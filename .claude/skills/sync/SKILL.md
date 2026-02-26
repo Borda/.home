@@ -178,13 +178,13 @@ Print a final outcome table:
 ```
 ## Sync Outcome — <date>
 
-| Step            | Result  |
-|-----------------|---------|
-| agents          | ✅ copied |
-| skills          | ✅ copied |
-| hooks           | ✅ copied |
-| settings.json   | ✅ merged |
-| JSON validity   | ✅ valid  |
+| Step            | Result   |
+|-----------------|----------|
+| agents          | copied   |
+| skills          | copied   |
+| hooks           | copied   |
+| settings.json   | merged   |
+| JSON validity   | valid    |
 
 Post-sync drift: 0 files differ
 ```

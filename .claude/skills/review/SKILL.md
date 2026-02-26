@@ -138,6 +138,38 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 3. [third]
 ```
 
+## Step 5: Delegate implementation follow-up (optional)
+
+After consolidating findings, identify tasks from the review that Codex can implement directly — not style violations (those are handled by pre-commit hooks), but work that requires writing meaningful code or documentation grounded in the actual implementation.
+
+**Delegate to Codex when you can write an accurate, specific brief:**
+
+- Public functions with no docstrings — read the implementation first, then describe what each one does so Codex can write a real 6-section docstring, not a placeholder
+- Missing test coverage for a concrete, well-defined behaviour — describe the exact scenario to test
+- A consistent rename identified across multiple files — name both the old and new symbol and why it was flagged
+
+**Do not delegate — these require human judgment:**
+
+- Architectural issues, logic errors, security vulnerabilities, or behavioural changes
+- Any task where you cannot write a precise description without guessing
+
+For each task, read the relevant code, form an accurate brief, then spawn:
+
+```
+Task(
+  subagent_type="general-purpose",
+  prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
+Task: use the <agent> to <specific task with accurate description of what the code does>.
+Target: <file>."
+)
+```
+
+Example prompt: `"use the qa-specialist to add a test for StreamReader.read_chunk() in tests/test_reader.py — the method should raise ValueError when called after close(), currently there is no test for this path"`
+
+The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
+
+Append a `### Codex Delegation` section to the review output summarizing what was auto-implemented.
+
 </workflow>
 
 <notes>
@@ -150,5 +182,6 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
   - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
   - Structural or quality issues → `/refactor` for test-first improvements
   - Security findings in auth/input/deps → `/security` for a dedicated deep audit
+  - Mechanical issues beyond what Step 5 auto-fixed → `/codex` to delegate additional tasks
 
 </notes>

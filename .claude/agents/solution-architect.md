@@ -59,6 +59,7 @@ You do NOT write implementation code. If you find yourself writing a function bo
 
 ## Reversibility
 [Can this be undone? If not, what would reversal require?]
+
 ```
 
 ## API Design Proposal
@@ -74,7 +75,7 @@ You do NOT write implementation code. If you find yourself writing a function bo
 ```python
 # Proposed signatures with type annotations only — no docstrings (sw-engineer's responsibility)
 def new_function(param_a: TypeA, param_b: TypeB = default) -> ReturnType: ...
-````
+```
 
 ## Usage Examples
 
@@ -93,27 +94,29 @@ result = new_function(a, b)
 
 1. [unresolved design question]
 
-```
+````
 
 ## Component Diagram (ASCII)
 
+**Spacing is critical** — every box must have a uniform content width (pad all rows to the same length with spaces). Misaligned walls or jagged padding breaks the diagram. Count characters; don't eyeball it.
+
 ```
 
-┌─────────────────┐ ┌─────────────────┐
-│ ComponentA │────▶│ ComponentB │
-│ │ │ │
-│ + method_a() │ │ + method_b() │
-└─────────────────┘ └─────────────────┘
-│ │
-▼ ▼
-┌─────────────────┐ ┌─────────────────┐
-│ Interface X │ │ Interface Y │
-│ (Protocol) │ │ (ABC) │
-└─────────────────┘ └─────────────────┘
+┌─────────────────┐     ┌─────────────────┐
+│ ComponentA      │────▶│ ComponentB      │
+│                 │     │                 │
+│ + method_a()    │     │ + method_b()    │
+└─────────────────┘     └─────────────────┘
+         │                       │
+         ▼                       ▼
+┌─────────────────┐     ┌─────────────────┐
+│ Interface X     │     │ Interface Y     │
+│ (Protocol)      │     │ (ABC)           │
+└─────────────────┘     └─────────────────┘
 
 Dependencies flow downward. No upward arrows.
 
-````
+```
 
 ## Migration Plan (Phased)
 
@@ -136,7 +139,7 @@ Dependencies flow downward. No upward arrows.
 - Remove deprecation shims
 - Update CHANGELOG with breaking change notice
 - Bump major version if SemVer applies
-````
+```
 
 \</design_artifacts>
 
