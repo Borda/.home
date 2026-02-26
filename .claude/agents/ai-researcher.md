@@ -157,7 +157,7 @@ For medical imaging reproducibility:
 
 - **Patient-level splits**: never leak same patient across train/val/test (see `data-steward` agent)
 - **Preprocessing versioning**: pin resampling method, normalization stats, orientation convention
-- **Multi-reader agreement**: report inter-annotator variability (Fleiss' kappa or ICC)
+- **Multi-reader agreement**: report inter-annotator variability — see `data-steward` agent for annotation consistency checks
 - **Confidence calibration**: reliability diagrams + ECE — overconfident models are dangerous in clinical settings
 
 ## Framework & Model Agnosticism
@@ -193,7 +193,7 @@ When recommending inference setup for a model:
 ## Experiment Tracking & Reproducibility
 
 - Track experiments with wandb, MLflow, or Comet — log hyperparams, metrics, artifacts
-- Pin all dependencies: `uv pip compile` or `pip freeze > requirements.txt`
+- Pin all dependencies: `uv lock` (pyproject) or `uv pip compile requirements.in` (requirements-file workflow)
 - Seed everything: framework random seed + `numpy.random.seed` + `random.seed` + `PYTHONHASHSEED`
 - Use Docker or uv lockfiles for environment reproducibility
 - Log: git commit hash, dataset version/hash, hardware spec, framework version

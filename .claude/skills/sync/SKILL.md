@@ -22,10 +22,10 @@ Compare the project-level `.claude/` (source of truth) against home `~/.claude/`
 
 <constants>
 
-- PROJECT: `/Users/jirka/Workspace/Borda.local/.claude`
-- HOME: `/Users/jirka/.claude`
+- PROJECT: `$(git rev-parse --show-toplevel)/.claude`
+- HOME_CLAUDE: `~/.claude`
 - NEVER sync: `settings.local.json`, `CLAUDE.md` (intentionally differ per level)
-- statusLine path transform: project uses relative `node .claude/hooks/statusline.js` → home needs absolute `node /Users/jirka/.claude/hooks/statusline.js`
+- statusLine path transform: project uses relative `node .claude/hooks/statusline.js` → home needs absolute `node $HOME/.claude/hooks/statusline.js` (expanded at apply time)
 
 </constants>
 
@@ -36,17 +36,15 @@ Compare the project-level `.claude/` (source of truth) against home `~/.claude/`
 Collect the set of syncable files from the project:
 
 ```bash
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
 # Agents
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/*.md
-
+ls "$PROJECT/agents/"*.md
 # Skills
-ls /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md
-
+ls "$PROJECT/skills/"*/SKILL.md
 # Hooks
-ls /Users/jirka/Workspace/Borda.local/.claude/hooks/
-
-# Settings (project settings.json only — never settings.local.json)
-ls /Users/jirka/Workspace/Borda.local/.claude/settings.json
+ls "$PROJECT/hooks/"
+# Settings
+ls "$PROJECT/settings.json"
 ```
 
 ## Step 2: Diff each category
@@ -54,10 +52,12 @@ ls /Users/jirka/Workspace/Borda.local/.claude/settings.json
 For each file, compare project vs home. Use `diff` to detect changes:
 
 ```bash
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+HOME_CLAUDE=~/.claude
 # Agents
-for f in /Users/jirka/Workspace/Borda.local/.claude/agents/*.md; do
+for f in "$PROJECT/agents/"*.md; do
   name=$(basename "$f")
-  target="/Users/jirka/.claude/agents/$name"
+  target="$HOME_CLAUDE/agents/$name"
   if [ ! -f "$target" ]; then
     echo "MISSING  agents/$name"
   elif diff -q "$f" "$target" > /dev/null 2>&1; then
@@ -69,9 +69,9 @@ for f in /Users/jirka/Workspace/Borda.local/.claude/agents/*.md; do
 done
 
 # Skills
-for f in /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md; do
+for f in "$PROJECT/skills/"*/SKILL.md; do
   skill=$(basename $(dirname "$f"))
-  target="/Users/jirka/.claude/skills/$skill/SKILL.md"
+  target="$HOME_CLAUDE/skills/$skill/SKILL.md"
   if [ ! -f "$target" ]; then
     echo "MISSING  skills/$skill/SKILL.md"
   elif diff -q "$f" "$target" > /dev/null 2>&1; then
@@ -83,9 +83,9 @@ for f in /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md; do
 done
 
 # Hooks
-for f in /Users/jirka/Workspace/Borda.local/.claude/hooks/*; do
+for f in "$PROJECT/hooks/"*; do
   name=$(basename "$f")
-  target="/Users/jirka/.claude/hooks/$name"
+  target="$HOME_CLAUDE/hooks/$name"
   if [ ! -f "$target" ]; then
     echo "MISSING  hooks/$name"
   elif diff -q "$f" "$target" > /dev/null 2>&1; then
@@ -97,8 +97,8 @@ done
 
 # Settings — compare ignoring the statusLine path difference
 diff \
-  <(cat /Users/jirka/Workspace/Borda.local/.claude/settings.json | sed 's|node .claude/hooks/statusline.js|node /Users/jirka/.claude/hooks/statusline.js|') \
-  /Users/jirka/.claude/settings.json
+  <(sed 's|node .claude/hooks/statusline.js|node '"$HOME"'/.claude/hooks/statusline.js|' "$PROJECT/settings.json") \
+  "$HOME_CLAUDE/settings.json"
 ```
 
 ## Step 3: Produce drift report
@@ -133,42 +133,44 @@ Apply changes in this order:
 **4a. Agents**
 
 ```bash
-cp /Users/jirka/Workspace/Borda.local/.claude/agents/*.md /Users/jirka/.claude/agents/
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+cp "$PROJECT/agents/"*.md ~/.claude/agents/
 ```
 
 **4b. Skills**
 
 ```bash
-for skill in /Users/jirka/Workspace/Borda.local/.claude/skills/*/; do
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+for skill in "$PROJECT/skills/"/*/; do
   name=$(basename "$skill")
-  mkdir -p "/Users/jirka/.claude/skills/$name"
-  cp "$skill/SKILL.md" "/Users/jirka/.claude/skills/$name/SKILL.md"
+  mkdir -p ~/.claude/skills/"$name"
+  cp "$skill/SKILL.md" ~/.claude/skills/"$name/SKILL.md"
 done
 ```
 
 **4c. Hooks**
 
 ```bash
-mkdir -p /Users/jirka/.claude/hooks
-cp /Users/jirka/Workspace/Borda.local/.claude/hooks/* /Users/jirka/.claude/hooks/
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+mkdir -p ~/.claude/hooks
+cp "$PROJECT/hooks/"* ~/.claude/hooks/
 ```
 
 **4d. Settings** — copy project settings.json but rewrite the statusLine path to absolute:
 
-Read `/Users/jirka/Workspace/Borda.local/.claude/settings.json`, replace `"node .claude/hooks/statusline.js"` with `"node /Users/jirka/.claude/hooks/statusline.js"`, write to `/Users/jirka/.claude/settings.json`.
+Read `.claude/settings.json`, replace `"node .claude/hooks/statusline.js"` with `"node $HOME/.claude/hooks/statusline.js"` (expand `$HOME` to the actual home directory path), write to `~/.claude/settings.json`.
 
 ## Step 5: Verify and report outcome
 
 ```bash
 # Counts
-echo "Agents:" && ls /Users/jirka/.claude/agents/*.md | wc -l
-echo "Skills:" && ls /Users/jirka/.claude/skills/*/SKILL.md | wc -l
+echo "Agents:" && ls ~/.claude/agents/*.md | wc -l
+echo "Skills:" && ls ~/.claude/skills/*/SKILL.md | wc -l
 
 # JSON validity
-python3 -c "import json; json.load(open('/Users/jirka/.claude/settings.json')); print('settings.json: valid')"
+python3 -c "import json; json.load(open('$HOME/.claude/settings.json')); print('settings.json: valid')"
 
-# Re-run diff to confirm all files now match
-# (same loop as Step 2 — should show all IDENTICAL)
+# Re-run diff to confirm all files now match (same loop as Step 2)
 ```
 
 Print a final outcome table:
@@ -192,7 +194,7 @@ Post-sync drift: 0 files differ
 <notes>
 
 - NEVER copy `settings.local.json` or `CLAUDE.md` — these intentionally differ per level
-- The statusLine path MUST be absolute in home settings (`/Users/jirka/.claude/hooks/statusline.js`) — relative paths only work from the project directory
+- The statusLine path MUST be absolute in home settings (`$HOME/.claude/hooks/statusline.js`) — relative paths only work from the project directory; expand `$HOME` when writing the JSON value
 - The project `.claude/` is always the source of truth; never sync home → project
 - Run `/sync` (dry-run) first to review changes before running `/sync apply`
 - After applying, the self-mentor agent can audit for any drift the skill missed

@@ -1,7 +1,7 @@
 ---
 name: release
 description: Prepare release communication from git history, PRs, or a diff. Adapts output to context — user-facing release notes, CHANGELOG entry, internal release summary, or migration guide. Groups changes by type, filters noise, writes in plain language for the audience.
-argument-hint: [tag, branch, or commit range — e.g. v1.2.0..v1.3.0]
+argument-hint: [range] [release-notes|changelog|summary|migration] | prep <version>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
@@ -23,6 +23,11 @@ Prepare release communication based on what changed. The output format adapts to
 
 <workflow>
 
+## Mode Detection
+
+If `$ARGUMENTS` starts with `prep`, skip to **Mode: prep** below.
+Otherwise, run Steps 1–3 as normal.
+
 ## Step 1: Gather changes
 
 ```bash
@@ -37,7 +42,7 @@ git log $RANGE --oneline --no-merges
 git log $RANGE --no-merges --format="--- %H%n%B"
 
 # File-level diff stat — confirms what areas actually changed
-git diff --stat $(echo $RANGE | tr '..' ' ' | awk '{print $1, $NF}')
+git diff --stat $(echo "$RANGE" | sed 's/\.\./\ /')
 
 # PR titles, bodies, and labels for merged PRs (richer context than commits)
 gh pr list --state merged --base main --limit 100 \
@@ -121,16 +126,7 @@ Always include: any breaking change, any behavior change, any new API surface.
 **Why**: [reason for the change]
 ```
 
-### Conda-forge Release (if applicable)
-
-```bash
-# Check if package is on conda-forge
-conda search -c conda-forge <package>
-
-# After PyPI release: conda-forge bot auto-creates a PR to update the feedstock
-# Monitor: https://github.com/conda-forge/<package>-feedstock/pulls
-# Manual: fork feedstock → update meta.yaml version + sha256 → PR
-```
+See `oss-maintainer` agent for conda-forge feedstock updates and PyPI publish workflow.
 
 ## Writing guidelines
 
@@ -144,20 +140,7 @@ For fixes, say what was broken, not just that it was fixed.
 - Bad: "Fix auth bug"
 - Good: "Fix: users with special characters in their email could not log in"
 
-## Version Bumping (before writing notes)
-
-```bash
-# Option A: bump-my-version (simple, config in pyproject.toml)
-bump-my-version bump patch   # or minor / major
-# Adds commit + tag automatically
-
-# Option B: commitizen (conventional commits → automatic changelog)
-cz bump     # reads commit history, bumps version, updates CHANGELOG
-cz changelog
-
-# Option C: manual
-# Edit pyproject.toml version + git tag vX.Y.Z
-```
+For version bumping (`bump-my-version`, `commitizen`, manual tagging), see the `oss-maintainer` agent's release checklist.
 
 ## PyPI + GitHub Release (after writing notes)
 
@@ -171,14 +154,57 @@ gh release create v<version> --title "v<version>" \
   --notes "$(cat CHANGELOG_FRAGMENT.md)" dist/*        # GitHub release
 ```
 
+## Mode: prep
+
+**Trigger**: `/release prep <version>` (e.g., `prep v1.3.0` or `prep 1.3.0`)
+
+**Purpose**: Write release artifacts to disk, ready for the manual bump → commit → push → PR workflow.
+
+```bash
+VERSION=$(echo "$ARGUMENTS" | awk '{print $2}')
+[[ "$VERSION" != v* ]] && VERSION="v$VERSION"
+DATE=$(date +%Y-%m-%d)
+LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
+RANGE="$LAST_TAG..HEAD"
+```
+
+Run **Steps 1–2** to gather and classify all changes in `$RANGE`. Then write two artifacts:
+
+### 1. Prepend to `CHANGELOG.md`
+
+Generate the entry in Keep a Changelog format, omitting empty sections. Then:
+
+- If `CHANGELOG.md` exists: insert the new entry after the first `# Changelog` heading line
+- If it does not exist: create it with a `# Changelog` header followed by the new entry
+
+### 2. Write `RELEASE_NOTES.md`
+
+Write the user-facing release notes (Step 3 "Release Notes" format) to `RELEASE_NOTES.md` at the repo root. Ready to paste directly into the GitHub release body.
+
+### Output
+
+```
+## Release prep: $VERSION
+
+### Written
+- `CHANGELOG.md` — $VERSION entry prepended (N changes across M categories)
+- `RELEASE_NOTES.md` — user-facing notes ready to paste into GitHub release
+
+### Next steps
+1. Review both files
+2. Bump version in `pyproject.toml` → `version = "$VERSION"`
+3. git add CHANGELOG.md RELEASE_NOTES.md pyproject.toml
+4. git commit -m "chore: release $VERSION"
+5. git push && gh pr create --title "Release $VERSION" --body "$(cat RELEASE_NOTES.md)"
+```
+
 </workflow>
 
 <notes>
 
-- Always cross-reference commit bodies with PR descriptions — PRs are the canonical source of *why*
-- `BREAKING CHANGE:` in a commit footer is a breaking change regardless of PR labels
 - Filter noise (CI config, dep bumps, typos) unless they are user-impacting
 - Follow-up chains:
+  - Notes look good → `/release prep <version>` to write artifacts to disk
   - Release includes breaking changes → `/analyse` for downstream ecosystem impact assessment
   - Pre-release audit → `/security` for dependency vulnerability scan before publishing
 

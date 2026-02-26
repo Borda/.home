@@ -57,8 +57,10 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 | **survey**   | `/survey [topic]`      | SOTA literature survey with implementation plan                                                |
 | **analyse**  | `/analyse [#\|health]` | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
 | **observe**  | `/observe`             | Meta-skill: analyze work patterns and suggest new agents or skills                             |
+| **audit**    | `/audit [fix]`         | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues     |
 | **sync**     | `/sync [apply]`        | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
 | **manage**   | `/manage <op> <type>`  | Create, update, or delete agents/skills with cross-ref propagation                             |
+| **feature**  | `/feature <desc>`      | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle     |
 | **refactor** | `/refactor <target>`   | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
 | **fix**      | `/fix <bug>`           | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
 
@@ -70,10 +72,8 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Profile a specific Python module
   /optimize src/mypackage/dataloader.py
-
   # Profile a whole package entry point
   /optimize src/mypackage/train.py
-
   # Target a slow test suite
   /optimize tests/test_heavy_integration.py
   ```
@@ -83,10 +83,8 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Review a PR by number
   /review 42
-
   # Review specific files
   /review src/mypackage/transforms.py
-
   # Review latest commit (no argument)
   /review
   ```
@@ -96,7 +94,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Audit a specific module
   /security src/mypackage/api/auth.py
-
   # Audit an entire directory
   /security src/mypackage/
   ```
@@ -106,10 +103,8 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Analyze an issue or PR by number
   /analyse 123
-
   # Repo health overview
   /analyse health
-
   # Find duplicate issues
   /analyse dupes memory leak
   ```
@@ -119,7 +114,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Survey a topic
   /survey efficient transformers for long sequences
-
   # Survey a specific method
   /survey knowledge distillation for object detection
   ```
@@ -129,7 +123,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Notes since last tag
   /release
-
   # Notes for a specific range
   /release v1.2.0..HEAD
   ```
@@ -139,7 +132,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Dry-run: show what differs between project and home .claude/
   /sync
-
   # Apply: copy differing files to ~/.claude/
   /sync apply
   ```
@@ -149,12 +141,23 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Create a new agent
   /manage create agent security-auditor "Security specialist for vulnerability scanning"
-
   # Rename a skill (updates all cross-references)
   /manage update skill optimize perf-audit
-
   # Delete an agent (cleans broken refs)
   /manage delete agent web-explorer
+  ```
+
+- **`/audit` — Config health sweep**
+
+  ```bash
+  # Full sweep — report only, no changes made (default)
+  /audit
+  # Full sweep + auto-fix critical and high findings
+  /audit fix
+  # Agents only, report only
+  /audit agents
+  # Skills only, with auto-fix
+  /audit skills fix
   ```
 
 - **`/refactor` — Test-first refactoring**
@@ -162,7 +165,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Refactor a module with a specific goal
   /refactor src/mypackage/transforms.py "replace manual loops with vectorized ops"
-
   # General quality pass on a directory
   /refactor src/mypackage/utils/
   ```
@@ -172,12 +174,21 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   ```bash
   # Fix a bug described in a GitHub issue
   /fix 42
-
   # Fix a specific error
   /fix "TypeError when passing None to transform()"
-
   # Fix a failing test
   /fix tests/test_transforms.py::test_none_input
+  ```
+
+- **`/feature` — TDD-first feature development**
+
+  ```bash
+  # Implement a feature from a GitHub issue
+  /feature 87
+  # Implement a feature described in plain text
+  /feature "add batched predict() method to Classifier"
+  # Scope analysis to a specific module
+  /feature "add batched predict() method to Classifier" "src/classifier"
   ```
 
 </details>
@@ -231,23 +242,46 @@ Skills chain naturally — the output of one becomes the input for the next.
 </details>
 
 <details>
+<summary><strong>New feature → implement → release</strong></summary>
+
+```
+/analyse 87            # understand the issue, clarify acceptance criteria
+/feature 87            # codebase analysis, demo test, TDD, docs, review
+/release               # generate CHANGELOG entry and release notes
+```
+
+</details>
+
+<details>
 <summary><strong>New capability → survey → implement</strong></summary>
 
 ```
 /survey "efficient attention for long sequences"  # find SOTA methods
-# implement recommended method using sw-engineer agent
+/feature "implement FlashAttention in encoder"    # TDD-first implementation
 /review                                           # validate implementation
 ```
 
 </details>
 
 <details>
-<summary><strong>Observe → create → sync</strong></summary>
+<summary><strong>Observe → create → audit → sync</strong></summary>
 
 ```
 /observe               # analyze work patterns, suggest new agents/skills
 /manage create agent security-auditor "..."  # scaffold suggested agent
-/sync apply            # propagate to ~/.claude/
+/audit                 # verify config integrity — catch broken refs, dead loops
+/sync apply            # propagate clean config to ~/.claude/
+```
+
+</details>
+
+<details>
+<summary><strong>Config maintenance — periodic health check</strong></summary>
+
+```
+/audit                 # inspect findings — report only, no changes made
+/audit fix             # full sweep + auto-fix critical and high findings
+/sync apply            # propagate verified config to ~/.claude/
 ```
 
 </details>

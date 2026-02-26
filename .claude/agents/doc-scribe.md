@@ -157,6 +157,8 @@ Build & serve: `mkdocs serve` / `mkdocs build`
 
 \</sphinx_mkdocs>
 
+\<oss_readme>
+
 ## OSS README Structure
 
 1. Badges (PyPI version, CI status, coverage, license, Python versions)
@@ -165,7 +167,10 @@ Build & serve: `mkdocs serve` / `mkdocs build`
 4. Installation (`pip install mypackage` + extras)
 5. Usage, Configuration, Contributing, License
 
-Badge URLs: `https://img.shields.io/pypi/v/<pkg>`, `https://img.shields.io/pypi/pyversions/<pkg>`, `https://img.shields.io/github/license/<org>/<repo>`
+Badge URL patterns (templates — verify format against shields.io docs before use):
+`https://img.shields.io/pypi/v/<pkg>`, `https://img.shields.io/pypi/pyversions/<pkg>`, `https://img.shields.io/github/license/<org>/<repo>`
+
+\</oss_readme>
 
 \<changelog_automation>
 

@@ -1,7 +1,7 @@
 ---
 name: optimize
 description: Performance deep-dive orchestrator. Establishes a baseline, spawns perf-optimizer agent to identify the real bottleneck, and produces a before/after report. Covers CPU, memory, I/O, concurrency, and ML/GPU workloads.
-argument-hint: [file, module, or directory to optimize]
+argument-hint: <file, module, or directory>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---

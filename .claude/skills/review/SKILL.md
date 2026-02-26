@@ -69,7 +69,7 @@ While agents from Step 2 are completing, run these two independent checks simult
 CHANGED_EXPORTS=$(git diff HEAD~1 HEAD -- "src/**/__init__.py" | grep "^[-+]" | grep -v "^[-+][-+]" | grep -oP '\w+' | sort -u)
 for export in $CHANGED_EXPORTS; do
   echo "=== $export ==="
-  gh api "search/code?q=$export+in:file+language:python" --jq '.items[:5] | .[].repository.full_name' 2>/dev/null
+  gh api "search/code" --field "q=$export language:python" --jq '.items[:5] | .[].repository.full_name' 2>/dev/null
 done
 
 # Check if deprecated APIs have migration guides

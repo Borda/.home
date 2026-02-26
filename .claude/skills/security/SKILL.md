@@ -1,7 +1,7 @@
 ---
 name: security
 description: Security audit of code or a feature. Checks OWASP Top 10, Python-specific vulnerabilities, ML security concerns, authentication/authorization, secrets handling, and dependency vulnerabilities. Flags issues by severity with specific remediation steps.
-argument-hint: [file, endpoint, or directory to audit]
+argument-hint: <file, endpoint, or directory>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
@@ -60,19 +60,19 @@ Launch three independent subagents simultaneously using the Task tool. Each agen
 ### Dependency Scan
 Run: pip-audit && safety check
 Results: [paste output or "clean"]
+```
 
 ### Supply Chain Security
-```
 
-\[ \] Dependencies pinned with hashes (uv pip compile --generate-hashes)
-\[ \] GitHub Actions pinned to SHA (not just @v4 tag — tags can be moved)
-\[ \] SLSA provenance: consider sigstore for signing release artifacts
-\[ \] No install-time code execution (setup.py → pyproject.toml migration)
-\[ \] Lockfile committed and CI uses --frozen / --locked
-
-```
+- [ ] Dependencies pinned with hashes (uv pip compile --generate-hashes)
+- [ ] GitHub Actions pinned to SHA (not just @v4 tag — tags can be moved)
+- [ ] SLSA provenance: consider sigstore for signing release artifacts
+- [ ] No install-time code execution (setup.py → pyproject.toml migration)
+- [ ] Lockfile committed and CI uses --frozen / --locked
 
 ### ML Security
+
+```
 - Model sources: [trusted/untrusted]
 - Pickle usage: [none/flagged locations]
 - Input validation: [present/missing]

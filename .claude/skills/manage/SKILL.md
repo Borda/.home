@@ -34,15 +34,15 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 
 - `/manage create skill benchmark "Benchmark orchestrator for measuring and comparing performance across commits"`
 - `/manage update skill optimize perf-audit`
-- `/manage delete skill observe`
+- `/manage delete skill old-skill`
 
 </inputs>
 
 <constants>
 
-- AGENTS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/agents`
-- SKILLS_DIR: `/Users/jirka/Workspace/Borda.local/.claude/skills`
-- MEMORY_FILE: `/Users/jirka/.claude/projects/-Users-jirka-Workspace-Borda-local/memory/MEMORY.md`
+- AGENTS_DIR: `.claude/agents`
+- SKILLS_DIR: `.claude/skills`
+- MEMORY_FILE: `~/.claude/projects/*/memory/MEMORY.md`
 - USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta, pink
 - AVAILABLE_COLORS: coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
 
@@ -64,8 +64,8 @@ Extract operation, type, name, and optional arguments from `$ARGUMENTS`.
 
 ```bash
 # Check existence
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/<name>.md 2>/dev/null
-ls /Users/jirka/Workspace/Borda.local/.claude/skills/<name>/SKILL.md 2>/dev/null
+ls .claude/agents/<name>.md 2>/dev/null
+ls .claude/skills/<name>/SKILL.md 2>/dev/null
 ```
 
 If validation fails, report the error and stop.
@@ -89,13 +89,13 @@ Snapshot the current roster for later comparison:
 
 ```bash
 # Current agents
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | sort
+ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | sort
 
 # Current skills
-ls -d /Users/jirka/Workspace/Borda.local/.claude/skills/*/ | xargs -n1 basename | sort
+ls -d .claude/skills/*/ | xargs -n1 basename | sort
 
 # Colors in use
-grep '^color:' /Users/jirka/Workspace/Borda.local/.claude/agents/*.md
+grep '^color:' .claude/agents/*.md
 ```
 
 ## Step 4: Execute operation
@@ -105,7 +105,10 @@ Branch into one of six modes:
 ### Mode: Create Agent
 
 1. Pick the first unused color from the AVAILABLE_COLORS pool (compare against colors found in Step 3)
-2. Choose model: `opus` (or `opusplan` for plan-gated roles like architect, maintainer, reviewer) for complex reasoning roles; `sonnet` for focused execution roles (linting, testing, data, CI)
+2. Choose model based on role complexity:
+   - `opusplan` — plan-gated roles (solution-architect, oss-maintainer, self-mentor): long-horizon reasoning + plan mode
+   - `opus` — complex implementation roles (sw-engineer, qa-specialist, ai-researcher, perf-optimizer): deep reasoning without plan mode
+   - `sonnet` — focused execution roles (linting-expert, data-steward, ci-guardian, web-explorer, doc-scribe): pattern-matching, structured output
 3. Write the agent file with real domain content derived from the description:
 
 **Agent template** — write to `AGENTS_DIR/<name>.md`:
@@ -137,7 +140,7 @@ name / description / tools / model / color (frontmatter)
 2. Write the skill file with workflow scaffold:
 
 ```bash
-mkdir -p /Users/jirka/Workspace/Borda.local/.claude/skills/<name>
+mkdir -p .claude/skills/<name>
 ```
 
 **Skill template** — write to `SKILLS_DIR/<name>/SKILL.md`:
@@ -160,16 +163,16 @@ Atomic update — write new file before deleting old:
 
 ```bash
 # 1. Read the old file
-cat /Users/jirka/Workspace/Borda.local/.claude/agents/<old-name>.md
+cat .claude/agents/<old-name>.md
 
 # 2. Write new file with updated name in frontmatter
 # (Edit the `name:` line in frontmatter to use new-name)
 
 # 3. Verify new file exists and is valid
-head -5 /Users/jirka/Workspace/Borda.local/.claude/agents/<new-name>.md
+head -5 .claude/agents/<new-name>.md
 
 # 4. Delete old file only after new file is confirmed
-rm /Users/jirka/Workspace/Borda.local/.claude/agents/<old-name>.md
+rm .claude/agents/<old-name>.md
 ```
 
 ### Mode: Update Skill
@@ -178,32 +181,32 @@ Atomic update — create new directory before removing old:
 
 ```bash
 # 1. Create new directory
-mkdir -p /Users/jirka/Workspace/Borda.local/.claude/skills/<new-name>
+mkdir -p .claude/skills/<new-name>
 
 # 2. Copy SKILL.md with updated name in frontmatter
 # (Read old, edit name: line, write to new location)
 
 # 3. Verify new file exists
-head -5 /Users/jirka/Workspace/Borda.local/.claude/skills/<new-name>/SKILL.md
+head -5 .claude/skills/<new-name>/SKILL.md
 
 # 4. Remove old directory only after new is confirmed
-rm -r /Users/jirka/Workspace/Borda.local/.claude/skills/<old-name>
+rm -r .claude/skills/<old-name>
 ```
 
 ### Mode: Delete Agent
 
 ```bash
 # Confirm existence before deleting
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/<name>.md
-rm /Users/jirka/Workspace/Borda.local/.claude/agents/<name>.md
+ls .claude/agents/<name>.md
+rm .claude/agents/<name>.md
 ```
 
 ### Mode: Delete Skill
 
 ```bash
 # Confirm existence before deleting
-ls /Users/jirka/Workspace/Borda.local/.claude/skills/<name>/SKILL.md
-rm -r /Users/jirka/Workspace/Borda.local/.claude/skills/<name>
+ls .claude/skills/<name>/SKILL.md
+rm -r .claude/skills/<name>
 ```
 
 ## Step 5: Propagate cross-references
@@ -212,8 +215,8 @@ Search all `.claude/` markdown files for the changed name and update references:
 
 ```bash
 # Find all references to the name across agents and skills
-grep -rn "<name>" /Users/jirka/Workspace/Borda.local/.claude/agents/*.md
-grep -rn "<name>" /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md
+grep -rn "<name>" .claude/agents/*.md
+grep -rn "<name>" .claude/skills/*/SKILL.md
 ```
 
 **For update:** Use the Edit tool to replace every occurrence of `<old-name>` with `<new-name>` in each file that references it.
@@ -232,10 +235,10 @@ Regenerate the inventory lines from what actually exists on disk:
 
 ```bash
 # Get current agent list
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | paste -sd', ' -
+ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | paste -sd', ' -
 
 # Get current skill list
-ls -d /Users/jirka/Workspace/Borda.local/.claude/skills/*/ | xargs -n1 basename | paste -sd', ' -
+ls -d .claude/skills/*/ | xargs -n1 basename | paste -sd', ' -
 ```
 
 Use the Edit tool to update these two lines in MEMORY.md:
@@ -245,7 +248,7 @@ Use the Edit tool to update these two lines in MEMORY.md:
 
 ## Step 7: Update README.md
 
-Update the agent or skill table in `/Users/jirka/Workspace/Borda.local/README.md`:
+Update the agent or skill table in `README.md`:
 
 - **create agent**: add a new row to the `### Agents` table — columns: `| **name** | Short tagline | Key capabilities |`
 - **create skill**: add a new row to the `### Skills` table — columns: `| **name** | \`/name\` | Description |\`
@@ -260,12 +263,12 @@ Confirm no broken references remain:
 
 ```bash
 # Extract all agent/skill names referenced in .claude/ files
-grep -rohE '[a-z]+-[a-z]+(-[a-z]+)*' /Users/jirka/Workspace/Borda.local/.claude/agents/*.md \
-  /Users/jirka/Workspace/Borda.local/.claude/skills/*/SKILL.md | sort -u
+grep -rohE '[a-z]+-[a-z]+(-[a-z]+)*' .claude/agents/*.md \
+  .claude/skills/*/SKILL.md | sort -u
 
 # Compare against actual files on disk
-ls /Users/jirka/Workspace/Borda.local/.claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//'
-ls -d /Users/jirka/Workspace/Borda.local/.claude/skills/*/ | xargs -n1 basename
+ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//'
+ls -d .claude/skills/*/ | xargs -n1 basename
 ```
 
 Use Grep to search for the specific changed name and confirm:
@@ -276,13 +279,19 @@ Use Grep to search for the specific changed name and confirm:
 
 ## Step 9: Audit
 
-Spawn the `self-mentor` agent to audit the created/modified file(s):
+Run `/audit` to validate the created/modified file(s) and catch any issues introduced by this operation:
+
+```
+/audit
+```
+
+For a targeted check of only the affected file, spawn **self-mentor** directly:
 
 - For `create`: audit the new file for structural completeness, cross-ref validity, and content quality
 - For `update`: audit the renamed file and verify no stale references remain
 - For `delete`: audit remaining files for broken references to the deleted name
 
-Include the audit findings in the final report.
+Include the audit findings in the final report. Do not proceed to sync if any `critical` findings remain.
 
 ## Step 10: Summary report
 
@@ -292,7 +301,7 @@ Output a structured report containing:
 - **Files Changed**: table of file paths and actions (created/renamed/deleted/cross-ref updated)
 - **Cross-References**: count of files updated, broken refs cleaned
 - **Current Roster**: agents (N) and skills (N) with comma-separated names
-- **Audit Result**: self-mentor findings (pass / issues found)
+- **Audit Result**: audit findings (pass / issues found)
 - **Follow-up**: run `/sync` to propagate to `~/.claude/`; for `create` review generated content; note if `settings.json` permissions might be needed
 
 </workflow>
@@ -306,7 +315,8 @@ Output a structured report containing:
 - **Cross-ref grep is broad**: searches bare kebab-case names across all markdown files — catches backtick references, prose mentions, spawn directives, and inventory lists
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
 - Follow-up chains:
-  - After any create/update/delete → `/sync` to propagate changes to `~/.claude/`
+  - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
   - After creating a new agent/skill → `/review` to validate generated content quality
+  - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`
 
 </notes>

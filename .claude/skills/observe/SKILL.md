@@ -24,8 +24,8 @@ Analyze how Claude Code is being used in this project and suggest new agents or 
 ## Step 1: Inventory existing agents and skills
 
 ```bash
-ls .claude/agents/*.md 2>/dev/null || ls ~/.claude/agents/*.md 2>/dev/null
-ls .claude/skills/*/SKILL.md 2>/dev/null || ls ~/.claude/skills/*/SKILL.md 2>/dev/null
+ls .claude/agents/*.md
+ls .claude/skills/*/SKILL.md
 ```
 
 For each agent/skill found, extract: name, description, tools, purpose.
@@ -50,8 +50,9 @@ git log --oneline -100 | awk '{print $2}' | sort | uniq -c | sort -rn | head -15
 ```bash
 # Then read task history and conversation hints
 cat tasks/todo.md tasks/lessons.md 2>/dev/null
-echo "$ARGUMENTS"
 ```
+
+If `$ARGUMENTS` was provided, use it as additional context for the pattern analysis.
 
 ### Frequency Heuristics
 

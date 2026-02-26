@@ -187,7 +187,7 @@ Description of return value.
 When checking if a dependency has a new release:
 ```bash
 # Check latest version on PyPI
-pip index versions <package> 2>/dev/null || pip install <package>== 2>&1 | grep -oP '\d+\.\d+\.\d+'
+pip install <package>== 2>&1 | grep -oP '\d+\.\d+\.\d+' | head -5
 
 # Compare with project's pinned version
 grep '<package>' pyproject.toml requirements*.txt uv.lock 2>/dev/null

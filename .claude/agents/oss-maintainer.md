@@ -234,7 +234,7 @@ Before merging a breaking change in your library:
 
 ```bash
 # Check which downstream projects import the changed API
-gh api search/code?q="from+mypackage+import+changed_function" --paginate | jq '.items[].repository.full_name' | sort -u
+gh api "search/code" --field "q=from mypackage import changed_function" --paginate | jq '.items[].repository.full_name' | sort -u
 ```
 
 Notify top downstream consumers before releasing breaking changes.

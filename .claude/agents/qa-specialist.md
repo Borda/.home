@@ -145,7 +145,7 @@ def test_raises_on_invalid_input():
 
 # Testing deprecation warnings (with pyDeprecate or warnings.warn)
 def test_deprecated_function_warns():
-    with pytest.warns(DeprecationWarning, match="deprecated since 1.0"):
+    with pytest.warns(DeprecationWarning, match=r"deprecated in"):
         result = old_function(x=1)
     assert result == new_function(x=1)
 ```
@@ -212,9 +212,12 @@ Note: The global `reset_random_seeds` fixture in `conftest.py` (above) handles s
 ```python
 @pytest.mark.gpu
 def test_cuda_inference():
-    pytest.importorskip("torch")
+    torch = pytest.importorskip("torch")
     if not torch.cuda.is_available():
         pytest.skip("CUDA not available")
+    model = torch.nn.Linear(5, 10).cuda()
+    x = torch.randn(2, 5).cuda()
+    output = model(x)
     assert output.shape == (2, 10)
 ```
 

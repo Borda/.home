@@ -149,6 +149,7 @@ Output a structured report:
 - After refactoring: run `self-mentor` to audit any `.claude/` files if they were part of the target
 - Follow-up chains:
   - Refactored code needs quality validation → `/review` for full multi-agent code review
+  - Cleaned-up module is ready to extend → `/feature` to add new capability on the improved foundation
   - Refactoring touched `.claude/` config files → `/sync` to propagate changes to home directory
 
 </notes>

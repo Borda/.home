@@ -1,7 +1,7 @@
 ---
 name: survey
 description: Survey SOTA literature for an AI/ML topic, method, or architecture. Finds relevant papers, builds a comparison table, and recommends the best implementation strategy for the current codebase. Delegates deep analysis to the ai-researcher agent.
-argument-hint: [topic, method, or problem to survey]
+argument-hint: <topic, method, or problem>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task, WebSearch, WebFetch
 ---
@@ -14,17 +14,7 @@ This skill is NOT for doing research or designing experiments — use the `ai-re
 
 </objective>
 
-\<link_integrity>
-
-**Never include a URL in output without fetching it first.**
-
-- Fetch every paper link, repo URL, and benchmark page before citing it
-
-- Do not hallucinate arXiv IDs, GitHub repo paths, or Papers With Code links — verify them
-
-- If a URL returns 404 or is inaccessible, say so and omit rather than guessing
-
-  \</link_integrity>
+**Link integrity**: All URLs cited in the survey report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
 
 <inputs>
 
@@ -124,7 +114,8 @@ grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 - This skill orchestrates — it gathers context and delegates research to `ai-researcher`. For direct hypothesis/experiment work, use the agent directly.
 - All URLs in the report must be fetched and verified before inclusion (link integrity rule)
 - Follow-up chains:
-  - Survey recommends a method for implementation → hand off to `sw-engineer` agent or `/refactor` if integrating into existing code
+  - Survey recommends a method for implementation → `/feature` for TDD-first implementation of the chosen approach
+  - Survey integrates into existing code → `/refactor` first to prepare the module, then `/feature`
   - Survey reveals security concerns with a dependency → `/security` for deep audit
 
 </notes>

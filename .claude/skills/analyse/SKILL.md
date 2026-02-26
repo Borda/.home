@@ -1,7 +1,7 @@
 ---
 name: analyse
 description: Analyze GitHub issues, PRs, and repo health for an OSS project. Summarizes long threads, assesses PR readiness, detects duplicates, extracts reproduction steps, and generates repo health stats. Uses gh CLI for GitHub API access. Complements oss-maintainer agent.
-argument-hint: [number, health, or 'dupes keyword']
+argument-hint: <number|health|dupes [keyword]|contributors|ecosystem>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
@@ -18,6 +18,8 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
   - Number (e.g. `42`) — auto-detects issue vs PR
   - `health` — generate repo issue/PR health overview
   - `dupes [keyword]` — find potential duplicate issues
+  - `contributors` — top contributor activity and release cadence
+  - `ecosystem` — downstream consumer impact analysis for library maintainers
 
 </inputs>
 
@@ -251,15 +253,15 @@ When assessing the impact of a change on downstream users:
 
 ```bash
 # Find downstream dependents on GitHub
-gh api "search/code?q=\"from+mypackage+import\"+in:file+language:python&per_page=20" \
+gh api "search/code" --field "q=from mypackage import language:python" \
   --jq '[.items[].repository.full_name] | unique | .[]'
 
 # Check PyPI reverse dependencies (who depends on us?)
-# pip install johnnydep
-# johnnydep mypackage --fields=name --reverse
+# Requires johnnydep: pip install johnnydep (not installed by default — skip if unavailable)
+# johnnydep mypackage --fields=name --reverse 2>/dev/null || echo "johnnydep not available — skipping PyPI reverse deps"
 
 # Check conda-forge feedstock dependents
-gh api "search/code?q=\"mypackage\"+in:file+repo:conda-forge/*-feedstock+filename:meta.yaml" \
+gh api "search/code" --field "q=mypackage repo:conda-forge/*-feedstock filename:meta.yaml" \
   --jq '[.items[].repository.full_name] | .[]'
 ```
 
@@ -289,6 +291,7 @@ Produce:
 - Don't post responses without explicit user instruction — only draft them
 - Follow-up chains:
   - Issue with confirmed bug → `/fix` to diagnose, reproduce with test, and apply targeted fix
+  - Issue is a feature request → `/feature` for TDD-first implementation
   - Issue with code smell or structural problem → `/refactor` for test-first improvements
   - PR with quality concerns → `/review` for comprehensive multi-agent code review
 
