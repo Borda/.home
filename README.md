@@ -12,6 +12,10 @@ borda.local/
 │   ├── agents/             # specialist agents
 │   ├── skills/             # workflow skills (slash commands)
 │   └── hooks/              # UI extensions
+├── .codex/                 # OpenAI Codex CLI
+│   ├── AGENTS.md           # global instructions and subagent spawn rules
+│   ├── config.toml         # multi-agent config (gpt-5.3-codex baseline)
+│   └── agents/             # per-agent model and instruction overrides
 ├── .pre-commit-config.yaml
 ├── .gitignore
 └── README.md
@@ -36,7 +40,7 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 | **perf-optimizer**     | Performance engineering          | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision      |
 | **ci-guardian**        | CI/CD reliability                | GitHub Actions, reusable workflows, trusted publishing, flaky test detection    |
 | **data-steward**       | ML data pipeline integrity       | Split validation, leakage detection, data contracts, class imbalance            |
-| **doc-scribe**         | Documentation                    | NumPy/Google docstrings, Sphinx/mkdocs, changelog automation                    |
+| **doc-scribe**         | Documentation                    | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, changelog      |
 | **web-explorer**       | Web and docs research            | API version comparison, migration guides, PyPI tracking, ecosystem compat       |
 | **self-mentor**        | Config quality reviewer (Opus)   | Agent/skill auditing, duplication detection, cross-ref validation, line budgets |
 
@@ -304,6 +308,66 @@ Two files are intentionally **not synced**: `CLAUDE.md` (project-specific rules)
 ```
 
 Run `/sync` after editing any agent, skill, hook, or `settings.json` in this repo to propagate the change to the home config.
+
+## 🤖 Codex CLI
+
+Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex) (Rust implementation, v0.105+). Where Claude Code excels at long-horizon planning and research, Codex CLI is optimized for focused, in-repo agentic coding — running shell commands, editing files, and spawning parallel sub-agents directly in your terminal.
+
+### Agents
+
+Nine specialist roles wired into the multi-agent system. Codex can spawn them autonomously based on task type (see `AGENTS.md` for the full spawn-rule matrix) or you can address them by name in your prompt.
+
+| Agent                | Model         | Effort | Purpose                                                                 |
+| -------------------- | ------------- | ------ | ----------------------------------------------------------------------- |
+| **sw-engineer**      | gpt-5.3-codex | high   | SOLID implementation, doctest-driven dev, ML pipeline architecture      |
+| **qa-specialist**    | gpt-5.3-codex | xhigh  | Edge-case matrix, The Borda Standard, adversarial test review           |
+| **squeezer**         | gpt-5.3-codex | high   | Profile-first optimization, GPU throughput, memory efficiency           |
+| **doc-scribe**       | gpt-5.3-codex | medium | 6-point Google/Napoleon docstrings, README stewardship, CHANGELOG       |
+| **security-auditor** | gpt-5.3-codex | xhigh  | OWASP Python, ML supply chain, secrets, CI/CD hygiene *(read-only)*     |
+| **data-steward**     | gpt-5.3-codex | high   | Split leakage, DataLoader reproducibility, augmentation correctness     |
+| **ci-guardian**      | gpt-5.3-codex | medium | GitHub Actions, trusted PyPI publishing, pre-commit, flaky tests        |
+| **linting-expert**   | gpt-5.3-codex | medium | ruff, mypy, pre-commit config, rule progression, suppression discipline |
+| **oss-maintainer**   | gpt-5.3-codex | high   | Issue triage, PR review, SemVer, pyDeprecate, release checklist         |
+
+### Model Strategy
+
+All agents use `gpt-5.3-codex` — the current Codex CLI default and the upgrade target for every prior model in the catalog. Differentiation is via reasoning effort:
+
+- **xhigh** — adversarial roles (qa-specialist, security-auditor): exhaustive search for what could go wrong
+- **high** — analytical roles (sw-engineer, squeezer, data-steward, oss-maintainer): depth without unbounded budget
+- **medium** — writing/config roles (doc-scribe, ci-guardian, linting-expert): quality over deductive intensity
+
+### Usage
+
+```bash
+# Interactive session — Codex selects agents automatically
+codex
+
+# Address a specific agent by name in your prompt
+codex "use the security-auditor to review src/api/auth.py"
+codex "spawn data-steward to validate the train/val split in data/splits/"
+
+# Parallel fan-out (Codex orchestrates automatically per AGENTS.md rules)
+# e.g. after sw-engineer finishes → qa-specialist + doc-scribe run concurrently
+```
+
+### Install / Port to Home
+
+This repo is the authoring location. To activate globally, copy the entire `.codex/` directory to `~/.codex/`:
+
+```bash
+cp -r .codex/ ~/.codex/
+```
+
+Paths in `config.toml` are **relative** — no substitution needed. The `AGENTS.md` at `~/.codex/AGENTS.md` is read by Codex for every project; a project-local `AGENTS.md` at the repo root extends it.
+
+### Files
+
+| File            | Purpose                                                                   |
+| --------------- | ------------------------------------------------------------------------- |
+| `config.toml`   | Global model, sandbox, features flags, and `[agents]` registry            |
+| `AGENTS.md`     | Borda Standard, 6-point docstring structure, spawn rules for all 9 agents |
+| `agents/*.toml` | Per-agent `model`, `model_reasoning_effort`, and `developer_instructions` |
 
 ## 💡 Design Principles
 

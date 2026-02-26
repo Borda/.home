@@ -63,7 +63,7 @@
       "WebFetch(domain:pre-commit.ci)",
       "WebFetch(domain:claude.ai)",
       "WebFetch(domain:claude.com)",
-      "WebFetch(domain:*.anthropic.com)",
+      "WebFetch(domain:anthropic.com)",
       "WebFetch(domain:arxiv.org)"
     ]
   }

@@ -1,0 +1,58 @@
+# .codex/config.toml
+# OpenAI Codex CLI — Borda project config (Rust CLI v0.105+, TOML only)
+# config_file paths are relative to this file — copy the whole .codex/ dir to ~/
+
+model                              = "gpt-5.3-codex"
+model_reasoning_effort             = "medium"
+model_reasoning_summary            = "auto"
+approval_policy                    = "untrusted"
+sandbox_mode                       = "workspace-write"
+personality                        = "pragmatic"
+web_search                         = "cached"
+suppress_unstable_features_warning = true
+
+[features]
+multi_agent     = true
+child_agents_md = true  # propagate AGENTS.md scope to sub-agents
+personality     = true
+
+[agents]
+max_threads             = 4
+max_depth               = 2
+job_max_runtime_seconds = 3600
+
+[agents.sw-engineer]
+description = "Core ML/backend implementation: SOLID, type-safety, doctest-driven, reproducible ML configs. Python 3.10+."
+config_file = "agents/sw-engineer.toml"
+
+[agents.qa-specialist]
+description = "Testing and reliability: edge-case matrix, The Borda Standard enforcement, suspicious verification mindset."
+config_file = "agents/qa-specialist.toml"
+
+[agents.squeezer]
+description = "Performance profiling and memory optimization: profile-first, benchmark before changing, ML throughput specialist."
+config_file = "agents/squeezer.toml"
+
+[agents.doc-scribe]
+description = "Documentation: 6-point NumPy docstring structure, README stewardship, CHANGELOG management."
+config_file = "agents/doc-scribe.toml"
+
+[agents.security-auditor]
+description = "Security audit: OWASP Python, ML supply chain (pickle, model weights), secrets, CI/CD hygiene. Read-only."
+config_file = "agents/security-auditor.toml"
+
+[agents.data-steward]
+description = "ML data pipeline integrity: split leakage, DataLoader reproducibility, augmentation correctness, class imbalance."
+config_file = "agents/data-steward.toml"
+
+[agents.ci-guardian]
+description = "CI/CD reliability: GitHub Actions, trusted PyPI publishing, pre-commit hooks, flaky test detection."
+config_file = "agents/ci-guardian.toml"
+
+[agents.linting-expert]
+description = "Code quality and static analysis: ruff, mypy, pre-commit config, rule selection progression, suppression discipline."
+config_file = "agents/linting-expert.toml"
+
+[agents.oss-maintainer]
+description = "OSS lifecycle: issue triage, PR review, SemVer decisions, pyDeprecate, release checklist, trusted publishing."
+config_file = "agents/oss-maintainer.toml"
