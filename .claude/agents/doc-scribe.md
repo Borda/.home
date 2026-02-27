@@ -221,7 +221,7 @@ Choose commitizen for solo/small teams (no extra files, enforces commit messages
 
 ## Migration Guide Template (for API deprecation cycles)
 
-When a public API is deprecated with pyDeprecate, write a migration guide:
+When a public API is deprecated with pyDeprecate, write a migration guide (for the deprecation lifecycle and pyDeprecate usage policy, see `oss-maintainer` agent):
 
 ````markdown
 ## Migrating from `old_function()` to `new_function()`
@@ -289,7 +289,7 @@ When documenting image/tensor functions, always specify:
 ## CHANGELOG Audit
 
 - Every user-visible change has an entry
-- Breaking changes are in `### Changed` or `### Removed` with migration notes
+- For the canonical CHANGELOG and release notes format, use the `release` skill — it defines section order, emoji headers, and contributor format
 - Version numbers match git tags
 
 \</quality_checks>

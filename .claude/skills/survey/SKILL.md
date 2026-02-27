@@ -36,30 +36,7 @@ Launch both tasks simultaneously — they are independent.
 
 ### 2a: Spawn ai-researcher agent (background subagent)
 
-Task the ai-researcher with:
-
-1. **Literature search**: Find the 5 most relevant papers for `$ARGUMENTS`. Prioritize:
-
-   - Papers with code (paperswithcode.com)
-   - Published in the last 2 years unless foundational
-   - Papers that match the codebase's constraints (latency / memory / data size)
-
-2. **SOTA comparison**: For each approach found, produce a comparison table:
-
-   - Method name and paper
-   - Key idea (one sentence)
-   - Benchmark results on standard datasets
-   - Compute requirements
-   - Official or high-quality implementation available?
-
-3. **Implementation recommendation**: Given the codebase constraints, recommend the single best method and explain why.
-
-4. **Implementation plan**: For the recommended method, outline:
-
-   - What components need to be added or changed
-   - Key hyperparameters and their typical values
-   - Training recipe (if applicable)
-   - Common failure modes and how to avoid them
+Task the ai-researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
 
 ### 2b: Check for existing implementations (main context)
 

@@ -75,10 +75,12 @@ Select the Codex agent based on task type. The "internal chain" column shows whi
 | Implementation, refactoring, renaming, type annotations | `sw-engineer`    | `sw-engineer` → `qa-specialist` + `doc-scribe` |
 | Lint / type-check fixes                                 | `linting-expert` | single agent                                   |
 | Test writing or improvements                            | `qa-specialist`  | single agent                                   |
-| Performance, profiling                                  | `squeezer`       | single agent                                   |
+| Performance, profiling                                  | `squeezer` ¹     | single agent                                   |
 | CI config, GitHub Actions                               | `ci-guardian`    | single agent                                   |
 | Data pipeline changes                                   | `data-steward`   | single agent                                   |
 | Release prep, deprecation notices                       | `oss-maintainer` | single agent                                   |
+
+¹ `squeezer` is a Codex-only agent (no `.claude/` peer) — for deep performance analysis use the `perf-optimizer` agent directly instead.
 
 For chained tasks (e.g. `sw-engineer`), Codex may take longer and touch more files — factor this into the complexity assessment above.
 

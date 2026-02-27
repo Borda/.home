@@ -1,3 +1,6 @@
+# Claude working scratchpad (plans, lessons, ephemeral artefacts)
+tasks/
+
 # Agent handover artifacts (ephemeral patch files)
 .codex/handover/
 

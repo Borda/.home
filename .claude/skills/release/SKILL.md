@@ -17,7 +17,7 @@ Prepare release communication based on what changed. The output format adapts to
 - **$ARGUMENTS**: git tag, branch, or commit range (e.g. `v1.2.0..HEAD`, `main..release/1.3`).
   If omitted, uses the range from the last tag to HEAD.
 - Optionally append the desired format: `release-notes`, `changelog`, `summary`, or `migration`.
-  If not specified, infer from context (public library → release notes, internal tool → summary).
+  If not specified, infer from context (public repo → release notes, internal tool → summary).
 
 </inputs>
 
@@ -55,15 +55,16 @@ it is a breaking change regardless of how it was labelled in the PR.
 
 ## Step 2: Classify each change
 
-| Category             | What goes here                                       |
-| -------------------- | ---------------------------------------------------- |
-| **Breaking Changes** | Requires callers to change code, config, or behavior |
-| **New Features**     | User-visible additions                               |
-| **Improvements**     | Enhancements to existing behavior                    |
-| **Bug Fixes**        | Correctness fixes                                    |
-| **Performance**      | Speed or memory improvements                         |
-| **Deprecations**     | Still works, scheduled for removal                   |
-| **Internal**         | Refactors, CI, deps — omit unless user-impacting     |
+| Category             | Output section         | What goes here                                       |
+| -------------------- | ---------------------- | ---------------------------------------------------- |
+| **Breaking Changes** | ⚠️ Breaking Changes    | Requires callers to change code, config, or behavior |
+| **New Features**     | 🚀 Added               | User-visible additions                               |
+| **Improvements**     | 🚀 Added or 🌱 Changed | Enhancements to existing behavior                    |
+| **Bug Fixes**        | 🔧 Fixed               | Correctness fixes                                    |
+| **Performance**      | 🚀 Added or 🔧 Fixed   | Speed or memory improvements                         |
+| **Deprecations**     | 🗑️ Deprecated          | Still works, scheduled for removal                   |
+| **Removals**         | ❌ Removed             | Previously deprecated API now gone                   |
+| **Internal**         | *(omit)*               | Refactors, CI, deps — omit unless user-impacting     |
 
 Filter out: merge commits, minor dep bumps, CI config, comment typos.
 Always include: any breaking change, any behavior change, any new API surface.
@@ -72,27 +73,58 @@ Always include: any breaking change, any behavior change, any new API surface.
 
 ### Release Notes (user-facing, public)
 
-```markdown
-## [version] — [date]
+Omit any section that has no content.
 
-### ⚠️ Breaking Changes
-- **[Area]**: [what changed and what users need to do]
+````markdown
+## 🚀 Added
 
-### ✨ New Features
-- [Feature]: [what it does and why it matters]
+- **Feature Name.** One-sentence description of what it does and why it matters. (#PR)
 
-### 🔧 Improvements
-- [brief description]
+# Minimal real-usage example showing the new surface
 
-### 🐛 Bug Fixes
-- [what was broken → what is fixed]
-
-### ⚡ Performance
-- [improvement, before/after if known]
-
-### 🗑️ Deprecations
-- `[thing]` is deprecated. Use `[replacement]`. Removed in [version].
+```python
+# example usage here
 ```
+
+| Option | Best for |
+| ------ | -------- |
+| `NAME` | ...      |
+
+- `new_param` added to `SomeConfig`, allowing X. (#PR)
+
+## 🌱 Changed
+
+- [Behaviour change]: old behaviour → new behaviour. (#PR)
+
+## 🗑️ Deprecated
+
+- `OLD_NAME` deprecated in favour of `NEW_NAME`. (#PR)
+
+## ❌ Removed
+
+- `OLD_API` removed (deprecated since vX.Y). Migrate to `NEW_API`. (#PR)
+
+## 🔧 Fixed
+
+- Fixed [what was broken] when [condition]. (#PR)
+
+## ⚠️ Breaking Changes
+
+- **[Area]**: [what changed and what callers must do to migrate]. (#PR)
+
+---
+
+## 🏆 Contributors
+
+A special welcome to our new contributors and a big thank you to everyone who helped with this release:
+
+* **Full Name** (@handle) ([LinkedIn](url)) – *What they built or fixed*
+* **Full Name** (@handle) – *What they built or fixed*
+
+---
+
+**Full changelog**: https://github.com/[org]/[repo]/compare/vPREV...vNEXT
+````
 
 ### CHANGELOG Entry (Keep a Changelog format)
 
@@ -106,7 +138,7 @@ Always include: any breaking change, any behavior change, any new API surface.
 ### Security
 ```
 
-### Internal Release Summary (team / stakeholders)
+### Internal Release Summary
 
 ```markdown
 ## Release [version]
@@ -121,37 +153,47 @@ Always include: any breaking change, any behavior change, any new API surface.
 ```markdown
 ## Migrating from [old] to [new]
 ### [Breaking change name]
-**Before**: [code or config snippet]
-**After**: [code or config snippet]
-**Why**: [reason for the change]
+**Before**: [snippet]
+**After**: [snippet]
+**Why**: [reason]
 ```
-
-See `oss-maintainer` agent for conda-forge feedstock updates and PyPI publish workflow.
 
 ## Step 4: Writing guidelines
 
 Write for the reader, not the commit author.
 
-- Bad: "refactor: extract UserService from monolith"
-- Good: "User management is now ~40% faster"
+| Element          | Rule                                                              |
+| ---------------- | ----------------------------------------------------------------- |
+| Feature heading  | Bold title, period, then plain-English description — no jargon    |
+| PR numbers       | Always at line end: `(#N)` or `(#N, #M)` — never omit             |
+| Code examples    | Real usage showing the new surface; not pseudocode                |
+| Tables           | Use for option/preset comparisons; skip for single-item features  |
+| Breaking changes | State exactly what breaks and the migration path                  |
+| Fix items        | Say what was broken and under what condition — not just "fixed X" |
+| Changed items    | Behaviour changes only — old behaviour → new behaviour            |
+| Deprecated items | Name old API and its replacement; omit removal version if unknown |
+| Removed items    | State deprecated-since version and migration target               |
 
-For fixes, say what was broken, not just that it was fixed.
+Bad/good examples:
 
-- Bad: "Fix auth bug"
-- Good: "Fix: users with special characters in their email could not log in"
+- Bad: `"refactor: extract UserService from monolith"` → Good: `"User management is now ~40% faster"`
+- Bad: `"Fix auth bug"` → Good: `"Fixed login failure for email addresses containing special characters"`
 
-For version bumping (`bump-my-version`, `commitizen`, manual tagging), see the `oss-maintainer` agent's release checklist.
+**Contributors rules:**
 
-## Step 5: PyPI + GitHub Release (after writing notes)
+- List every external contributor, even for a one-liner fix
+- Format: `* **Full Name** (@handle) ([LinkedIn](url)) – *noun phrase of what they built/fixed*`
+- LinkedIn is optional — include only if known; never guess
+- New contributors get a welcome sentence above the list
+- Maintainer always listed last with infra / CI / docs scope
 
-See `oss-maintainer` agent for the full build → publish → verify checklist.
-Quick reference:
+## Step 5: Publish (after writing notes)
+
+Use project-level tooling to build, publish, and create the GitHub release. Refer to the project's CLAUDE.md or `oss-maintainer` agent for the specific commands.
 
 ```bash
-uv build && twine check dist/*                        # build + verify
-uv publish dist/*                                      # publish (needs UV_PUBLISH_TOKEN)
 gh release create v<version> --title "v<version>" \
-  --notes "$(cat CHANGELOG_FRAGMENT.md)" dist/*        # GitHub release
+  --notes "$(cat RELEASE_NOTES.md)"
 ```
 
 ## Mode: prep
@@ -192,10 +234,9 @@ Write the user-facing release notes (Step 3 "Release Notes" format) to `RELEASE_
 
 ### Next steps
 1. Review both files
-2. Bump version in `pyproject.toml` → `version = "$VERSION"`
-3. git add CHANGELOG.md RELEASE_NOTES.md pyproject.toml
-4. git commit -m "chore: release $VERSION"
-5. git push && gh pr create --title "Release $VERSION" --body "$(cat RELEASE_NOTES.md)"
+2. Bump version in the project manifest
+3. Commit, push, open PR
+4. On merge: create GitHub release from RELEASE_NOTES.md
 ```
 
 </workflow>

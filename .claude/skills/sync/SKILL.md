@@ -24,7 +24,7 @@ Compare the project-level `.claude/` (source of truth) against home `~/.claude/`
 
 - PROJECT: `$(git rev-parse --show-toplevel)/.claude`
 - HOME_CLAUDE: `~/.claude`
-- NEVER sync: `settings.local.json`, `CLAUDE.md` (intentionally differ per level)
+- NEVER sync: `settings.local.json`
 - statusLine path transform: project uses relative `node .claude/hooks/statusline.js` → home needs absolute `node $HOME/.claude/hooks/statusline.js` (expanded at apply time)
 
 </constants>
@@ -45,6 +45,8 @@ ls "$PROJECT/skills/"*/SKILL.md
 ls "$PROJECT/hooks/"
 # Settings
 ls "$PROJECT/settings.json"
+# CLAUDE.md
+ls "$PROJECT/CLAUDE.md"
 ```
 
 ## Step 2: Diff each category
@@ -99,6 +101,16 @@ done
 diff \
   <(sed 's|node .claude/hooks/statusline.js|node '"$HOME"'/.claude/hooks/statusline.js|' "$PROJECT/settings.json") \
   "$HOME_CLAUDE/settings.json"
+
+# CLAUDE.md
+if [ ! -f "$HOME_CLAUDE/CLAUDE.md" ]; then
+  echo "MISSING  CLAUDE.md"
+elif diff -q "$PROJECT/CLAUDE.md" "$HOME_CLAUDE/CLAUDE.md" > /dev/null 2>&1; then
+  echo "IDENTICAL CLAUDE.md"
+else
+  echo "DIFFERS  CLAUDE.md"
+  diff "$PROJECT/CLAUDE.md" "$HOME_CLAUDE/CLAUDE.md" | head -20
+fi
 ```
 
 ## Step 3: Produce drift report
@@ -156,9 +168,23 @@ mkdir -p ~/.claude/hooks
 cp "$PROJECT/hooks/"* ~/.claude/hooks/
 ```
 
-**4d. Settings** — copy project settings.json but rewrite the statusLine path to absolute:
+**4d. CLAUDE.md**
 
-Read `.claude/settings.json`, replace `"node .claude/hooks/statusline.js"` with `"node $HOME/.claude/hooks/statusline.js"` (expand `$HOME` to the actual home directory path), write to `~/.claude/settings.json`.
+```bash
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+cp "$PROJECT/CLAUDE.md" ~/.claude/CLAUDE.md
+```
+
+**4e. Settings** — copy project settings.json but rewrite the statusLine path to absolute:
+
+```bash
+PROJECT="$(git rev-parse --show-toplevel)/.claude"
+HOME_EXPANDED="$(eval echo ~)"
+sed "s|node .claude/hooks/statusline.js|node $HOME_EXPANDED/.claude/hooks/statusline.js|" \
+  "$PROJECT/settings.json" > ~/.claude/settings.json
+```
+
+Important: expand `$HOME` to the actual absolute path (not the literal string `$HOME`) so the JSON value is a fully resolved path like `/home/<user>/.claude/hooks/statusline.js`.
 
 ## Step 5: Verify and report outcome
 
@@ -193,7 +219,7 @@ Post-sync drift: 0 files differ
 
 <notes>
 
-- NEVER copy `settings.local.json` or `CLAUDE.md` — these intentionally differ per level
+- NEVER copy `settings.local.json`
 - The statusLine path MUST be absolute in home settings (`$HOME/.claude/hooks/statusline.js`) — relative paths only work from the project directory; expand `$HOME` when writing the JSON value
 - The project `.claude/` is always the source of truth; never sync home → project
 - Run `/sync` (dry-run) first to review changes before running `/sync apply`

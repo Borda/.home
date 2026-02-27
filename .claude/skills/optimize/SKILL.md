@@ -31,7 +31,7 @@ python -m cProfile -s cumtime $ARGUMENTS 2>&1 | head -30
 # Quick wall-clock timing
 time python $ARGUMENTS
 
-# Memory snapshot
+# Memory snapshot (for standalone scripts only — breaks on relative imports; use memray for libraries)
 python -c "import tracemalloc; tracemalloc.start(); exec(open('$ARGUMENTS').read()); print(tracemalloc.get_traced_memory())"
 ```
 
@@ -107,7 +107,7 @@ Example prompt: `"use the doc-scribe to add an inline comment to the inner loop 
 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully.
 
-Include a `### Codex Delegation` line in the Step 4 report only if this step ran.
+Append a `### Codex Delegation` section after the Step 4 report output only if this step ran.
 
 </workflow>
 

@@ -83,7 +83,7 @@ For the top hypothesis, trace through relevant code:
 ```[language]
 # [file:line] — [what this code does and why it relates to the hypothesis]
 [relevant code snippet]
-````
+```
 
 ### Suggested Labels
 
@@ -92,6 +92,8 @@ For the top hypothesis, trace through relevant code:
 ### Suggested Response
 
 [draft reply — or "close as duplicate of #X"]
+
+\[Use Markdown formatting: wrap function/class/method names in backticks (`func_name`), wrap code samples in fenced blocks with language tag (`py ... `)\]
 
 ### Priority
 
@@ -114,7 +116,7 @@ gh pr checks $ARGUMENTS
 
 # Files changed
 gh pr diff $ARGUMENTS --name-only
-````
+```
 
 Produce:
 
@@ -285,6 +287,7 @@ Produce:
 
 <notes>
 
+- This skill uses mode dispatch (`## Mode: X` sections) rather than sequential numbered steps — each mode is self-contained
 - Always use `gh` CLI — never hardcode repo URLs
 - Run `gh auth status` first if commands fail; user may need to authenticate
 - For closed issues/PRs, note the resolution so history is useful

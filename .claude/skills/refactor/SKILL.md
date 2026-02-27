@@ -130,7 +130,7 @@ Example prompt: `"use the doc-scribe to rewrite the docstring for DataPipeline.t
 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
 
-Include a `### Codex Delegation` line in the Step 6 report only if this step ran.
+Include a `### Codex Delegation` section in the Step 6 report only if this step ran.
 
 ## Step 6: Verify and report
 
@@ -181,11 +181,10 @@ Output a structured report:
 - One change at a time: each edit should be independently verifiable by the test suite
 - If the refactoring goal conflicts with existing tests, that's a signal to discuss with the user — don't silently change test expectations
 - Related agents: `sw-engineer` (code analysis), `qa-specialist` (test generation), `linting-expert` (post-refactor cleanup)
-- After refactoring: run `self-mentor` to audit any `.claude/` files if they were part of the target
 - Follow-up chains:
   - Refactored code needs quality validation → `/review` for full multi-agent code review
   - Cleaned-up module is ready to extend → `/feature` to add new capability on the improved foundation
-  - Refactoring touched `.claude/` config files → `/sync` to propagate changes to home directory
+  - Refactoring touched `.claude/` config files → run `self-mentor` on changed files, then `/sync` to propagate
   - Mechanical cleanup needed beyond what Step 5 handled → `/codex` to delegate additional tasks
 
 </notes>

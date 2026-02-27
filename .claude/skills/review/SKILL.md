@@ -54,7 +54,7 @@ Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional)
 
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
-**Subagent 6 — `/security` skill (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — invoke the `/security` skill (via a Task subagent running that skill prompt) to run a Python-specific vulnerability scan and OWASP checks. Skip if the PR is purely internal refactoring.
+**Agent 6 — `/security` skill (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — invoke the `/security` skill (via a Task subagent running that skill prompt) to run a Python-specific vulnerability scan and OWASP checks. Skip if the PR is purely internal refactoring.
 
 **Agent 7 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
@@ -70,6 +70,7 @@ CHANGED_EXPORTS=$(git diff HEAD~1 HEAD -- "src/**/__init__.py" | grep "^[-+]" | 
 for export in $CHANGED_EXPORTS; do
   echo "=== $export ==="
   gh api "search/code" --field "q=$export language:python" --jq '.items[:5] | .[].repository.full_name' 2>/dev/null
+  # Note: GitHub code search API is rate-limited (~30 req/min); empty results may indicate rate limiting, not absence of usage
 done
 
 # Check if deprecated APIs have migration guides

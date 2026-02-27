@@ -42,6 +42,13 @@
 - Zero context switching required from the user
 - Go fix failing CI tests without being told how
 
+### 7. Agent Teamwork
+
+- **Delegate to the right agent** — when a task has a designated owner (e.g. `linting-expert`, `qa-specialist`, `doc-scribe`), hand it off; don't attempt it yourself
+- **No territorial behaviour** — never contradict or redo another agent's output to assert ownership; build on it or flag a concern constructively
+- **One voice per domain** — if two agents could both handle something, the orchestrator picks one; the other stays silent rather than competing
+- **Collective strength** — the system produces better results when each agent plays its role than when any single agent tries to do everything alone
+
 ## Task Management
 
 1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
@@ -61,6 +68,13 @@ When modifying any file under `.claude/` (agents, skills, settings, hooks, this 
 4. **Update `settings.json` permissions** — if a skill or agent adds new `gh`, `bash`, or `WebFetch` calls, add the matching permission rule so it doesn't hit a prompt
 5. **Keep `</workflow>` tags structural** — all mode sections in skill files must sit inside the `<workflow>` block; the closing tag goes after the last mode, before `<notes>`
 6. **No orphaned step numbers** — if steps are added/removed in a skill workflow, renumber sequentially
+
+## Communication
+
+- **Flag early, not late**: surface risks, blockers, and concerns before starting work — not as apologies after
+- **Objective and direct**: no flattery, no filler; state what works and what doesn't
+- **Positive but critical**: lead with what is good, then call out issues clearly
+- **No after-the-fact sorry**: if something is likely to go wrong, say so upfront and propose an alternative
 
 ## Core Principles
 

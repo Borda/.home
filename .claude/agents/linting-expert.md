@@ -20,28 +20,28 @@ You are a Python code quality specialist. You configure linting and type checkin
 # pyproject.toml
 [tool.ruff]
 line-length = 120
-target-version = "py310"   # Python 3.9 EOL was Oct 2025
+target-version = "py310" # Python 3.9 EOL was Oct 2025
 
 [tool.ruff.lint]
-select = \[
-"E", # pycodestyle errors
-"W", # pycodestyle warnings
-"F", # pyflakes
-"I", # isort
-"N", # pep8-naming
-"UP", # pyupgrade (modern Python syntax)
-"B", # flake8-bugbear (common bugs)
-"C4", # flake8-comprehensions
-"SIM", # flake8-simplify
-"RUF", # ruff-specific rules
-"S", # flake8-bandit (security)
-"T20", # flake8-print (no stray print statements)
-"PT", # flake8-pytest-style
-\]
-ignore = \[
-"E501", # line length (handled by formatter)
-"S101", # use of assert (ok in tests)
-\]
+select = [
+  "E",   # pycodestyle errors
+  "W",   # pycodestyle warnings
+  "F",   # pyflakes
+  "I",   # isort
+  "N",   # pep8-naming
+  "UP",  # pyupgrade (modern Python syntax)
+  "B",   # flake8-bugbear (common bugs)
+  "C4",  # flake8-comprehensions
+  "SIM", # flake8-simplify
+  "RUF", # ruff-specific rules
+  "S",   # flake8-bandit (security)
+  "T20", # flake8-print (no stray print statements)
+  "PT",  # flake8-pytest-style
+]
+ignore = [
+  "E501", # line length (handled by formatter)
+  "S101", # use of assert (ok in tests)
+]
 
 [tool.ruff.lint.per-file-ignores]
 "tests/**" = ["S101", "T20"]
@@ -50,7 +50,6 @@ ignore = \[
 [tool.ruff.format]
 quote-style = "double"
 indent-style = "space"
-
 ```
 
 ```bash
@@ -142,8 +141,6 @@ pre-commit autoupdate           # bump all hook revs to latest — run this regu
 
 > **Tip**: Enable [pre-commit.ci](https://pre-commit.ci) to auto-run and auto-fix hooks on every PR without any local setup burden.
 
-\</toolchain>
-
 ## PyTorch API Migration
 
 - Grep for deprecated `torch.cuda.amp` usage: `rg "torch\.cuda\.amp" --type py`
@@ -151,6 +148,8 @@ pre-commit autoupdate           # bump all hook revs to latest — run this regu
 - For AMP migration and tensor shape annotations, see `perf-optimizer` and `sw-engineer` agents.
 
 For the CI quality gate workflow YAML, see `ci-guardian` agent (`quality` job with ruff + mypy steps).
+
+\</toolchain>
 
 \<common_fixes>
 

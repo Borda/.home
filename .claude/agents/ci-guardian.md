@@ -73,6 +73,7 @@ jobs:
       - run: uv run ruff check .
       - run: uv run ruff format --check .
       - run: uv run mypy src/
+      # For ruff/mypy config and rule selection, see linting-expert agent
 
   test:
     runs-on: ubuntu-latest
@@ -274,28 +275,7 @@ Callers use `uses: ./.github/workflows/reusable-test.yml` with `python-version` 
 
 ## Trusted Publishing to PyPI
 
-```yaml
-# .github/workflows/release.yml
-on:
-  release:
-    types: [published]
-
-permissions:
-  id-token: write   # OIDC token for trusted publishing
-
-jobs:
-  publish:
-    runs-on: ubuntu-latest
-    environment: release
-    steps:
-      - uses: actions/checkout@v4
-      - uses: astral-sh/setup-uv@v5
-      - run: uv build
-      - uses: pypa/gh-action-pypi-publish@release/v1
-        # No token needed — uses OIDC trusted publisher
-```
-
-Setup: PyPI → Project → Publishing → Add GitHub Actions publisher. No long-lived API tokens to manage.
+Use `pypa/gh-action-pypi-publish@release/v1` with `id-token: write` permission and `environment: release`. No `TWINE_PASSWORD` or `UV_PUBLISH_TOKEN` needed — OIDC handles it. See `oss-maintainer` agent for setup steps and the pre/post-release checklist.
 
 \</reusable_workflows>
 

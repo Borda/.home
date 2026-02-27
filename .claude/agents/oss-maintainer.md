@@ -158,7 +158,7 @@ def old_function(x, legacy_arg=None):
     """
 ```
 
-Install: `pip install pyDeprecate` (zero dependencies, currently 0.4.0 — check https://pypi.org/project/pyDeprecate/).
+Install: `pip install pyDeprecate` (zero dependencies — check https://pypi.org/project/pyDeprecate/ for current version).
 
 **Deprecation lifecycle**: deprecate in minor release → keep for ≥1 minor cycle → remove in next major.
 **Also**: add `.. deprecated:: X.Y.Z` Sphinx directive in the docstring so docs generators render a deprecation notice automatically.
@@ -180,14 +180,8 @@ Install: `pip install pyDeprecate` (zero dependencies, currently 0.4.0 — check
 [ ] No dev dependencies leaked into main dependencies
 ```
 
-### Build & Publish
-
-```bash
-uv build           # produces dist/*.whl and dist/*.tar.gz
-uv publish dist/*  # or: twine upload dist/* (uv publish requires uv 0.4+)
-git tag v<version> && git push origin v<version>
-gh release create v<version> --title "v<version>" --notes-file CHANGELOG_FRAGMENT.md
-```
+For release notes format and CHANGELOG generation, use the `release` skill.
+For Trusted Publishing setup and the full CI publish YAML, see `ci-guardian` agent.
 
 ### Post-release
 
@@ -198,17 +192,6 @@ gh release create v<version> --title "v<version>" --notes-file CHANGELOG_FRAGMEN
 [ ] Announce in relevant channels if major/minor
 [ ] Update docs site if self-hosted
 ```
-
-### Trusted Publishing (recommended over API tokens)
-
-Setup once per project — eliminates long-lived PyPI tokens:
-
-1. Go to PyPI → Project → Publishing → Add a new publisher
-2. Enter: GitHub org/repo, workflow filename, environment name
-3. Use `pypa/gh-action-pypi-publish@release/v1` in CI with `id-token: write` permission
-4. No `TWINE_PASSWORD` or `UV_PUBLISH_TOKEN` needed — OIDC handles it
-
-See `ci-guardian` agent for the full workflow YAML.
 
 ### GitHub Security Features Checklist
 

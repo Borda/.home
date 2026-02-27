@@ -42,7 +42,7 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 
 - AGENTS_DIR: `.claude/agents`
 - SKILLS_DIR: `.claude/skills`
-- MEMORY_FILE: `~/.claude/projects/*/memory/MEMORY.md`
+- MEMORY_GLOB: `~/.claude/projects/*/memory/MEMORY.md` (glob — target the specific project MEMORY.md, not all matches)
 - USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta, pink
 - AVAILABLE_COLORS: coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
 
@@ -279,7 +279,7 @@ Use Grep to search for the specific changed name and confirm:
 
 ## Step 9: Audit
 
-Run `/audit` to validate the created/modified file(s) and catch any issues introduced by this operation:
+Run `/audit` to validate the created/modified file(s) and catch any issues introduced by this operation. **Skip this step if the current `manage` operation is itself being executed as part of an `audit fix` run** — the outer audit will cover it.
 
 ```
 /audit

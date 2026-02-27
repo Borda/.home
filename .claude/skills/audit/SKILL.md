@@ -25,7 +25,20 @@ Run a full-sweep quality audit of the `.claude/` configuration: every agent file
 
 <workflow>
 
-## Step 1: Collect all config files
+## Step 1: Run pre-commit (if configured)
+
+```bash
+# Check whether pre-commit is installed and a config exists
+if command -v pre-commit &>/dev/null && [ -f .pre-commit-config.yaml ]; then
+  pre-commit run --all-files
+fi
+```
+
+Any files auto-corrected by pre-commit hooks (formatters, linters, whitespace fixers) are now clean before the structural audit begins. Note which files were modified — include them in the audit scope even if they were not originally targeted.
+
+If pre-commit is not configured, skip this step silently.
+
+## Step 2: Collect all config files
 
 Enumerate everything in scope:
 
@@ -41,9 +54,9 @@ ls .claude/settings.json
 ls .claude/hooks/
 ```
 
-Record the full file list — this becomes the audit scope for Steps 2–4.
+Record the full file list — this becomes the audit scope for Steps 3–4.
 
-## Step 2: Per-file audit via self-mentor
+## Step 3: Per-file audit via self-mentor
 
 Spawn one **self-mentor** agent per file (or batch into groups of 4–5 for efficiency). Each invocation should ask self-mentor to check:
 
@@ -57,7 +70,7 @@ Spawn one **self-mentor** agent per file (or batch into groups of 4–5 for effi
 
 Collect all findings from each self-mentor response into a structured list keyed by file path.
 
-## Step 3: System-wide checks
+## Step 4: System-wide checks
 
 Beyond per-file analysis, run cross-file checks that self-mentor cannot do alone:
 
@@ -88,24 +101,39 @@ grep -rn '/Users/\|/home/' .claude/agents/*.md .claude/skills/*/SKILL.md 2>/dev/
 
 Flag any drift between MEMORY.md, README.md, settings.json, and actual disk state. Flag any hardcoded `/Users/` or `/home/` paths — these should be `.claude/`, `~/`, or `$(git rev-parse --show-toplevel)/` style.
 
-**6. Purpose overlap review** — read all agent/skill descriptions together and flag pairs where:
+### Purpose overlap review
+
+Read all agent/skill descriptions together and flag pairs where:
 
 - Two agents have substantially overlapping domains (risk: users don't know which to pick)
 - A skill's workflow duplicates logic already owned by an agent it could simply spawn
 - An agent has grown so broad its scope is unclear (candidate for splitting)
 
-## Step 4: Aggregate and classify findings
+### CLAUDE.md consistency
 
-Group all findings from Steps 2–3 into a severity table:
+`.claude/CLAUDE.md` is the master governance file; agent and skill instructions must not contradict it.
 
-| Severity     | Examples                                                                                                                                          |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory |
-| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax)  |
-| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs  |
-| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note                                              |
+Read `.claude/CLAUDE.md` and extract its governance directives (Workflow Orchestration, Task Management, Self-Setup Maintenance, Communication, Core Principles). For each agent and skill file, check whether any instruction contradicts or undermines a CLAUDE.md directive:
 
-## Step 5: Report findings
+- **Direct contradiction**: file says the opposite of what CLAUDE.md mandates (e.g., "skip planning" vs "enter plan mode for non-trivial tasks")
+- **Missing required behavior**: file performs an action governed by Self-Setup Maintenance rules but omits the required steps (e.g., modifies `.claude/` files without mentioning cross-reference updates)
+- **Tone/style mismatch**: file's communication guidance conflicts with the Communication section (e.g., "apologize to the user" vs "flag early, not late")
+
+Major contradictions → **high** severity, raised to user (CLAUDE.md takes precedence — the agent/skill needs updating, but the user decides how).
+Minor drift (slightly different wording of the same idea, or missing but not contradicting) → **low**.
+
+## Step 5: Aggregate and classify findings
+
+Group all findings from Steps 1–4 into a severity table:
+
+| Severity     | Examples                                                                                                                                                                                                                       |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory                                                                              |
+| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax), agent/skill instruction directly contradicts a `.claude/CLAUDE.md` directive |
+| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs                                                                               |
+| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it                                                        |
+
+## Step 6: Report findings
 
 Output a structured audit report before fixing anything:
 
@@ -115,7 +143,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency
 
 ### Findings by Severity
 
@@ -140,7 +168,7 @@ Output a structured audit report before fixing anything:
 
 If `fix` was not passed, stop here and present the report.
 
-## Step 6: Fix critical, high, and medium findings
+## Step 7: Fix critical, high, and medium findings
 
 For each `critical`, `high`, and `medium` finding, apply a targeted fix:
 
@@ -152,12 +180,13 @@ For each `critical`, `high`, and `medium` finding, apply a targeted fix:
 - **Hardcoded `/Users/<name>/` path**: replace with `.claude/` (project-relative), `~/` (home-relative), or `$(git rev-parse --show-toplevel)/` as appropriate
 - **Broken code example**: fix the code directly (undefined variables, wrong API, wrong shell syntax)
 - **Undocumented modes**: add the mode to `<inputs>` block and `argument-hint` frontmatter
+- **CLAUDE.md contradiction**: do NOT auto-fix — raise to user with the specific contradiction (quote both the CLAUDE.md directive and the conflicting line in the agent/skill). CLAUDE.md takes precedence; the user decides whether to update the agent/skill or revise CLAUDE.md.
 
 After each fix, note the file and change in a running fix log.
 
 **Low findings** (nits): collect them in the final report but do not auto-fix — present them for optional manual cleanup.
 
-## Step 7: Re-audit modified files
+## Step 8: Re-audit modified files
 
 For every file changed in Step 6, spawn **self-mentor** again to confirm:
 
@@ -169,9 +198,9 @@ For every file changed in Step 6, spawn **self-mentor** again to confirm:
 grep -n "<broken-name>" <fixed-file>
 ```
 
-If re-audit surfaces new issues, loop back to Step 6 for those findings only (max 2 re-audit cycles — escalate to user if still unresolved).
+If re-audit surfaces new issues, loop back to Step 7 for those findings only (max 2 re-audit cycles — escalate to user if still unresolved).
 
-## Step 8: Final report
+## Step 9: Final report
 
 Output the complete audit summary:
 
@@ -206,7 +235,7 @@ Run `/sync apply` to propagate clean config to ~/.claude/
 
 <notes>
 
-- **Report before fix**: never silently mutate files — always present the findings report first (Step 5), then fix
+- **Report before fix**: never silently mutate files — always present the findings report first (Step 6), then fix
 - **settings.json is hands-off**: missing permissions are always reported, never auto-edited — structural JSON edits risk breaking Claude Code's config loading
 - **Dead loops need human judgment**: a cycle in follow-up chains might be intentional (e.g., refactor → review → fix → refactor) — flag and explain, don't auto-remove
 - **Max 2 re-audit cycles**: if fixes don't converge after 2 loops, surface the remaining issues to the user rather than spinning
