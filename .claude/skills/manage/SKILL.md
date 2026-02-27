@@ -3,7 +3,7 @@ name: manage
 description: Create, update, or delete agents and skills with full cross-reference propagation across all .claude/ files and memory/MEMORY.md inventory.
 argument-hint: <create|update|delete> <agent|skill> <name> [new-name|"description"]
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
 
 <objective>
@@ -33,7 +33,7 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 **Skill examples:**
 
 - `/manage create skill benchmark "Benchmark orchestrator for measuring and comparing performance across commits"`
-- `/manage update skill optimize perf-audit`
+- `/manage update skill debug trace-logger`
 - `/manage delete skill old-skill`
 
 </inputs>
@@ -104,11 +104,26 @@ Branch into one of six modes:
 
 ### Mode: Create Agent
 
+0. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
+
+   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/sub-agents`
+   - Confirm valid frontmatter fields: `name`, `description`, `tools`, `disallowedTools`,
+     `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`,
+     `background`, `isolation`
+   - Verify model shorthand values are still current (`sonnet`, `opus`, `haiku`, `inherit`)
+   - Note any new fields worth including in the generated template
+     Adjust the template generated in steps 1–3 to reflect the current schema. If a new field is
+     broadly useful for the agent's role (e.g. `maxTurns` for long-running agents), include it
+     with a sensible default and inline comment.
+
 1. Pick the first unused color from the AVAILABLE_COLORS pool (compare against colors found in Step 3)
+
 2. Choose model based on role complexity:
+
    - `opusplan` — plan-gated roles (solution-architect, oss-maintainer, self-mentor): long-horizon reasoning + plan mode
    - `opus` — complex implementation roles (sw-engineer, qa-specialist, ai-researcher, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (linting-expert, data-steward, ci-guardian, web-explorer, doc-scribe): pattern-matching, structured output
+
 3. Write the agent file with real domain content derived from the description:
 
 **Agent template** — write to `AGENTS_DIR/<name>.md`:
@@ -136,7 +151,18 @@ name / description / tools / model / color (frontmatter)
 
 ### Mode: Create Skill
 
+0. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
+
+   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/skills`
+   - Confirm valid frontmatter fields: `name`, `description`, `argument-hint`,
+     `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
+     `context`, `agent`, `hooks`
+   - Note any new fields worth including in the generated template
+     Adjust the template generated in step 2 to reflect the current schema. Include `model`
+     or `context: fork` only when the skill's described purpose clearly benefits from them.
+
 1. Create the skill directory
+
 2. Write the skill file with workflow scaffold:
 
 ```bash

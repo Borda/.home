@@ -9,6 +9,7 @@
 //   Note: cost.total_cost_usd is tokens × API rates — NOT actual subscription charge.
 //   Subscription quota % is not exposed in hook data. Check /status for monthly usage.
 
+const fs = require('fs');
 const path = require('path');
 
 let raw = '';
@@ -50,6 +51,23 @@ process.stdin.on('end', () => {
       const color = pct < 50 ? 32 : pct < 75 ? 33 : 31;  // green / yellow / red
       parts.push(`\x1b[${color}m${bar} ${Math.round(pct)}%\x1b[0m`);
     }
+
+    // Active subagents indicator — populated by SubagentStart/SubagentStop hooks in task-log.js
+    try {
+      const stateFile = path.join(workspace?.current_dir || process.cwd(), '.claude/state/agents.json');
+      const allAgents = JSON.parse(fs.readFileSync(stateFile, 'utf8'));
+      // Safety-net: drop agents stuck > 10 min (SubagentStop didn't fire — crash or hang)
+      const MAX_AGE_MS = 10 * 60 * 1000;
+      const now = Date.now();
+      const agents = allAgents.filter(a =>
+        !a.since || (now - new Date(a.since).getTime()) < MAX_AGE_MS
+      );
+      if (agents.length > 0) {
+        const counts = agents.reduce((acc, a) => { acc[a.type] = (acc[a.type] || 0) + 1; return acc; }, {});
+        const types = Object.entries(counts).map(([t, n]) => n > 1 ? `${t} ×${n}` : t).join(', ');
+        parts.push(`\x1b[35m⚡ ${agents.length} agent${agents.length > 1 ? 's' : ''} (${types})\x1b[0m`);
+      }
+    } catch (_) {}  // file missing = no active agents
 
     process.stdout.write(parts.join(' \x1b[2m│\x1b[0m '));
   } catch (e) {

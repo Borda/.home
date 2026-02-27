@@ -245,7 +245,6 @@ Never report optimization results without before/after numbers.
 
 \<common_bottlenecks>
 
-- N+1 queries: loop calling DB/API → batch it
 - Serialization in hot path: cache serialized form or move outside loop
 - Synchronous I/O blocking event loop: use async or thread pool
 - Memory fragmentation: pre-allocate buffers, use object pools

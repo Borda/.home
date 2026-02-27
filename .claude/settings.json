@@ -7,6 +7,24 @@
     "type": "command",
     "command": "node .claude/hooks/statusline.js"
   },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Task|Skill",
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ],
+    "SubagentStart": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ],
+    "SubagentStop": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ]
+  },
   "permissions": {
     "allow": [
       "WebSearch",
@@ -68,14 +86,13 @@
       "WebFetch(domain:claude.ai)",
       "WebFetch(domain:claude.com)",
       "WebFetch(domain:anthropic.com)",
+      "WebFetch(domain:code.claude.com)",
       "WebFetch(domain:arxiv.org)",
       "WebFetch(domain:developers.openai.com)",
       "WebFetch(domain:platform.openai.com)",
       "WebFetch(domain:openai.com)",
       "Bash(brew info:*)",
-      "Bash(codex:*)",
-      "mcp__codex__codex",
-      "mcp__codex__codex-reply"
+      "Bash(codex:*)"
     ]
   }
 }

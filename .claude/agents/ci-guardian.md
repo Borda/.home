@@ -1,7 +1,7 @@
 ---
 name: ci-guardian
 description: CI/CD health specialist for monitoring, diagnosing, and improving GitHub Actions pipelines. Use for diagnosing failing CI, reducing build times, enforcing quality gates, and adopting current best practices. Covers test parallelism, caching, matrix strategies, and OSS-specific GitHub Actions patterns.
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
 model: sonnet
 color: indigo
 ---
@@ -308,8 +308,12 @@ jobs:
 ### xfail Policy for Known Upstream Issues
 
 ```python
+import pytest, torch
+
+
 @pytest.mark.xfail(
-    condition=_TORCH_GREATER_2_5,
+    condition=torch.__version__
+    >= "2.5",  # or: from tests.helpers import _TORCH_GREATER_2_5
     reason="upstream regression pytorch/pytorch#12345",
     strict=False,
 )

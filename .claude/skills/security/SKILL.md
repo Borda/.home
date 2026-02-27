@@ -4,6 +4,7 @@ description: Security audit of code or a feature. Checks OWASP Top 10, Python-sp
 argument-hint: <file, endpoint, or directory>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
+context: fork
 ---
 
 <objective>
@@ -32,7 +33,7 @@ Launch three independent subagents simultaneously using the Task tool. Each agen
 
 **Agent 1 — Python vulnerability scan**: Scan for dangerous deserialization (`pickle.loads`, `yaml.load` without `Loader=`), code execution sinks (`eval`, `exec`, `shell=True`, `os.system`), path traversal (unvalidated `open()` paths), and insecure temp files (`tempfile.mktemp`, hardcoded `/tmp/`).
 
-**Agent 2 — OWASP Top 10 checklist**: Evaluate against A01 (Broken Access Control), A02 (Cryptographic Failures), A03 (Injection), A04 (Insecure Design), A05 (Security Misconfiguration), A07 (Authentication Failures), A08 (Dependency Vulnerabilities — run `pip-audit`, `safety scan`), and A09 (Logging Failures). Return a checklist with pass/fail per item.
+**Agent 2 — OWASP Top 10 checklist**: Evaluate against A01 (Broken Access Control), A02 (Cryptographic Failures), A03 (Injection), A04 (Insecure Design), A05 (Security Misconfiguration), A06 (Vulnerable and Outdated Components — cross-check `pip-audit` results against known CVE databases), A07 (Authentication Failures), A08 (Software and Data Integrity Failures — run `pip-audit`, `safety scan` \[v3+; use `safety check` for v2\]), and A09 (Logging Failures). Return a checklist with pass/fail per item.
 
 **Agent 3 — ML Security checks**: Audit supply chain for pre-trained models (source verification, checksum validation, pickle-based weight files), pickle usage in ML workflows (`torch.load`, `joblib.load` — check for `weights_only=True`), model poisoning risks (data provenance, federated learning defenses), adversarial input validation (image dimensions/dtype, text length, LLM prompt injection defenses).
 

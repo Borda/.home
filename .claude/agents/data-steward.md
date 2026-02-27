@@ -1,7 +1,7 @@
 ---
 name: data-steward
 description: Data pipeline specialist for dataset management, split integrity, leakage detection, class imbalance, and data quality. Use for auditing train/val/test splits, verifying augmentation pipelines preserve labels, detecting data contamination, and DataLoader configuration.
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
 model: sonnet
 color: cyan
 ---
@@ -224,7 +224,7 @@ Use Polars over pandas when: dataset > 1M rows, need lazy evaluation, or speed m
 from datasets import load_dataset
 
 # Load a public dataset
-ds = load_dataset("roboflow/coco-2017", split="train[:10%]")
+ds = load_dataset("cifar10", split="train[:10%]")
 
 # Streaming for large datasets
 ds = load_dataset("imagenet-1k", streaming=True)

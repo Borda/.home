@@ -4,6 +4,7 @@ description: Analyze GitHub issues, PRs, and repo health for an OSS project. Sum
 argument-hint: <number|health|dupes [keyword]|contributors|ecosystem>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
+context: fork
 ---
 
 <objective>
@@ -109,7 +110,7 @@ Run all three `gh` commands in parallel — they are independent API calls:
 # --- run these three in parallel ---
 
 # PR metadata
-gh pr view $ARGUMENTS --json number,title,body,labels,reviews,checksuite,files,additions,deletions,commits,author
+gh pr view $ARGUMENTS --json number,title,body,labels,reviews,statusCheckRollup,files,additions,deletions,commits,author
 
 # CI status
 gh pr checks $ARGUMENTS
@@ -174,7 +175,7 @@ gh issue list --state open --json number,title,updatedAt --limit 200 | \
   jq '[.[] | select(.updatedAt < (now - 7776000 | todate))]'
 
 # Open PRs
-gh pr list --state open --json number,title,createdAt,reviews,checksuite
+gh pr list --state open --json number,title,createdAt,reviews,statusCheckRollup
 ```
 
 Produce:

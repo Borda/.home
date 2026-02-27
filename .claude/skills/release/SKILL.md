@@ -1,7 +1,7 @@
 ---
 name: release
 description: Prepare release communication from git history, PRs, or a diff. Adapts output to context — user-facing release notes, CHANGELOG entry, internal release summary, or migration guide. Groups changes by type, filters noise, writes in plain language for the audience.
-argument-hint: [range] [release-notes|changelog|summary|migration] | prep <version>
+argument-hint: '[range] [release-notes|changelog|summary|migration] | prep <version>'
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 ---
@@ -18,6 +18,7 @@ Prepare release communication based on what changed. The output format adapts to
   If omitted, uses the range from the last tag to HEAD.
 - Optionally append the desired format: `release-notes`, `changelog`, `summary`, or `migration`.
   If not specified, infer from context (public repo → release notes, internal tool → summary).
+- **Or**: `prep <version>` (e.g. `prep v1.3.0`) — skip to Mode: prep to write CHANGELOG and RELEASE_NOTES.md artifacts to disk.
 
 </inputs>
 
@@ -192,6 +193,7 @@ Bad/good examples:
 Use project-level tooling to build, publish, and create the GitHub release. Refer to the project's CLAUDE.md or `oss-maintainer` agent for the specific commands.
 
 ```bash
+# example only — check project CLAUDE.md or oss-maintainer agent for actual release process
 gh release create v<version> --title "v<version>" \
   --notes "$(cat RELEASE_NOTES.md)"
 ```

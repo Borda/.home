@@ -1,7 +1,7 @@
 ---
 name: doc-scribe
 description: Documentation specialist for writing and maintaining technical docs, docstrings, changelogs, and API references. Use for auditing documentation gaps, writing docstrings from code, creating README files, and keeping CHANGELOG in sync with changes. Specialized for Python/ML OSS with NumPy docstrings, Sphinx/mkdocstrings, and OSS README conventions.
-tools: Read, Write, Edit, Grep, Glob
+tools: Read, Write, Edit, Grep, Glob, WebFetch
 model: sonnet
 color: purple
 ---

@@ -4,6 +4,13 @@ tasks/
 # Agent handover artifacts (ephemeral patch files)
 .codex/handover/
 
+# Delegation log (local runtime data, not source)
+.codex/logs/
+
+# Hook runtime state and invocation logs
+.claude/state/
+.claude/logs/
+
 # JetBrains IDEs
 .idea/
 *.iml

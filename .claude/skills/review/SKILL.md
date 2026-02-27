@@ -1,9 +1,10 @@
 ---
 name: review
 description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, solution-architect agents plus the /security skill in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
-argument-hint: [file, directory, or PR number to review]
+argument-hint: '[file, directory, or PR number to review]'
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
+context: fork
 ---
 
 <objective>

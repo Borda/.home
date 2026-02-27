@@ -121,7 +121,7 @@ Start from the Step 2 demo — it is already failing and becomes the first targe
    - Reuse or extend existing code identified in Step 1 — avoid reinventing
    - Match the project's existing patterns (naming, error handling, type annotations)
    - Keep each change small and focused
-5. **Run the demo/test — confirm it passes** (same command as step 3)
+5. **Run the demo/test — confirm it passes** (same command as sub-step 3 above)
 6. **Run the full suite** to catch regressions:
    ```bash
    python -m pytest <target_test_dir> -v --tb=short -q

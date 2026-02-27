@@ -325,12 +325,12 @@ Skills chain naturally — the output of one becomes the input for the next.
 A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
 
 ```
-claude-sonnet-4-6 │ Borda.local │ Max ~$1.20 │ ████░░░░░░ 38%
 claude-sonnet-4-6 │ Borda.local │ Pro ~$1.20 │ ████░░░░░░ 38%
 claude-sonnet-4-6 │ Borda.local │ API $0.42  │ ████░░░░░░ 38%
+claude-sonnet-4-6 │ Borda.local │ Max ~$0.80 │ ██░░░░░░░░ 20% │ ⚡ 2 agents (Explore, sw-engineer)
 ```
 
-Shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red).
+Shows the active model name, current project directory, billing indicator, a 10-segment context usage bar (green → yellow → red), and an active subagent indicator when background agents are running.
 
 <details>
 <summary><strong>Billing indicator explained</strong></summary>
@@ -342,7 +342,9 @@ Shows the active model name, current project directory, billing indicator, and a
 
 </details>
 
-Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` only.
+The subagent indicator (`⚡ N agents (type, ...)`) appears while Task agents are running and clears the moment they finish. It is powered by a companion hook (`hooks/task-log.js`) that listens to `SubagentStart` and `SubagentStop` events — agents are added when they spawn and removed when they complete, for both foreground and background tasks. A 10-minute safety-net age-out handles crashed or hung agents.
+
+Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
 
 ### Config Sync
 
@@ -356,7 +358,7 @@ Borda.local/.claude/   →   ~/.claude/
   settings.json              settings.json  (statusLine path rewritten to absolute)
 ```
 
-Two files are intentionally **not synced**: `CLAUDE.md` (project-specific rules) and `settings.local.json` (machine-local overrides).
+One file is intentionally **not synced**: `settings.local.json` (machine-local overrides). `CLAUDE.md` is synced as part of the standard propagation.
 
 **Workflow:**
 

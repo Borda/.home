@@ -4,6 +4,7 @@ description: Survey SOTA literature for an AI/ML topic, method, or architecture.
 argument-hint: <topic, method, or problem>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task, WebSearch, WebFetch
+context: fork
 ---
 
 <objective>
@@ -42,7 +43,7 @@ Task the ai-researcher with a single objective: find the top 5 papers for `$ARGU
 
 ```bash
 # Search the codebase for any existing related code
-grep -r "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
+grep -rF "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 ```
 
 ## Step 3: Report

@@ -1,7 +1,7 @@
 ---
 name: audit
 description: Comprehensive config audit for the entire .claude/ directory. Orchestrates self-mentor across all agents, skills, settings, and hooks to detect correctness issues, broken cross-references, interoperability problems, infinite loops, redundancy, and inefficiency. Reports findings by severity and auto-fixes everything except low (nit) findings.
-argument-hint: [agents|skills] [fix]
+argument-hint: '[agents|skills] [fix]'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
@@ -122,16 +122,61 @@ Read `.claude/CLAUDE.md` and extract its governance directives (Workflow Orchest
 Major contradictions → **high** severity, raised to user (CLAUDE.md takes precedence — the agent/skill needs updating, but the user decides how).
 Minor drift (slightly different wording of the same idea, or missing but not contradicting) → **low**.
 
+### Claude Code docs freshness
+
+Spawn a **web-explorer** agent to fetch the current Claude Code documentation. Try the direct paths below; if they don't resolve, navigate from the Claude Code homepage (`code.claude.com`) to find the current schema pages:
+
+- Hook event names, types, and schemas — `code.claude.com/docs/en/hooks`
+- Agent frontmatter schema — `code.claude.com/docs/en/sub-agents`
+- Skill frontmatter schema — `code.claude.com/docs/en/skills`
+
+With the fetched docs, validate the local config:
+
+**Hook validation** (`settings.json`):
+
+- Every hook event name (e.g. `SubagentStart`) exists in the documented event list
+- Every hook `type` is one of `command`, `http`, `prompt`, `agent`
+- No deprecated top-level `decision:`/`reason:` fields in PreToolUse hooks
+  (correct form is `hookSpecificOutput.permissionDecision`)
+
+**Agent frontmatter validation** (`.claude/agents/*.md`):
+
+- All frontmatter fields are in the documented schema
+  (`name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`,
+  `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `isolation`,
+  `color` — note: `color` is a Claude Code UI extension not in the public schema)
+- `model` values are recognized short-names (`sonnet`, `opus`, `haiku`, `inherit`,
+  or project-level aliases like `opusplan`)
+
+**Skill frontmatter validation** (`.claude/skills/*/SKILL.md`):
+
+- All frontmatter fields are in the documented schema
+  (`name`, `description`, `argument-hint`, `disable-model-invocation`,
+  `user-invocable`, `allowed-tools`, `model`, `context`, `agent`, `hooks`)
+
+**Improvement opportunities** — collect documented features not yet in use:
+
+- New hook events that could add value (e.g. `PreCompact`, `SessionEnd`, `Stop`)
+- New agent frontmatter fields (e.g. `memory`, `isolation`, `maxTurns`, `background`)
+- New skill frontmatter fields (e.g. `context: fork`, `model`, `hooks`)
+- New settings keys (e.g. `sandbox`, `plansDirectory`, `alwaysThinkingEnabled`)
+
+Findings classification:
+
+- Deprecated/invalid hook event name or type in use → **high**
+- Deprecated frontmatter field, deprecated settings key, unrecognized model ID → **medium**
+- New documented feature not yet used → **low** (prefix with 💡)
+
 ## Step 5: Aggregate and classify findings
 
 Group all findings from Steps 1–4 into a severity table:
 
-| Severity     | Examples                                                                                                                                                                                                                       |
-| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory                                                                              |
-| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax), agent/skill instruction directly contradicts a `.claude/CLAUDE.md` directive |
-| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs                                                                               |
-| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it                                                        |
+| Severity     | Examples                                                                                                                                                                                                                                                                          |
+| ------------ | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory                                                                                                                                 |
+| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax), agent/skill instruction directly contradicts a `.claude/CLAUDE.md` directive, deprecated/invalid hook event name or type in use |
+| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs, deprecated frontmatter field or settings key                                                                                    |
+| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it, 💡 new documented CC feature not yet used                                                                |
 
 ## Step 6: Report findings
 
@@ -143,7 +188,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness
 
 ### Findings by Severity
 
@@ -188,7 +233,7 @@ After each fix, note the file and change in a running fix log.
 
 ## Step 8: Re-audit modified files
 
-For every file changed in Step 6, spawn **self-mentor** again to confirm:
+For every file changed in Step 7, spawn **self-mentor** again to confirm:
 
 - The fix resolved the finding
 - No new issues were introduced by the edit

@@ -34,7 +34,9 @@ For each agent/skill found, extract: name, description, tools, purpose.
 
 ## Step 2: Analyze work patterns
 
-Look for signals of repetitive or specialist work. The first three git commands are independent — run them in parallel:
+**If `$ARGUMENTS` is `review`**: skip the git analysis below and go directly to Step 3 (Gap analysis). Use the agent/skill descriptions from Step 1 as the sole input — the goal is to assess quality and coverage of the existing roster, not to look for new patterns in recent work. In Step 5, suppress all "Recommend: New Agent/Skill" sections and output only "Existing Coverage", "Recommend: Enhance Existing", and "No Action Needed" entries.
+
+Otherwise, look for signals of repetitive or specialist work. The first three git commands are independent — run them in parallel:
 
 ```bash
 # --- run these three in parallel ---

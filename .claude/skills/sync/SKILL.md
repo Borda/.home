@@ -1,7 +1,7 @@
 ---
 name: sync
 description: Drift-detect and sync project .claude/ config to home ~/.claude/. Default mode shows a drift report; pass "apply" to perform the sync and report the outcome.
-argument-hint: [apply]
+argument-hint: '[apply]'
 disable-model-invocation: true
 allowed-tools: Read, Write, Bash, Glob, Grep
 ---
@@ -184,7 +184,7 @@ sed "s|node .claude/hooks/statusline.js|node $HOME_EXPANDED/.claude/hooks/status
   "$PROJECT/settings.json" > ~/.claude/settings.json
 ```
 
-Important: expand `$HOME` to the actual absolute path (not the literal string `$HOME`) so the JSON value is a fully resolved path like `/home/<user>/.claude/hooks/statusline.js`.
+Important: expand `$HOME` to the actual absolute path (not the literal string `$HOME`) so the JSON value is a fully resolved path like `~/.claude/hooks/statusline.js` (e.g. `/Users/<name>/.claude/hooks/statusline.js` on macOS).
 
 ## Step 5: Verify and report outcome
 
@@ -194,7 +194,7 @@ echo "Agents:" && ls ~/.claude/agents/*.md | wc -l
 echo "Skills:" && ls ~/.claude/skills/*/SKILL.md | wc -l
 
 # JSON validity
-python3 -c "import json; json.load(open('$HOME/.claude/settings.json')); print('settings.json: valid')"
+python3 -c "import json, os; json.load(open(os.path.expanduser('~/.claude/settings.json'))); print('settings.json: valid')"
 
 # Re-run diff to confirm all files now match (same loop as Step 2)
 ```

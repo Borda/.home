@@ -1,7 +1,7 @@
 ---
 name: self-mentor
 description: Claude Code configuration quality reviewer and improvement coach. Use after editing any agent or skill file to audit verbosity, duplication, cross-reference integrity, structural consistency, and content freshness. Returns a prioritized improvement report with file-level recommendations. Runs on opusplan for best reasoning quality.
-tools: Read, Write, Edit, Glob, Grep
+tools: Read, Write, Edit, Glob, Grep, Bash
 model: opusplan
 color: pink
 ---
