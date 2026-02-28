@@ -49,22 +49,23 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/security`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill        | Command                  | What It Does                                                                                   |
-| ------------ | ------------------------ | ---------------------------------------------------------------------------------------------- |
-| **review**   | `/review [file\|PR#]`    | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design) |
-| **security** | `/security [target]`     | OWASP Top 10 + Python-specific + ML supply chain audit                                         |
-| **optimize** | `/optimize [target]`     | Measure-change-measure performance loop                                                        |
-| **release**  | `/release [range]`       | Release notes, CHANGELOG, or migration guide from git history                                  |
-| **survey**   | `/survey [topic]`        | SOTA literature survey with implementation plan                                                |
-| **analyse**  | `/analyse [#\|health]`   | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
-| **observe**  | `/observe`               | Meta-skill: analyze work patterns and suggest new agents or skills                             |
-| **audit**    | `/audit [fix]`           | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues     |
-| **sync**     | `/sync [apply]`          | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
-| **manage**   | `/manage <op> <type>`    | Create, update, or delete agents/skills with cross-ref propagation                             |
-| **feature**  | `/feature <desc>`        | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle     |
-| **refactor** | `/refactor <target>`     | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
-| **fix**      | `/fix <bug>`             | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
-| **codex**    | `/codex <task> [target]` | Delegate mechanical coding tasks to Codex via MCP — Claude orchestrates, Codex executes        |
+| Skill         | Command                            | What It Does                                                                                   |
+| ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------- |
+| **review**    | `/review [file\|PR#]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design) |
+| **security**  | `/security [target]`               | OWASP Top 10 + Python-specific + ML supply chain audit                                         |
+| **optimize**  | `/optimize [target]`               | Measure-change-measure performance loop                                                        |
+| **release**   | `/release [range]`                 | Release notes, CHANGELOG, or migration guide from git history                                  |
+| **survey**    | `/survey [topic]`                  | SOTA literature survey with implementation plan                                                |
+| **analyse**   | `/analyse [#\|health]`             | Issue/PR analysis, repo health, duplicate detection, contributor activity                      |
+| **observe**   | `/observe`                         | Meta-skill: analyze work patterns and suggest new agents or skills                             |
+| **audit**     | `/audit [fix]`                     | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues     |
+| **sync**      | `/sync [apply]`                    | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                |
+| **manage**    | `/manage <op> <type>`              | Create, update, or delete agents/skills with cross-ref propagation                             |
+| **feature**   | `/feature <desc>`                  | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle     |
+| **refactor**  | `/refactor <target>`               | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
+| **fix**       | `/fix <bug>`                       | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
+| **calibrate** | `/calibrate [target] [fast\|full]` | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias  |
+| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex via MCP — Claude orchestrates, Codex executes        |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>

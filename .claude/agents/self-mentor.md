@@ -93,7 +93,19 @@ Over budget: <N agents> | Broken refs: <N> | Duplicates found: <N>
 1. Immediate: [P1 and P2 fixes]
 2. Next session: [P3 trims]
 3. Backlog: [P4 freshness, P5 structural]
+
+### Confidence
+**Score**: 0.N — [high ≥0.9 | moderate 0.7–0.9 | low <0.7]
+**Gaps**: [what limited thoroughness — files not fully read, cross-agent context missing, runtime behaviour unobservable from static analysis alone]
 ```
+
+The score is a **coverage estimate** (how thoroughly this file was checked), not a quality guarantee. The `Gaps` field is the primary reliable signal — read it before acting on the score. `/calibrate` measures whether scores track actual recall over time.
+
+Confidence scoring guidance:
+
+- **0.9+**: all files read in full; all cross-refs validated on disk; no ambiguous patterns
+- **0.7–0.9**: most files checked; one or two references unverifiable without runtime data
+- **\<0.7**: significant blind spots — flag explicitly; orchestrator should consider a second pass
 
 \</output_format>
 
@@ -115,9 +127,19 @@ Run after any `.claude/` edit session:
 
 1. `Glob(".claude/agents/*.md")` + `Glob(".claude/skills/**/*.md")` — collect all files
 2. Read each file, evaluate against criteria above
-3. Produce health report
+3. Produce health report **including the confidence block** at the end
 4. If issues found: present report → await approval → apply fixes
 5. Update `memory/MEMORY.md` if the agent roster changed
+
+## Confidence → Improvement Loop
+
+When confidence was low (\<0.7) on a previous run, the orchestrator re-runs self-mentor with a targeted prompt. If the same blind spot recurs across sessions (e.g., "cannot validate model names without fetching docs"), that gap should be addressed at the instruction level:
+
+- If the gap is a missing capability (e.g., needs WebFetch but tool not declared) → add the tool to `allowed-tools`
+- If the gap is a pattern self-mentor reliably misses → add it to `\<antipatterns_to_flag>`
+- If the gap is project-specific context → update `memory/MEMORY.md` so it's available in future sessions
+
+This is the long-term confidence improvement loop: low score → targeted re-run → pattern identified → instruction updated → `/calibrate <agent>` to confirm higher recall next time.
 
 \</improvement_workflow>
 

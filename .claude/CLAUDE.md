@@ -27,6 +27,8 @@
 - Diff behavior between main and your changes when relevant
 - Ask yourself: "Would a staff engineer approve this?"
 - Run tests, check logs, demonstrate correctness
+- **Confidence scores**: when spawning analysis agents, request a confidence score (0–1) at the end of each response. If any agent < 0.7: flag with ⚠, state the gap, and consider a targeted second pass. Low confidence is not failure — it is signal; always surface it rather than dropping uncertain findings.
+- **Confidence → improvement loop**: if the same low-confidence gap recurs across sessions (e.g., "cannot validate without runtime traces"), address it at the instruction level — add the blind spot to the agent's `\<antipatterns_to_flag>` or update `tasks/lessons.md` with the pattern so it is not silently repeated. Run `/calibrate <agent>` after instruction changes to confirm improved recall.
 
 ### 5. Demand Elegance (Balanced)
 
@@ -75,6 +77,27 @@ When modifying any file under `.claude/` (agents, skills, settings, hooks, this 
 - **Objective and direct**: no flattery, no filler; state what works and what doesn't
 - **Positive but critical**: lead with what is good, then call out issues clearly
 - **No after-the-fact sorry**: if something is likely to go wrong, say so upfront and propose an alternative
+- **`!` Breaking findings**: when something is completely non-functional (skill can't run, cross-ref is broken, hook crashes), mark it `!` or `! BREAKING` and state the impact + fix in the same breath — never bury it as a quiet table row. The user should not have to discover it themselves.
+- **Terminal color conventions** (for skill bash output and status lines):
+  - RED — breaking/critical: `! BREAKING`, errors that prevent execution
+  - YELLOW — warnings: `⚠ MISSING`, `⚠ DIFFERS`, medium findings
+  - GREEN — pass status: `✓ OK`, `✓ IDENTICAL`
+  - CYAN — source agent name or inline fix hint
+
+## Output Standards
+
+Every agent completing an analysis task **must** end its response with a `## Confidence` block:
+
+```
+## Confidence
+**Score**: 0.N — [high ≥0.9 | moderate 0.7–0.9 | low <0.7]
+**Gaps**: what limited thoroughness (missing runtime data, partial file read, cross-agent context unavailable…)
+```
+
+- The score is a **coverage estimate** — how thoroughly the task was checked. It is not a quality guarantee.
+- The **Gaps field** is the primary reliable signal: it makes implicit limitations explicit so the orchestrator and user can decide whether a second pass is needed.
+- Score < 0.7 → orchestrator flags with ⚠ and may re-run the agent with the specific gap addressed.
+- This standard applies to **all** agents regardless of who spawned them. Orchestrating skills (audit, review, security, calibrate) collect and aggregate these scores; `/calibrate` measures whether they track actual quality over time.
 
 ## Core Principles
 

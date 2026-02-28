@@ -2,7 +2,6 @@
 name: review
 description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, solution-architect agents plus the /security skill in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
 argument-hint: '[file, directory, or PR number to review]'
-disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Task
 context: fork
 ---
@@ -43,7 +42,9 @@ If CI is red, report that without full review.
 
 ## Step 2: Spawn sub-agents in parallel
 
-Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional):
+Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional). Every agent prompt must end with:
+
+> "End your response with: `## Confidence` / `**Score**: 0.N` (high ≥0.9 / moderate 0.7–0.9 / low \<0.7) / `**Gaps**: what limited your analysis (e.g., no runtime traces, no test execution, partial file read)`."
 
 **Agent 1 — sw-engineer**: Review architecture, SOLID adherence, type safety, error handling, and code structure. Check for Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking issues vs suggestions.
 
@@ -94,6 +95,25 @@ git diff HEAD~1 HEAD -- "src/**/__init__.py"
 git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 ```
 
+## Step 3b: Cross-validate critical and high findings
+
+Before consolidating, for any finding classified as `CRITICAL` or `[blocking]` from Step 2, spawn a second independent agent to verify. Use the **same agent type** that raised the finding (e.g., sw-engineer verifies sw-engineer's critical finding):
+
+```
+Independently review <file or diff section> for the following specific issue: "<finding description>".
+Do NOT read the previous agent's output.
+Is this a real critical/blocking issue? Confirm or refute with reasoning.
+Include your ## Confidence block.
+```
+
+Classify:
+
+- **Confirmed by both** → include as critical/blocking ✓
+- **Second pass disagrees** → downgrade to `high` with note "unconfirmed — one of two passes flagged this"
+- **Both agree lower severity** → re-classify accordingly
+
+Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and lower go directly to Step 4.
+
 ## Step 4: Consolidate findings
 
 ```
@@ -138,7 +158,19 @@ git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 1. [most important action]
 2. [second most important]
 3. [third]
+
+### Review Confidence
+| Agent | Score | Label | Gaps |
+|-------|-------|-------|------|
+| sw-engineer | 0.88 | high | — |
+| qa-specialist | 0.65 | ⚠ low | no test execution; coverage unverifiable without running suite |
+| perf-optimizer | 0.72 | moderate | no profiling data; estimates from static analysis only |
+
+**Aggregate**: min 0.65 / median 0.N
+[⚠ LOW CONFIDENCE: qa-specialist could not verify test execution — treat coverage findings as indicative, not conclusive]
 ```
+
+After parsing confidence scores: if any agent scored < 0.7, prepend **⚠ LOW CONFIDENCE** to that agent's findings section and explicitly state the gap. Do not silently drop uncertain findings — flag them so the reviewer can decide whether to investigate further.
 
 ## Step 5: Delegate implementation follow-up (optional)
 

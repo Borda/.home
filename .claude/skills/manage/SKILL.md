@@ -1,7 +1,7 @@
 ---
 name: manage
-description: Create, update, or delete agents and skills with full cross-reference propagation across all .claude/ files and memory/MEMORY.md inventory.
-argument-hint: <create|update|delete> <agent|skill> <name> [new-name|"description"]
+description: Create, update, or delete agents and skills with full cross-reference propagation. Also manages settings.json permissions atomically with permissions-guide.md via add/remove perm operations.
+argument-hint: <create|update|delete> <agent|skill> <name> | add perm <rule> "desc" "use-case" | remove perm <rule>
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Task
 ---
@@ -21,8 +21,11 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
   - `update skill <old-name> <new-name>` — rename skill directory + update all cross-refs
   - `delete agent <name>` — delete agent file + clean broken refs
   - `delete skill <name>` — delete skill directory + clean broken refs
+  - `add perm <rule> "description" "use case"` — add a permission to settings.json allow list and permissions-guide.md
+  - `remove perm <rule>` — remove a permission from settings.json allow list and permissions-guide.md
 - Names must be **kebab-case** (lowercase, hyphens only)
 - Descriptions must be quoted when they contain spaces
+- Permission rules use the Claude Code format: `WebSearch`, `Bash(cmd:*)`, `WebFetch(domain:example.com)`
 
 **Agent examples:**
 
@@ -35,6 +38,11 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 - `/manage create skill benchmark "Benchmark orchestrator for measuring and comparing performance across commits"`
 - `/manage update skill debug trace-logger`
 - `/manage delete skill old-skill`
+
+**Permission examples:**
+
+- `/manage add perm "Bash(jq:*)" "Parse and filter JSON" "Extract fields from REST API responses"`
+- `/manage remove perm "Bash(jq:*)"`
 
 </inputs>
 
@@ -61,14 +69,21 @@ Extract operation, type, name, and optional arguments from `$ARGUMENTS`.
 - For `update`/`delete`: name MUST already exist on disk
 - For `update`: new-name must NOT already exist on disk
 - For `create`: description is required
+- For `add perm`: rule must NOT already exist in settings.json allow list; description and use case are required
+- For `remove perm`: rule MUST already exist in settings.json allow list
 
 ```bash
-# Check existence
+# Check agent/skill existence
 ls .claude/agents/<name>.md 2>/dev/null
 ls .claude/skills/<name>/SKILL.md 2>/dev/null
+
+# Check permission existence (for add perm / remove perm)
+python3 -c "import json,sys; d=json.load(open('.claude/settings.json')); sys.exit(0 if '<rule>' in d['permissions']['allow'] else 1)" 2>/dev/null
 ```
 
 If validation fails, report the error and stop.
+
+**For perm operations**: skip Steps 2, 3, 5, 6, 7, 8 — go directly from Step 1 → Step 4 → Step 9.
 
 ## Step 2: Overlap review (create only)
 
@@ -235,6 +250,77 @@ ls .claude/skills/<name>/SKILL.md
 rm -r .claude/skills/<name>
 ```
 
+### Mode: Add Permission
+
+Adds a rule to both `settings.json` and `permissions-guide.md` atomically.
+
+1. Determine the guide category from the rule prefix:
+
+   - `WebSearch` → `## Web`
+   - `WebFetch(domain:...)` → `## WebFetch — allowed domains`
+   - `Bash(gh ...)` → `## GitHub CLI — read-only`
+   - `Bash(git log:*)`, `Bash(git show:*)`, `Bash(git diff:*)`, `Bash(git rev-*:*)`, `Bash(git ls-*:*)`, `Bash(git -C:*)`, `Bash(git branch:*)`, `Bash(git tag:*)`, `Bash(git status:*)`, `Bash(git describe:*)`, `Bash(git shortlog:*)` → `## Git — read-only`
+   - `Bash(git add:*)`, `Bash(git checkout:*)`, `Bash(git stash:*)`, `Bash(git restore:*)`, `Bash(git clean:*)`, `Bash(git apply:*)` → `## Git — local write`
+   - `Bash(pytest:*)`, `Bash(python ...)`, `Bash(ruff:*)`, `Bash(mypy:*)`, `Bash(pip ...)` → `## Python toolchain`
+   - `Bash(brew ...)`, `Bash(codex:*)` → `## macOS / ecosystem`
+   - All other `Bash(...)` → `## Shell utilities`
+
+2. Update `settings.json` — parse, append, write back:
+
+```bash
+python3 -c "
+import json
+with open('.claude/settings.json') as f:
+    d = json.load(f)
+d['permissions']['allow'].append('<rule>')
+with open('.claude/settings.json', 'w') as f:
+    json.dump(d, f, indent=2)
+    f.write('\n')
+"
+```
+
+3. Update `permissions-guide.md` — append a new row to the end of the correct section (before its trailing `---` separator). New row format:
+
+```
+| `<rule>` | <description> | <use case> |
+```
+
+Use the Edit tool to insert the row: find the last table row in the target section and insert after it.
+
+4. Verify both files were updated:
+
+```bash
+python3 -c "import json; d=json.load(open('.claude/settings.json')); print('OK' if '<rule>' in d['permissions']['allow'] else 'MISSING')"
+grep -F '`<rule>`' .claude/permissions-guide.md
+```
+
+### Mode: Remove Permission
+
+Removes a rule from both `settings.json` and `permissions-guide.md` atomically.
+
+1. Update `settings.json` — parse, filter, write back:
+
+```bash
+python3 -c "
+import json
+with open('.claude/settings.json') as f:
+    d = json.load(f)
+d['permissions']['allow'] = [p for p in d['permissions']['allow'] if p != '<rule>']
+with open('.claude/settings.json', 'w') as f:
+    json.dump(d, f, indent=2)
+    f.write('\n')
+"
+```
+
+2. Update `permissions-guide.md` — use the Edit tool to remove the table row containing `` `<rule>` ``.
+
+3. Verify both files are clean:
+
+```bash
+python3 -c "import json; d=json.load(open('.claude/settings.json')); print('OK' if '<rule>' not in d['permissions']['allow'] else 'STILL PRESENT')"
+grep -cF '`<rule>`' .claude/permissions-guide.md && echo "STILL IN GUIDE" || echo "OK"
+```
+
 ## Step 5: Propagate cross-references
 
 Search all `.claude/` markdown files for the changed name and update references:
@@ -323,19 +409,21 @@ Include the audit findings in the final report. Do not proceed to sync if any `c
 
 Output a structured report containing:
 
-- **Operation**: what was done (create/update/delete + type + name)
-- **Files Changed**: table of file paths and actions (created/renamed/deleted/cross-ref updated)
-- **Cross-References**: count of files updated, broken refs cleaned
-- **Current Roster**: agents (N) and skills (N) with comma-separated names
-- **Audit Result**: audit findings (pass / issues found)
-- **Follow-up**: run `/sync` to propagate to `~/.claude/`; for `create` review generated content; note if `settings.json` permissions might be needed
+- **Operation**: what was done (create/update/delete + type + name, or add/remove perm + rule)
+- **Files Changed**: table of file paths and actions (created/renamed/deleted/cross-ref updated/appended/removed)
+- **Cross-References**: count of files updated, broken refs cleaned (n/a for perm operations)
+- **Current Roster**: agents (N) and skills (N) with comma-separated names (n/a for perm operations)
+- **Audit Result**: audit findings (pass / issues found) (n/a for perm operations)
+- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` review generated content; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
 
 </workflow>
 
 <notes>
 
 - **Atomic updates**: always write-before-delete to prevent data loss on interruption
-- **No settings.json auto-edit**: this skill only mentions when new permissions might be needed — it does not mutate JSON files to avoid risky structural edits
+- **Perm operations are dual-file**: `add perm` and `remove perm` MUST update both `settings.json` and `permissions-guide.md` — they must stay in sync. Never update one without the other.
+- **settings.json format**: Python json.load/json.dump with indent=2 is the safe editing path — avoids fragile sed/awk surgery on JSON. The output format (2-space indent, no trailing commas) matches the existing file style.
+- **No auto-edit for agent/skill operations**: this skill only mentions when new permissions might be needed for create/update/delete — it does not mutate settings.json for those operations
 - **README.md tables**: Step 7 updates the agent/skill tables in the project README.md — keep the row format consistent with existing rows
 - **Color pool**: the AVAILABLE_COLORS list provides unused colors for new agents; if exhausted, reuse colors with a note
 - **Cross-ref grep is broad**: searches bare kebab-case names across all markdown files — catches backtick references, prose mentions, spawn directives, and inventory lists
@@ -343,6 +431,8 @@ Output a structured report containing:
 - Follow-up chains:
   - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
   - After creating a new agent/skill → `/review` to validate generated content quality
+  - After updating agent instructions (especially `\<antipatterns_to_flag>` or `\<evaluation_criteria>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
+  - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
   - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`
 
 </notes>
