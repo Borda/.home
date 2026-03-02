@@ -30,7 +30,7 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 **Agent examples:**
 
 - `/manage create agent security-auditor "Security specialist for vulnerability scanning and OWASP compliance"`
-- `/manage update agent ci-guardian ci-specialist`
+- `/manage update agent example-agent example-agent-v2`
 - `/manage delete agent old-agent-name`
 
 **Skill examples:**
@@ -50,7 +50,6 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 
 - AGENTS_DIR: `.claude/agents`
 - SKILLS_DIR: `.claude/skills`
-- MEMORY_GLOB: `~/.claude/projects/*/memory/MEMORY.md` (glob — target the specific project MEMORY.md, not all matches)
 - USED_COLORS: blue, green, purple, lime, orange, yellow, cyan, red, teal, indigo, magenta, pink
 - AVAILABLE_COLORS: coral, gold, olive, navy, salmon, violet, maroon, aqua, brown
 
@@ -119,7 +118,7 @@ Branch into one of six modes:
 
 ### Mode: Create Agent
 
-0. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
+1. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
 
    - Spawn **web-explorer** to fetch `code.claude.com/docs/en/sub-agents`
    - Confirm valid frontmatter fields: `name`, `description`, `tools`, `disallowedTools`,
@@ -127,19 +126,19 @@ Branch into one of six modes:
      `background`, `isolation`
    - Verify model shorthand values are still current (`sonnet`, `opus`, `haiku`, `inherit`)
    - Note any new fields worth including in the generated template
-     Adjust the template generated in steps 1–3 to reflect the current schema. If a new field is
+     Adjust the template generated in steps 2–4 to reflect the current schema. If a new field is
      broadly useful for the agent's role (e.g. `maxTurns` for long-running agents), include it
      with a sensible default and inline comment.
 
-1. Pick the first unused color from the AVAILABLE_COLORS pool (compare against colors found in Step 3)
+2. Pick the first unused color from the AVAILABLE_COLORS pool (compare against colors found in Step 3)
 
-2. Choose model based on role complexity:
+3. Choose model based on role complexity:
 
    - `opusplan` — plan-gated roles (solution-architect, oss-maintainer, self-mentor): long-horizon reasoning + plan mode
    - `opus` — complex implementation roles (sw-engineer, qa-specialist, ai-researcher, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (linting-expert, data-steward, ci-guardian, web-explorer, doc-scribe): pattern-matching, structured output
 
-3. Write the agent file with real domain content derived from the description:
+4. Write the agent file with real domain content derived from the description:
 
 **Agent template** — write to `AGENTS_DIR/<name>.md`:
 
@@ -166,19 +165,19 @@ name / description / tools / model / color (frontmatter)
 
 ### Mode: Create Skill
 
-0. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
+1. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
 
    - Spawn **web-explorer** to fetch `code.claude.com/docs/en/skills`
    - Confirm valid frontmatter fields: `name`, `description`, `argument-hint`,
      `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
      `context`, `agent`, `hooks`
    - Note any new fields worth including in the generated template
-     Adjust the template generated in step 2 to reflect the current schema. Include `model`
+     Adjust the template generated in step 3 to reflect the current schema. Include `model`
      or `context: fork` only when the skill's described purpose clearly benefits from them.
 
-1. Create the skill directory
+2. Create the skill directory
 
-2. Write the skill file with workflow scaffold:
+3. Write the skill file with workflow scaffold:
 
 ```bash
 mkdir -p .claude/skills/<name>
@@ -326,9 +325,11 @@ grep -cF '`<rule>`' .claude/permissions-guide.md && echo "STILL IN GUIDE" || ech
 Search all `.claude/` markdown files for the changed name and update references:
 
 ```bash
-# Find all references to the name across agents and skills
+# Find all references to the name across agents, skills, and top-level config
 grep -rn "<name>" .claude/agents/*.md
 grep -rn "<name>" .claude/skills/*/SKILL.md
+grep -n "<name>" .claude/CLAUDE.md
+grep -n "<name>" README.md
 ```
 
 **For update:** Use the Edit tool to replace every occurrence of `<old-name>` with `<new-name>` in each file that references it.

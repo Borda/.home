@@ -8,6 +8,11 @@
     "command": "node .claude/hooks/statusline.js"
   },
   "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [{ "type": "command", "command": "mkdir -p ~/.claude/state && claude auth status > ~/.claude/state/subscription.json 2>/dev/null", "async": true }]
+      }
+    ],
     "PreToolUse": [
       {
         "matcher": "Task|Skill",
@@ -40,6 +45,20 @@
       "Bash(cp:*)",
       "Bash(mkdir:*)",
       "Bash(time:*)",
+      "Bash(rsync:*)",
+      "Bash(sed:*)",
+      "Bash(awk:*)",
+      "Bash(cat:*)",
+      "Bash(sort:*)",
+      "Bash(uniq:*)",
+      "Bash(cut:*)",
+      "Bash(tr:*)",
+      "Bash(xargs:*)",
+      "Bash(tee:*)",
+      "Bash(jq:*)",
+      "Bash(date:*)",
+      "Bash(which:*)",
+      "Bash(env:*)",
       "Bash(gh api graphql:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr diff:*)",

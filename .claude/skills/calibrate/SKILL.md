@@ -36,13 +36,15 @@ Problem domain by agent:
 - `sw-engineer` → Python bugs: type errors, logic errors, anti-patterns, bare `except:`, mutable defaults
 - `qa-specialist` → coverage gaps: uncovered edge cases, missing exception tests, ML non-determinism
 - `linting-expert` → violations: ruff rules, mypy errors, annotation gaps
-- `security` → OWASP: `yaml.load`, SQL injection, hardcoded secrets, `torch.load` without `weights_only`
 - `self-mentor` → config issues: broken cross-refs, missing workflow blocks, wrong model, step gaps
 - `doc-scribe` → docs gaps: missing docstrings, incomplete NumPy sections, broken examples
 - `perf-optimizer` → perf issues: unnecessary loops, repeated computation, wrong dtype, missing vectorisation
 - `ci-guardian` → CI issues: non-pinned action SHAs, missing cache, inefficient matrix
 - `data-steward` → data issues: label leakage, split contamination, augmentation order bugs
 - `ai-researcher` → paper analysis: missed contributions, wrong method attribution
+- `solution-architect` → design issues: leaky abstractions, circular dependencies, missing ADR, backward-compat violations without deprecation path
+- `web-explorer` → content quality: broken or unverified URLs, outdated docs, incomplete extraction from fetched pages
+- `oss-maintainer` → OSS governance: incorrect SemVer decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
 
 Skill domains:
 
@@ -146,6 +148,7 @@ Collect all per-problem scores and compute:
 Classify calibration:
 
 - `|bias| < 0.10` → **calibrated ✓**
+- `0.10 ≤ |bias| ≤ 0.15` → **borderline** — monitor; no immediate action unless persistent across runs
 - `bias > 0.15` → **⚠ overconfident** — adjust effective re-run threshold upward
 - `bias < −0.15` → **underconfident** — no action needed; confidence is conservative
 

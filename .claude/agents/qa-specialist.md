@@ -287,6 +287,7 @@ def test_normalize_idempotent(values):
 6. Check for missing assertions (a test that doesn't assert anything is useless)
 7. Review test names: each name should describe what behavior is verified
 8. Run: `pytest --tb=short -q` to ensure all tests pass
+9. End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., mutation testing not run, property-based tests not executed, edge case matrix incomplete for domain-specific inputs).
 
 </workflow>
 

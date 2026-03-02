@@ -285,5 +285,12 @@ Every OSS Python project should have:
 5. For breaking changes: check deprecation cycle was respected
 6. Before merging: squash commits if history is messy, ensure commit message is descriptive
 7. After merging: check if issue can be closed, update milestone
+8. End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., CI not fully verified, changelog completeness assumed, deprecation cycle not traced end-to-end).
 
 </workflow>
+
+\<notes>
+
+**Link integrity**: Never include a URL in output (release notes, changelogs, deprecation guides, responses) without fetching it first to confirm it is live and the content is accurate. This applies to PyPI package links, GitHub release URLs, documentation links, and any external references.
+
+\</notes>

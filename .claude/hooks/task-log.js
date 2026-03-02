@@ -52,7 +52,7 @@ process.stdin.on('end', () => {
     } else if (hook_event_name === 'SubagentStop') {
       // Subagent finished — remove from active state and log completion
       mutateAgents(stateFile, stateDir, agents =>
-        agents.filter(a => a.id !== (agent_id || ''))
+        agent_id ? agents.filter(a => a.id !== agent_id) : agents
       );
       appendLog(logFile, logsDir, { ts, event: 'completed', tool: 'Task', agent: agent_type || 'unknown' });
     }

@@ -127,7 +127,7 @@ For each candidate agent/skill:
 - Has a distinct persona, expertise, or decision-making style
 - Would be invoked for a class of tasks, not a single workflow
 - Benefits from deep domain knowledge in its system prompt
-- Examples: `benchmark-runner`, `migration-guide`, `dependency-auditor`
+- Examples: `migration-guide`, `dependency-auditor` (hypothetical — use abstract names, not agent names that don't exist on disk)
 
 ### When to Create a New Skill (workflow)
 

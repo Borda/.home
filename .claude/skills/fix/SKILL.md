@@ -33,7 +33,7 @@ Gather all available context about the bug:
 gh issue view <number> --comments
 
 # If error message: search codebase for the failing code path
-grep -rn "<error_pattern>" src/
+grep -rn "<error_pattern>" .  # adjust path to match project layout (src/, lib/, app/, etc.)
 
 # If failing test: run it to capture the exact failure
 python -m pytest <test_path> -v --tb=long 2>&1 | tail -40

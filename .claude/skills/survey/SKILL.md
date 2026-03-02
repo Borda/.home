@@ -2,8 +2,7 @@
 name: survey
 description: Survey SOTA literature for an AI/ML topic, method, or architecture. Finds relevant papers, builds a comparison table, and recommends the best implementation strategy for the current codebase. Delegates deep analysis to the ai-researcher agent.
 argument-hint: <topic, method, or problem>
-disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob, Task, WebSearch, WebFetch
+allowed-tools: Read, Write, Bash, Grep, Glob, Task, WebSearch, WebFetch
 context: fork
 ---
 
@@ -39,11 +38,20 @@ Launch both tasks simultaneously — they are independent.
 
 Task the ai-researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
 
+Use this prompt scaffold (adapt the constraints from Step 1):
+
+```
+Survey the literature on: <$ARGUMENTS>
+Codebase constraints: <framework, Python version, compute budget, existing dependencies from Step 1>
+Deliver: comparison table (method, key idea, benchmarks, compute, code available), recommendation for best method, and a 3-step implementation plan for this codebase.
+Include a ## Confidence block at the end.
+```
+
 ### 2b: Check for existing implementations (main context)
 
 ```bash
 # Search the codebase for any existing related code
-grep -rF "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
+grep -rF "$ARGUMENTS" "$(git rev-parse --show-toplevel)" --include="*.py" -l 2>/dev/null | head -10
 ```
 
 ## Step 3: Report
@@ -82,6 +90,8 @@ grep -rF "$ARGUMENTS" . --include="*.py" -l 2>/dev/null | head -10
 ### References
 - [Paper title] ([year]) — [link]
 ```
+
+After printing the report above, write the full content to `tasks/output-survey-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-survey-$(date +%Y-%m-%d).md`
 
 </workflow>
 

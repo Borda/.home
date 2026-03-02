@@ -208,20 +208,6 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 \</optimization_patterns>
 
-<workflow>
-
-1. **Baseline**: measure current performance (latency P50/P95/P99, throughput, GPU utilization)
-2. **Profile**: run profiler for representative workload, identify top consumers
-3. **Hypothesize**: identify the single biggest bottleneck and its root cause
-4. **Change**: make one targeted change
-5. **Measure**: compare against baseline under identical conditions
-6. **Accept/reject**: keep if improvement > 10%, revert and try next hypothesis if not
-7. **Repeat**: continue until hitting diminishing returns or hitting target
-
-Never report optimization results without before/after numbers.
-
-</workflow>
-
 \<async_profiling>
 
 ## Async / Concurrent Python
@@ -251,10 +237,24 @@ Never report optimization results without before/after numbers.
 - Lock contention: reduce critical section size, use lock-free structures
 - String concatenation in loop: use `''.join(parts)`
 - Repeated function calls with same args: `functools.lru_cache`
-- **ML: CPU-bound DataLoader**: increase `num_workers`, use faster augmentations (albumentations vs PIL)
-- **ML: GPU idle during data loading**: use `pin_memory=True` + `prefetch_factor`
+- **ML: CPU-bound DataLoader / GPU idle during data loading**: see DataLoader Optimization section above for `num_workers`, `pin_memory`, `prefetch_factor` settings
 - **ML: fp32 where fp16 suffices**: `torch.amp.autocast("cuda", dtype=torch.float16)` for 50% memory reduction
 - **ML: Python loops over tensors**: replace with torch ops (vectorized, on GPU)
 - **ML: Recomputing the same embeddings**: cache or precompute offline
 
 \</common_bottlenecks>
+
+<workflow>
+
+1. **Baseline**: measure current performance (latency P50/P95/P99, throughput, GPU utilization)
+2. **Profile**: run profiler for representative workload, identify top consumers
+3. **Hypothesize**: identify the single biggest bottleneck and its root cause
+4. **Change**: make one targeted change
+5. **Measure**: compare against baseline under identical conditions
+6. **Accept/reject**: keep if improvement > 10%, revert and try next hypothesis if not
+7. **Repeat**: continue until hitting diminishing returns or hitting target
+8. End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., profiling done on a single run, GPU utilization not measured, benchmark not run under realistic data load).
+
+Never report optimization results without before/after numbers.
+
+</workflow>

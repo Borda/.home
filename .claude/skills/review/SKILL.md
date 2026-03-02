@@ -2,7 +2,7 @@
 name: review
 description: Full code review orchestrating sw-engineer, qa-specialist, perf-optimizer, doc-scribe, linting-expert, solution-architect agents plus the /security skill in parallel. Produces structured findings across architecture, test coverage, performance, documentation, lint, security, and API design. Supports PR review mode and includes OSS-specific checks.
 argument-hint: '[file, directory, or PR number to review]'
-allowed-tools: Read, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Task
 context: fork
 ---
 
@@ -95,7 +95,7 @@ git diff HEAD~1 HEAD -- "src/**/__init__.py"
 git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 ```
 
-## Step 3b: Cross-validate critical and high findings
+## Step 4: Cross-validate critical and high findings
 
 Before consolidating, for any finding classified as `CRITICAL` or `[blocking]` from Step 2, spawn a second independent agent to verify. Use the **same agent type** that raised the finding (e.g., sw-engineer verifies sw-engineer's critical finding):
 
@@ -112,9 +112,9 @@ Classify:
 - **Second pass disagrees** → downgrade to `high` with note "unconfirmed — one of two passes flagged this"
 - **Both agree lower severity** → re-classify accordingly
 
-Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and lower go directly to Step 4.
+Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and lower go directly to Step 5.
 
-## Step 4: Consolidate findings
+## Step 5: Consolidate findings
 
 ```
 ## Code Review: [target]
@@ -172,7 +172,9 @@ Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and low
 
 After parsing confidence scores: if any agent scored < 0.7, prepend **⚠ LOW CONFIDENCE** to that agent's findings section and explicitly state the gap. Do not silently drop uncertain findings — flag them so the reviewer can decide whether to investigate further.
 
-## Step 5: Delegate implementation follow-up (optional)
+After printing the consolidated report, write the full content to `tasks/output-review-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-review-$(date +%Y-%m-%d).md`
+
+## Step 6: Delegate implementation follow-up (optional)
 
 After consolidating findings, identify tasks from the review that Codex can implement directly — not style violations (those are handled by pre-commit hooks), but work that requires writing meaningful code or documentation grounded in the actual implementation.
 
@@ -202,7 +204,7 @@ Example prompt: `"use the qa-specialist to add a test for StreamReader.read_chun
 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
 
-Append a `### Codex Delegation` section to the review output summarizing what was auto-implemented.
+Print a `### Codex Delegation` section to the terminal summarizing what was auto-implemented (do not re-write the output file).
 
 </workflow>
 
@@ -216,6 +218,6 @@ Append a `### Codex Delegation` section to the review output summarizing what wa
   - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
   - Structural or quality issues → `/refactor` for test-first improvements
   - Security findings in auth/input/deps → `/security` for a dedicated deep audit
-  - Mechanical issues beyond what Step 5 auto-fixed → `/codex` to delegate additional tasks
+  - Mechanical issues beyond what Step 6 auto-fixed → `/codex` to delegate additional tasks
 
 </notes>

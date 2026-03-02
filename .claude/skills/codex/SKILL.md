@@ -95,7 +95,7 @@ printf '{"ts":"%s","status":"skipped","reason":"task too broad for delegation","
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" "$PROMPT" "$TARGET" >> "$CODEX_LOG"
 ```
 
-Select the Codex agent based on task type. The "internal chain" column shows which agents Codex may spawn internally (per AGENTS.md spawn rules) — Claude receives the final working-tree result of the whole chain, not just the first agent:
+Select the Codex agent based on task type. The "internal chain" column shows which agents Codex may spawn internally (per `.codex/AGENTS.md` spawn rules) — Claude receives the final working-tree result of the whole chain, not just the first agent:
 
 | Task type                                               | Entry agent      | Internal chain                                 |
 | ------------------------------------------------------- | ---------------- | ---------------------------------------------- |
@@ -103,12 +103,9 @@ Select the Codex agent based on task type. The "internal chain" column shows whi
 | Implementation, refactoring, renaming, type annotations | `sw-engineer`    | `sw-engineer` → `qa-specialist` + `doc-scribe` |
 | Lint / type-check fixes                                 | `linting-expert` | single agent                                   |
 | Test writing or improvements                            | `qa-specialist`  | single agent                                   |
-| Performance, profiling                                  | `squeezer` ¹     | single agent                                   |
 | CI config, GitHub Actions                               | `ci-guardian`    | single agent                                   |
 | Data pipeline changes                                   | `data-steward`   | single agent                                   |
 | Release prep, deprecation notices                       | `oss-maintainer` | single agent                                   |
-
-¹ `squeezer` is a Codex-only agent (no `.claude/` peer) — for deep performance analysis use the `perf-optimizer` agent directly instead.
 
 For chained tasks (e.g. `sw-engineer`), Codex may take longer and touch more files — factor this into the complexity assessment above.
 

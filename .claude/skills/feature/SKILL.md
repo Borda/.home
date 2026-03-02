@@ -209,10 +209,11 @@ Task(
   prompt="Read .claude/skills/codex/SKILL.md and follow its workflow exactly.
 Task: use the <agent> to <specific task with accurate description of what the code does>.
 Target: <file>."
+  # Path is project-relative; if the codex skill moves, update this path.
 )
 ```
 
-Example prompt: `"use the doc-scribe to add a 6-section Google-style docstring to BatchTransform.apply() in src/transforms.py — the method applies per-sample normalization using a precomputed mean/std tensor and returns a tensor of the same shape as input"`
+Example prompt: `"use the doc-scribe to add a 6-section NumPy-style docstring to BatchTransform.apply() in src/transforms.py — the method applies per-sample normalization using a precomputed mean/std tensor and returns a tensor of the same shape as input"`
 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully — do not block on this step.
 
@@ -261,11 +262,11 @@ Output a structured summary:
 - **Reuse over reinvent**: Step 1 analysis is mandatory to find existing patterns; duplicating code is a review failure
 - **Never skip the review cycle**: `/review` is not optional — it catches what TDD misses (API design, security, performance)
 - **Fix loop is bounded**: after 3 cycles without reaching clean review, pause and re-scope with the user — the feature may need architectural rethinking
-- Related agents: `sw-engineer` (analysis + implementation), `qa-specialist` (TDD + demo test), `doc-scribe` (documentation), `linting-expert` (type safety + style)
+- Related agents: `sw-engineer` (analysis + implementation), `doc-scribe` (documentation), `linting-expert` (type safety + style) — `qa-specialist` is invoked indirectly via `/review`, not spawned directly by this skill
 - Follow-up chains:
   - Feature changes public API → `/release` to prepare CHANGELOG entry and migration guide
   - Feature is performance-sensitive → `/optimize` for baseline + bottleneck analysis
-  - Feature touches `.claude/` config files → run `self-mentor` audit + `/sync` to propagate
+  - Feature touches `.claude/` config files → spawn a `self-mentor` agent for the modified files, then `/sync` to propagate
   - Mechanical follow-up needed beyond what Step 7 handled → `/codex` to delegate additional tasks
 
 </notes>

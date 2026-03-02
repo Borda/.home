@@ -16,7 +16,6 @@ borda.local/
 │   ├── AGENTS.md           # global instructions and subagent spawn rules
 │   ├── config.toml         # multi-agent config (gpt-5.3-codex baseline)
 │   └── agents/             # per-agent model and instruction overrides
-├── .mcp.json               # MCP server wiring (Codex headless via codex)
 ├── .pre-commit-config.yaml
 ├── .gitignore
 └── README.md
@@ -65,7 +64,7 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 | **refactor**  | `/refactor <target>`               | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor      |
 | **fix**       | `/fix <bug>`                       | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks             |
 | **calibrate** | `/calibrate [target] [fast\|full]` | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias  |
-| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex via MCP — Claude orchestrates, Codex executes        |
+| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes            |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>

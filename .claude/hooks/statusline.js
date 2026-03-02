@@ -5,7 +5,8 @@
 // Billing detection:
 //   - ANTHROPIC_API_KEY set → API key billing → show real cost in yellow ($X.XX)
 //   - No API key          → OAuth subscription → show "<Plan> ~$X.XX" in cyan
-//   Plan name inferred from context_window_size: ≥1M → Max, ≥200k → Pro, else Sub.
+//   Plan name: read from ~/.claude/state/subscription.json (written at SessionStart by `claude auth status`).
+//   Falls back to CLAUDE_PLAN env var, then "Sub" if cache is unavailable.
 //   Note: cost.total_cost_usd is tokens × API rates — NOT actual subscription charge.
 //   Subscription quota % is not exposed in hook data. Check /status for monthly usage.
 
@@ -25,9 +26,20 @@ process.stdin.on('end', () => {
     const usd = cost?.total_cost_usd ?? 0;
     const isApiKey = !!process.env.ANTHROPIC_API_KEY;
 
-    const ctxSize = context_window?.context_window_size ?? 0;
-    // Infer plan from context window size: 1M tokens → Max, 200k → Pro, unknown → Sub
-    const planName = ctxSize >= 1_000_000 ? 'Max' : ctxSize >= 200_000 ? 'Pro' : 'Sub';
+    // Plan detection: CLAUDE_PLAN env var wins when set; otherwise read subscription type
+    // cached at SessionStart by `claude auth status`; falls back to "Sub".
+    let planName;
+    if (process.env.CLAUDE_PLAN) {
+      planName = process.env.CLAUDE_PLAN;
+    } else {
+      planName = 'Sub';
+      try {
+        const sub = JSON.parse(fs.readFileSync(
+          path.join(process.env.HOME || '/tmp', '.claude/state/subscription.json'), 'utf8'
+        ));
+        if (sub.subscriptionType) planName = sub.subscriptionType[0].toUpperCase() + sub.subscriptionType.slice(1);
+      } catch (_) {}
+    }
 
     const parts = [];
 
@@ -40,7 +52,6 @@ process.stdin.on('end', () => {
     } else {
       // OAuth subscription (Pro / Max) — cost.total_cost_usd is theoretical API-rate
       // cost (tokens × published rates), NOT actual subscription charge or quota consumption.
-      // Plan name inferred from context_window_size (1M = Max, 200k = Pro).
       // Use /status for actual monthly quota.
       parts.push(`\x1b[36m${planName} ~$${usd.toFixed(2)}\x1b[0m`);            // cyan plan + tilde
     }
@@ -70,10 +81,7 @@ process.stdin.on('end', () => {
     } catch (_) {}  // file missing = no active agents
 
     process.stdout.write(parts.join(' \x1b[2m│\x1b[0m '));
-  } catch (e) {
-    // Write error to temp file for debugging, show fallback statusline
-    require('fs').appendFileSync('/tmp/statusline-debug.log',
-      new Date().toISOString() + ' raw=' + JSON.stringify(raw.slice(0, 200)) + ' err=' + e.message + '\n');
+  } catch (_) {
     process.stdout.write('\x1b[2m?\x1b[0m');
   }
 });

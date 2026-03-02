@@ -2,8 +2,7 @@
 name: release
 description: Prepare release communication from git history, PRs, or a diff. Adapts output to context — user-facing release notes, CHANGELOG entry, internal release summary, or migration guide. Groups changes by type, filters noise, writes in plain language for the audience.
 argument-hint: '[range] [release-notes|changelog|summary|migration] | prep <version>'
-disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Task
 ---
 
 <objective>
@@ -187,6 +186,8 @@ Bad/good examples:
 - LinkedIn is optional — include only if known; never guess
 - New contributors get a welcome sentence above the list
 - Maintainer always listed last with infra / CI / docs scope
+
+After applying the guidelines above to polish the output, write the full content to `tasks/output-release-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-release-$(date +%Y-%m-%d).md`
 
 ## Step 5: Publish (after writing notes)
 

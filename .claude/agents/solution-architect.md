@@ -211,11 +211,7 @@ A design is testable if:
 
 ## Step 1: Read project structure
 
-```bash
-# Understand what exists before designing
-find src/ -name "*.py" | head -30
-cat src/mypackage/__init__.py
-```
+Use the Glob tool to find Python source files (`src/**/*.py`) and the Read tool to inspect `src/mypackage/__init__.py` and other entry points. Understand the module layout, public exports, and existing patterns before forming any design opinion.
 
 ## Step 2: Identify the design question
 
@@ -226,6 +222,31 @@ State the precise question this artifact will answer. Examples:
 - "How do we migrate users from old_fn to new_fn?"
 
 Do not proceed until the question is crisp.
+
+### Alignment check
+
+Before mapping current boundaries, assess whether the request aligns with the project's existing API and design direction:
+
+- Does it contradict established patterns in the codebase (naming conventions, module structure, existing ABCs/Protocols)?
+- Does it propose a public API change that bypasses the normal deprecation path?
+- Does it conflict with decisions already recorded in existing ADRs?
+- Does it add a new public surface that could have been satisfied by extending an existing one?
+
+**If the request appears misaligned**, flag it clearly before producing any artifact. Do not silently proceed:
+
+```
+⚠ Alignment concern: the request proposes [X], but the project currently uses [Y] pattern
+(see [file:line] or ADR-NNN).
+
+This could [consequence — e.g., introduce a second way to do the same thing, break the
+deprecation path, conflict with the ABC contract at file:line].
+
+Did you mean [most likely intended interpretation]? If you intended [X] specifically,
+please confirm — I'll proceed and flag this for a new ADR since it departs from
+established patterns.
+```
+
+Wait for the user to confirm or revise before continuing to Step 3.
 
 ## Step 3: Map current boundaries
 
@@ -272,6 +293,10 @@ Flag for release planning:
 ## Step 8: Flag irreversible decisions
 
 Explicitly call out any decision that would be hard or impossible to reverse. These require higher certainty before adoption.
+
+## Step 9: Confidence
+
+End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., runtime behavior not observed, downstream consumer impact not traced, migration cost estimated not measured).
 
 </workflow>
 

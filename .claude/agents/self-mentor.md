@@ -158,10 +158,23 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 \<antipatterns_to_flag>
 
 - Agents notably longer than their peers with no clear justification for the extra content
+
 - Cross-refs to non-existent agents (`"see foo-agent"` when `foo-agent.md` doesn't exist)
+
 - Same YAML snippet copy-pasted into 2+ agents instead of cross-referenced
+
 - Workflow step numbers with gaps (1, 2, 4 — step 3 missing)
+
 - URLs in agent files that were never fetched (hallucinated docs links)
-- Plan-gated agents (solution-architect, oss-maintainer, self-mentor) must use `opusplan`; implementation agents (sw-engineer, qa-specialist, ai-researcher, perf-optimizer) must use `opus`; diagnostics/writing agents (ci-guardian, linting-expert, web-explorer, doc-scribe, data-steward) may use `sonnet` when cost is prioritised over depth — never use `sonnet` for agents that make complex multi-file design decisions
+
+- Model assignments must follow this policy:
+
+  | Category              | Model      | Agents                                                              |
+  | --------------------- | ---------- | ------------------------------------------------------------------- |
+  | Plan-gated            | `opusplan` | solution-architect, oss-maintainer, self-mentor                     |
+  | Implementation        | `opus`     | sw-engineer, qa-specialist, ai-researcher, perf-optimizer           |
+  | Diagnostics / writing | `sonnet`   | ci-guardian, linting-expert, web-explorer, doc-scribe, data-steward |
+
+  Never use `sonnet` for agents that make complex multi-file design decisions.
 
 \</antipatterns_to_flag>

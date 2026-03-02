@@ -87,12 +87,12 @@ RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; CYN='\033[0;36m'; NC='\033
 # Agents on disk
 ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | sort > /tmp/agents_disk.txt
 # Agents in MEMORY.md
-grep '^\- Agents:' ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null | head -1
+grep '^\- Agents:' .claude/memory/MEMORY.md 2>/dev/null | head -1
 
 # Skills on disk
 ls .claude/skills/ | sort > /tmp/skills_disk.txt
 # Skills in MEMORY.md
-grep '^\- Skills:' ~/.claude/projects/*/memory/MEMORY.md 2>/dev/null | head -1
+grep '^\- Skills:' .claude/memory/MEMORY.md 2>/dev/null | head -1
 
 # 2. README vs disk — skill/agent table rows should match disk
 grep '^\| \*\*' README.md | head -30
@@ -108,7 +108,7 @@ grep -rn '/Users/\|/home/' .claude/agents/*.md .claude/skills/*/SKILL.md 2>/dev/
 
 # 6. permissions-guide.md drift — every allow entry must appear in the guide, and vice versa
 # Allow entries missing from guide
-python3 -c "import json; [print(p) for p in json.load(open('.claude/settings.json'))['permissions']['allow']]" | \
+jq -r '.permissions.allow[]' .claude/settings.json | \
   while IFS= read -r perm; do
     grep -qF "\`$perm\`" .claude/permissions-guide.md 2>/dev/null \
       || printf "${YEL}⚠ MISSING from guide${NC}: %s\n" "$perm"
@@ -116,7 +116,7 @@ python3 -c "import json; [print(p) for p in json.load(open('.claude/settings.jso
 # Guide entries orphaned (not in allow list)
 grep '^\| `' .claude/permissions-guide.md | awk -F'`' '{print $2}' | \
   while IFS= read -r perm; do
-    python3 -c "import json,sys; d=json.load(open('.claude/settings.json')); sys.exit(0 if '$perm' in d['permissions']['allow'] else 1)" 2>/dev/null \
+    jq -e --arg p "$perm" '.permissions.allow | contains([$p])' .claude/settings.json > /dev/null 2>&1 \
       || printf "${YEL}⚠ ORPHANED in guide${NC}: %s\n" "$perm"
   done
 
@@ -125,7 +125,8 @@ grep '^\| `' .claude/permissions-guide.md | awk -F'`' '{print $2}' | \
 # or synthesize Task agent results. The combination silently prevents the skill from working.
 for f in .claude/skills/*/SKILL.md; do
   name=$(basename "$(dirname "$f")")
-  if grep -q 'context: fork' "$f" 2>/dev/null && grep -q 'disable-model-invocation: true' "$f" 2>/dev/null; then
+  if awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'context: fork' && \
+     awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'disable-model-invocation: true'; then
     printf "${RED}! BREAKING${NC} skills/%s: context:fork + disable-model-invocation:true\n" "$name"
     printf "  ${RED}→${NC} forked skill has no model to coordinate agents or synthesize results\n"
     printf "  ${CYN}fix${NC}: remove disable-model-invocation:true (or remove context:fork if purely tool-only)\n"
@@ -212,7 +213,7 @@ Group all findings from Steps 1–4 into a severity table:
 | **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs, deprecated frontmatter field or settings key, permissions-guide.md missing row for an allow entry or containing an orphaned row                                                                                      |
 | **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it, 💡 new documented CC feature not yet used                                                                                                                                                     |
 
-## Step 5b: Cross-validate critical findings
+## Step 6: Cross-validate critical findings
 
 Before surfacing any `critical` finding in the report, spawn a second **self-mentor** agent targeting only that file with a prompt that names the specific finding:
 
@@ -231,7 +232,7 @@ Classify the outcome:
 
 This cross-validation adds one extra spawn per critical finding — it is worth it to avoid false-positive blocking issues reaching the user.
 
-## Step 6: Report findings
+## Step 7: Report findings
 
 Output a structured audit report before fixing anything:
 
@@ -266,7 +267,7 @@ Output a structured audit report before fixing anything:
 
 If `fix` was not passed, stop here and present the report.
 
-## Step 7: Fix critical, high, and medium findings
+## Step 8: Fix critical, high, and medium findings
 
 For each `critical`, `high`, and `medium` finding, apply a targeted fix:
 
@@ -287,9 +288,9 @@ After each fix, note the file and change in a running fix log.
 
 **Low findings** (nits): collect them in the final report but do not auto-fix — present them for optional manual cleanup.
 
-## Step 8: Re-audit modified files + confidence check
+## Step 9: Re-audit modified files + confidence check
 
-For every file changed in Step 7, spawn **self-mentor** again to confirm:
+For every file changed in Step 8, spawn **self-mentor** again to confirm:
 
 - The fix resolved the finding
 - No new issues were introduced by the edit
@@ -299,7 +300,7 @@ For every file changed in Step 7, spawn **self-mentor** again to confirm:
 grep -n "<broken-name>" <fixed-file>
 ```
 
-**Confidence re-run**: after collecting all self-mentor responses from Steps 3 and 8, parse each confidence score. For any file where **Score < 0.7**:
+**Confidence re-run**: after collecting all self-mentor responses from Steps 3 and 9, parse each confidence score. For any file where **Score < 0.7**:
 
 1. Re-spawn self-mentor on that file with the specific gap from the `Gaps:` field addressed in the prompt (e.g., "pay special attention to async error paths — previous pass flagged this as a gap")
 2. If confidence is still < 0.7 after one retry: flag to user with ⚠ and include the gap in the final report — do not silently drop it
@@ -311,9 +312,9 @@ grep -n "<broken-name>" <fixed-file>
 # Flag any < 0.7 for targeted re-run
 ```
 
-If re-audit surfaces new issues, loop back to Step 7 for those findings only (max 2 re-audit cycles — escalate to user if still unresolved).
+If re-audit surfaces new issues, loop back to Step 8 for those findings only (max 2 re-audit cycles — escalate to user if still unresolved).
 
-## Step 9: Final report
+## Step 10: Final report
 
 Output the complete audit summary:
 
@@ -362,7 +363,7 @@ Run `/sync apply` to propagate clean config to ~/.claude/
   - `YELLOW` (`\033[1;33m`) — warnings/medium: `⚠ MISSING`, `⚠ ORPHANED`, `⚠ DIFFERS`
   - `GREEN` (`\033[0;32m`) — pass status: `✓ OK`, `✓ IDENTICAL`
   - `CYAN` (`\033[0;36m`) — source agent name or fix hint
-- **Report before fix**: never silently mutate files — always present the findings report first (Step 6), then fix
+- **Report before fix**: never silently mutate files — always present the findings report first (Step 7), then fix
 - **settings.json is hands-off**: missing permissions are always reported, never auto-edited — structural JSON edits risk breaking Claude Code's config loading
 - **Dead loops need human judgment**: a cycle in follow-up chains might be intentional (e.g., refactor → review → fix → refactor) — flag and explain, don't auto-remove
 - **Max 2 re-audit cycles**: if fixes don't converge after 2 loops, surface the remaining issues to the user rather than spinning

@@ -63,8 +63,8 @@ When checking if docs match code:
 # Check installed library version
 pip show <library> | grep Version
 
-# Find library's docs URL
-pip show <library> | grep Home-page
+# Find library's docs URL (Home-page deprecated in pip 22+; Project-URLs is the replacement)
+pip show <library> | grep -E "Home-page|Project-URLs"
 
 # Check pyproject.toml for version constraints
 grep -A 5 'dependencies' pyproject.toml
@@ -156,7 +156,7 @@ Description of return value.
 When checking if a dependency has a new release:
 ```bash
 # Check latest version on PyPI
-pip install <package>== 2>&1 | grep -oP '\d+\.\d+\.\d+' | head -5
+pip index versions <package> 2>/dev/null | grep -oE '[0-9]+\.[0-9]+\.[0-9]+' | head -5
 
 # Compare with project's pinned version
 grep '<package>' pyproject.toml requirements*.txt uv.lock 2>/dev/null
@@ -219,14 +219,7 @@ When upgrading a dependency in the PyTorch ecosystem:
 gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -d | grep -A 20 "compatibility"
 ```
 
-2. Build a cross-reference:
-
-```
-| PyTorch | Lightning | TorchMetrics | torchvision | CUDA |
-|---------|-----------|-------------|-------------|------|
-| 2.5     | 2.4+      | 1.5+        | 0.20+       | 12.4 |
-| 2.4     | 2.3+      | 1.4+        | 0.19+       | 12.1 |
-```
+2. Build a cross-reference table from the fetched compatibility docs — do not use hardcoded version numbers, as they become stale within one release cycle. Fetch and parse the current matrix from each library's official compatibility page.
 
 3. Cross-check against `pyproject.toml` constraints before recommending upgrade
 
@@ -241,6 +234,7 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 5. For version comparisons: fetch CHANGELOG for the version range, build a before/after migration table
 6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim
 7. Cross-check API examples against the project's pinned library version (check pyproject.toml)
+8. End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., docs page not fetched — used cached summary, CHANGELOG not found for version range, API examples not executed).
 
 </workflow>
 

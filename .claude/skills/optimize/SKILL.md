@@ -26,13 +26,13 @@ Before touching any code, measure current performance:
 
 ```bash
 # Python script / module
-python -m cProfile -s cumtime $ARGUMENTS 2>&1 | head -30
+python -m cProfile -s cumtime "$ARGUMENTS" 2>&1 | head -30
 
 # Quick wall-clock timing
-time python $ARGUMENTS
+time python "$ARGUMENTS"
 
-# Memory snapshot (for standalone scripts only — breaks on relative imports; use memray for libraries)
-python -c "import tracemalloc; tracemalloc.start(); exec(open('$ARGUMENTS').read()); print(tracemalloc.get_traced_memory())"
+# Memory snapshot — use memray (safer and more accurate than exec-based approaches):
+# python -m memray run --output /tmp/memray.bin "$ARGUMENTS" && python -m memray stats /tmp/memray.bin
 ```
 
 Record the baseline numbers — they are the benchmark for all improvements.
@@ -53,8 +53,8 @@ After each change from the perf-optimizer:
 
 ```bash
 # Re-run the same baseline measurement
-python -m cProfile -s cumtime $ARGUMENTS 2>&1 | head -30
-time python $ARGUMENTS
+python -m cProfile -s cumtime "$ARGUMENTS" 2>&1 | head -30
+time python "$ARGUMENTS"
 ```
 
 **Accept** if improvement > 10%. **Revert** if not measurable or < noise floor.
@@ -107,7 +107,7 @@ Example prompt: `"use the doc-scribe to add an inline comment to the inner loop 
 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully.
 
-Append a `### Codex Delegation` section after the Step 4 report output only if this step ran.
+Print a `### Codex Delegation` section after the Step 4 terminal output only if this step ran.
 
 </workflow>
 

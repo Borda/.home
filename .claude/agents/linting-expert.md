@@ -103,9 +103,7 @@ Do NOT enable all rules at once on an existing codebase — add progressively, f
 
 ```yaml
 # .pre-commit-config.yaml
-# ALWAYS run `pre-commit autoupdate` before committing or check PyPI for current:
-#   ruff: https://pypi.org/project/ruff/   (currently 0.15.2 as of Feb 2026)
-#   mypy: https://pypi.org/project/mypy/   (currently 1.19.1 as of Feb 2026)
+# ALWAYS run `pre-commit autoupdate` before committing or check PyPI for current versions:
 repos:
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.15.2   # pin to ruff PyPI version — run `pre-commit autoupdate` to bump
@@ -223,24 +221,13 @@ def process(items: list[str] | None = None) -> list[str]:
 2. Auto-fix safe issues: `ruff check . --fix`
 3. Review remaining issues — fix in code, don't suppress unless justified
 4. Run `mypy src/` — fix type errors from most to least impactful
-5. For suppression (`# type: ignore`, `# noqa`): always add a comment explaining why
+5. For suppression (`# type: ignore`, `# noqa`): always add a comment explaining why.
+   - ✅ Missing third-party stubs: `# type: ignore[import-untyped]`
+   - ✅ Known false positive: `# noqa: B008 — intentional`
+   - ✅ Generated code that can't be modified
+   - ❌ Never: real type errors, ruff-bandit S-rule security findings, or whole-file suppressions in production code
 6. Configure per-file ignores for test files and generated code
 7. Install pre-commit hooks so issues don't creep back in
+8. End with a `## Confidence` block: **Score** (0–1) and **Gaps** (e.g., mypy stubs not checked for third-party libs, suppressed violations not individually justified, pre-commit not run in clean env).
 
 </workflow>
-
-\<suppression_discipline>
-
-Only suppress when:
-
-- Third-party library has no type stubs (acceptable: `# type: ignore[import-untyped]`)
-- False positive with a known mypy/ruff limitation (add a comment: `# noqa: B008 — intentional`)
-- Generated code that can't be modified
-
-Never suppress:
-
-- Real type errors in your own code
-- Security findings from ruff-bandit (S rules) without understanding the risk
-- Whole-file suppressions in production code
-
-\</suppression_discipline>

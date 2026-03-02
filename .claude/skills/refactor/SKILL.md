@@ -169,8 +169,6 @@ Output a structured report:
 - [any remaining items that need manual review]
 ```
 
-<!-- If Step 5 (Codex delegation) ran, append a "### Codex Delegation" section listing files and tasks delegated. -->
-
 </workflow>
 
 <notes>

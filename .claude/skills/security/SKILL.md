@@ -2,8 +2,7 @@
 name: security
 description: Security audit of code or a feature. Checks OWASP Top 10, Python-specific vulnerabilities, ML security concerns, authentication/authorization, secrets handling, and dependency vulnerabilities. Flags issues by severity with specific remediation steps.
 argument-hint: <file, endpoint, or directory>
-disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Task
 context: fork
 ---
 
@@ -33,9 +32,9 @@ Launch three independent subagents simultaneously using the Task tool. Each agen
 
 **Agent 1 — Python vulnerability scan**: Scan for dangerous deserialization (`pickle.loads`, `yaml.load` without `Loader=`), code execution sinks (`eval`, `exec`, `shell=True`, `os.system`), path traversal (unvalidated `open()` paths), and insecure temp files (`tempfile.mktemp`, hardcoded `/tmp/`).
 
-**Agent 2 — OWASP Top 10 checklist**: Evaluate against A01 (Broken Access Control), A02 (Cryptographic Failures), A03 (Injection), A04 (Insecure Design), A05 (Security Misconfiguration), A06 (Vulnerable and Outdated Components — cross-check `pip-audit` results against known CVE databases), A07 (Authentication Failures), A08 (Software and Data Integrity Failures — run `pip-audit`, `safety scan` \[v3+; use `safety check` for v2\]), and A09 (Logging Failures). Return a checklist with pass/fail per item.
+**Agent 2 — OWASP Top 10 checklist**: Evaluate against A01 (Broken Access Control), A02 (Cryptographic Failures), A03 (Injection), A04 (Insecure Design), A05 (Security Misconfiguration), A06 (Vulnerable and Outdated Components — cross-check `pip-audit` results against known CVE databases), A07 (Authentication Failures), A08 (Software and Data Integrity Failures — run `pip-audit`, `safety scan` \[run `safety --help` to confirm current subcommand; v3+ uses `scan`, v2 uses `check`\]), and A09 (Logging Failures), and A10 (Server-Side Request Forgery — validate all outbound requests originating from user-supplied URLs; flag `requests.get(user_url)` without allowlist). Return a checklist with pass/fail per item.
 
-**Agent 3 — ML Security checks**: Audit supply chain for pre-trained models (source verification, checksum validation, pickle-based weight files), pickle usage in ML workflows (`torch.load`, `joblib.load` — check for `weights_only=True`), model poisoning risks (data provenance, federated learning defenses), adversarial input validation (image dimensions/dtype, text length, LLM prompt injection defenses).
+**Agent 3 — ML Security checks**: Audit supply chain for pre-trained models (source verification, checksum validation, pickle-based weight files), pickle usage in ML workflows (`torch.load`, `joblib.load` — check for `weights_only=True`; note: `weights_only=True` is the default in PyTorch 2.6+, so flag only if explicitly set to `False` or the project targets PyTorch < 2.6), model poisoning risks (data provenance, federated learning defenses), adversarial input validation (image dimensions/dtype, text length, LLM prompt injection defenses).
 
 ## Step 3: Report
 
@@ -76,6 +75,8 @@ Results: [paste output or "clean"]
 - Pickle usage: [none/flagged locations]
 - Input validation: [present/missing]
 ```
+
+After printing the report above, write the full content to `tasks/output-security-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-security-$(date +%Y-%m-%d).md`
 
 ## Step 4: Delegate mechanical fixes (optional)
 

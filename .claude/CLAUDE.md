@@ -77,6 +77,7 @@ When modifying any file under `.claude/` (agents, skills, settings, hooks, this 
 - **Objective and direct**: no flattery, no filler; state what works and what doesn't
 - **Positive but critical**: lead with what is good, then call out issues clearly
 - **No after-the-fact sorry**: if something is likely to go wrong, say so upfront and propose an alternative
+- **File vs terminal for long output**: ask "will the user copy this into something else?" — if yes, write to a **new** file `tasks/output-<slug>-<YYYY-MM-DD>.md` (e.g. `tasks/output-release-2026-03-01.md`) AND print to terminal; notify `→ saved to tasks/output-<slug>-<date>.md`. If output is just a report the user reads and acts on (audit findings, calibrate results, analysis within the current workflow), keep it terminal-only. Never overwrite an existing output file — always create a new one to avoid diff noise from unrelated content. Prose paragraphs: no hard line breaks at column width.
 - **`!` Breaking findings**: when something is completely non-functional (skill can't run, cross-ref is broken, hook crashes), mark it `!` or `! BREAKING` and state the impact + fix in the same breath — never bury it as a quiet table row. The user should not have to discover it themselves.
 - **Terminal color conventions** (for skill bash output and status lines):
   - RED — breaking/critical: `! BREAKING`, errors that prevent execution

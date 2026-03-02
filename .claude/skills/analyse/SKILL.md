@@ -2,8 +2,7 @@
 name: analyse
 description: Analyze GitHub issues, PRs, and repo health for an OSS project. Summarizes long threads, assesses PR readiness, detects duplicates, extracts reproduction steps, and generates repo health stats. Uses gh CLI for GitHub API access. Complements oss-maintainer agent.
 argument-hint: <number|health|dupes [keyword]|contributors|ecosystem>
-disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob, Task
+allowed-tools: Read, Write, Bash, Grep, Glob, Task
 context: fork
 ---
 
@@ -102,6 +101,8 @@ For the top hypothesis, trace through relevant code:
 
 ````
 
+After printing the output above, write the full content to `tasks/output-analyse-issue-$ARGUMENTS-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-issue-$ARGUMENTS-$(date +%Y-%m-%d).md`
+
 ## Mode: PR Analysis
 
 Run all three `gh` commands in parallel — they are independent API calls:
@@ -160,6 +161,8 @@ _Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 1. [clear action for the author]
 ```
 
+After printing the output above, write the full content to `tasks/output-analyse-pr-$ARGUMENTS-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-pr-$ARGUMENTS-$(date +%Y-%m-%d).md`
+
 ## Mode: Repo Health Overview
 
 Run all three `gh` commands in parallel — they are independent API calls:
@@ -201,6 +204,8 @@ Produce:
 3. [third]
 ```
 
+After printing the output above, write the full content to `tasks/output-analyse-health-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-health-$(date +%Y-%m-%d).md`
+
 ## Mode: Duplicate Detection
 
 ```bash
@@ -221,6 +226,8 @@ Canonical: #[oldest open issue] — suggest closing others as duplicates
 ### Unique (not duplicates)
 - #[N]: [title] — [why it's distinct]
 ```
+
+After printing the output above, write the full content to `tasks/output-analyse-dupes-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-dupes-$(date +%Y-%m-%d).md`
 
 ## Mode: Contributor Activity
 
@@ -249,6 +256,8 @@ Produce:
 - Last release: [date] ([tag])
 - Overdue? [yes/no based on cadence]
 ```
+
+After printing the output above, write the full content to `tasks/output-analyse-contributors-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-contributors-$(date +%Y-%m-%d).md`
 
 ## Mode: Ecosystem Impact (for library maintainers)
 
@@ -283,6 +292,8 @@ Produce:
 ### Recommended Communication
 - [create migration guide / add deprecation warning / notify maintainers directly]
 ```
+
+After printing the output above, write the full content to `tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md`
 
 </workflow>
 
