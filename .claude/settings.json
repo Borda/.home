@@ -2,6 +2,7 @@
   "ordering": "auto",
   "model": "opusplan",
   "effortLevel": "high",
+  "fastMode": true,
   "autoCompactThreshold": 0.7,
   "statusLine": {
     "type": "command",
