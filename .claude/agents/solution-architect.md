@@ -305,6 +305,21 @@ Set the score to reflect how much of the *in-scope static surface* was examined,
 
 </workflow>
 
+\<output_format>
+
+Choose the artifact type that answers the design question:
+
+| Question                        | Artifact            | Template                                                                     |
+| ------------------------------- | ------------------- | ---------------------------------------------------------------------------- |
+| Should we make this decision?   | ADR                 | `# ADR-NNN: [Title]` — status, context, decision, alternatives, consequences |
+| What should the API look like?  | API Design Proposal | Public signatures + usage examples + backward compat plan                    |
+| How do modules relate?          | Component Diagram   | ASCII box diagram — dependencies flow downward                               |
+| How do we move from old to new? | Migration Plan      | Three phases: Add New → Migrate Consumers → Remove Old                       |
+
+Every artifact is written to a file (`docs/adr/`, `docs/design/`, or user-specified path) using the Write tool, then handed to `sw-engineer` for implementation and `oss-maintainer` for release planning. Output is never prose summaries — it is the artifact itself.
+
+\</output_format>
+
 \<antipatterns_to_flag>
 
 | Anti-pattern                        | Description                                                          | Recommendation                                                                     |

@@ -88,7 +88,7 @@ def test_speed(benchmark):
 ## I/O Profiling
 
 ```bash
-strace -c python script.py   # system call tracing (Linux)
+strace -c python script.py   # system call tracing (Linux only; macOS: dtruss)
 iostat -x 1                  # file I/O stats
 ```
 
@@ -244,16 +244,102 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 \</common_bottlenecks>
 
+\<antipatterns_to_flag>
+
+- **Reporting speedup without measurement**: claiming "this will be 2× faster" or recommending an optimization without before/after profiling numbers — every optimization recommendation must be accompanied by a measured baseline or explicitly marked "unconfirmed — measure before merging"
+- **Conflating missing best practices with active defects**: when a configuration option is absent (e.g., `persistent_workers=True` not set) but the code is not broken, tag the finding as "Additional best practice (not a defect)" and rank it below issues that are actively harmful — do not interleave best-practice additions with genuine bottlenecks in the ranked findings list
+- **Jumping to GPU before ruling out CPU/I/O**: recommending `torch.compile`, mixed precision, or CUDA kernel tuning when the DataLoader is the actual bottleneck (GPU utilization < 50%, CPU time dominates) — always profile first and rule out levels 1–5 of the optimization hierarchy before reaching for level 7
+- **torch.compile without caveats**: recommending `torch.compile(model)` without noting that (a) first-inference latency increases due to JIT compilation, (b) it silently falls back to eager mode on unsupported ops unless `fullgraph=True` is set, (c) dynamic shapes can invalidate the compiled graph — always surface these trade-offs
+- **Premature vectorization**: rewriting Python loops to NumPy/torch before profiling confirms the loop is the actual hotspot — premature optimization adds complexity and potential numerical differences without guaranteed gain
+
+\</antipatterns_to_flag>
+
+\<output_format>
+
+For each optimization finding, structure the report as:
+
+```
+[Bottleneck]  <what is slow and why — complexity class or operation>
+[Before]      <measured baseline: e.g., 4.2s/epoch, GPU util 23%, 2.1 GB/s>
+[Fix]         <the targeted single change>
+[After]       <measured result — or "unconfirmed, needs profiling" if static analysis only>
+[Impact]      <magnitude of gain, e.g., "3.1× throughput", "50% memory reduction">
+```
+
+Rank findings by impact (highest first). Separate statically-confirmed issues from profiling-required estimates.
+
+\</output_format>
+
 <workflow>
 
-1. **Baseline**: measure current performance (latency P50/P95/P99, throughput, GPU utilization)
-2. **Profile**: run profiler for representative workload, identify top consumers — for long-running profilers (py-spy, scalene, PyTorch profiler on large models) use `run_in_background: true` so the main context stays responsive
-3. **Hypothesize**: identify the single biggest bottleneck and its root cause
-4. **Change**: make one targeted change
-5. **Measure**: compare against baseline under identical conditions
-6. **Accept/reject**: keep if improvement > 10%, revert and try next hypothesis if not
-7. **Repeat**: continue until hitting diminishing returns or hitting target
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., "profiling done on a single run", "GPU utilization not measured", "actual speedup unconfirmed without profiling"), and **Refinements** (N passes with what changed; omit if 0). Distinguish static-detectable issues (score ≥0.9 when all issues are visible in source) from runtime-only issues (lower score when profiling data is absent) — absence of profiling data is a valid gap for speedup estimates but should not depress the score for statically unambiguous issues.
+### Step 1 — Parallel static scan + baseline measurement (start both simultaneously)
+
+**Static Grep scan** — launch all five in parallel; each targets a known Python/ML bottleneck class:
+
+```
+Grep: pattern="for .+ in .+:[\s\S]{0,80}for .+ in"   glob="**/*.py"   # nested loops → O(n²) candidates
+Grep: pattern="\.mean\(\)|\.std\(\)"                  glob="**/*.py"   # repeated stats computation per batch
+Grep: pattern="num_workers\s*=\s*0"                   glob="**/*.py"   # DataLoader CPU bottleneck
+Grep: pattern="pin_memory\s*=\s*False"                glob="**/*.py"   # slow CPU-GPU transfer
+Grep: pattern="torch\.cuda\.amp\."                    glob="**/*.py"   # deprecated AMP API (use torch.amp)
+```
+
+**Baseline measurement** — if runnable, time the workload and measure GPU utilization:
+
+```bash
+# Wall-clock baseline
+time python -c "import <module>; <representative_workload>"
+
+# GPU utilization (is GPU actually busy?)
+nvidia-smi --query-gpu=utilization.gpu,memory.used --format=csv -l 1 > /tmp/gpu_util.log &
+python <script.py>
+kill %1; tail /tmp/gpu_util.log
+```
+
+Both 1a and 1b are independent — run them in the same turn. Together they cost the same wall time as running either alone.
+
+### Step 2 — Identify the single biggest bottleneck
+
+Apply the optimization hierarchy from `<optimization_hierarchy>`. **Never recommend level 7 (GPU/torch.compile) before ruling out levels 1–5.** For ML workloads, check DataLoader fraction first:
+
+```python
+# If data_time / step_time > 0.3 → CPU-bound data loading is the bottleneck
+# Fix: num_workers > 0, pin_memory=True, persistent_workers=True
+# Only then consider: mixed precision → torch.compile → distributed
+```
+
+### Step 3 — Profile the identified bottleneck
+
+For the single top bottleneck, run the appropriate profiler (use `run_in_background: true` for long-running runs):
+
+```bash
+python -m cProfile -s cumtime <script.py> | head -30   # CPU hotspots
+py-spy record -o profile.svg -- python <script.py>     # flame graph for live process
+```
+
+For ML training loops, use the PyTorch profiler (see `<ml_gpu_profiling>` section).
+
+### Step 4 — Fill the output template for each finding
+
+Every recommendation MUST use the `<output_format>` template. Never report an optimization without filling [Before] and [After] — if profiling data is unavailable, mark them "unconfirmed — measure before merging":
+
+```
+[Bottleneck]  DataLoader: num_workers=0, single-process loading starves GPU
+[Before]      GPU util 23%, step time 4.2s (data load: 3.1s, forward+backward: 1.1s)
+[Fix]         num_workers=8, pin_memory=True, persistent_workers=True
+[After]       unconfirmed — expected GPU util >80%, step time ~1.3s
+[Impact]      ~3× throughput (static analysis) — confirm with profiling
+```
+
+### Step 5–7 — One-change loop
+
+5. **Change**: make one targeted change from the highest-impact finding
+6. **Measure**: compare against baseline under identical conditions
+7. **Accept/reject**: keep if >10% improvement; revert and try next hypothesis if not. Repeat until target met or diminishing returns.
+
+### Step 8 — Internal Quality Loop and Confidence block
+
+Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., "profiling done on a single run", "GPU utilization not measured", "actual speedup unconfirmed without profiling"), and **Refinements** (N passes with what changed; omit if 0). Distinguish static-detectable issues (score ≥0.9 when all issues are visible in source) from runtime-only issues (lower score when profiling data is absent) — absence of profiling data is a valid gap for speedup estimates but should not depress the score for statically unambiguous issues.
 
 Never report optimization results without before/after numbers.
 

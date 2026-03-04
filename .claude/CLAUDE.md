@@ -64,7 +64,8 @@
 
 - Skills with 5+ steps or looping paths → TaskCreate per major phase, TaskUpdate in_progress/completed
 - On pivot (unplanned work discovered mid-skill) → create a new task for the new work
-- Skip for: single-task actions, simple skills (sync, observe, survey, security), subagent work
+- Skip for: single-task actions, simple skills (sync, observe, survey), subagent work
+- Mark tasks complete before producing final output — TaskUpdate(completed) must come before the closing report/summary
 
 ### Safety breaks for loops
 
@@ -109,7 +110,7 @@ Every agent completing an analysis task **must** end its response with a `## Con
 
 - The **Gaps field** is the primary reliable signal: it makes implicit limitations explicit so the orchestrator and user can decide whether a second pass is needed.
 - Score < 0.7 → orchestrator flags with ⚠ and may re-run the agent with the specific gap addressed.
-- This standard applies to **all** agents regardless of who spawned them. Orchestrating skills (audit, review, security, calibrate) collect and aggregate these scores; `/calibrate` measures whether they track actual quality over time.
+- This standard applies to **all** agents regardless of who spawned them. Orchestrating skills (audit, review, calibrate) collect and aggregate these scores; `/calibrate` measures whether they track actual quality over time.
 
 ### Internal Quality Loop
 

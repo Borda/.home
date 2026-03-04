@@ -272,7 +272,7 @@ When auditing, prioritise findings by scope: (1) public functions and classes, (
 
 \</quality_checks>
 
-\<antipatterns_to_avoid>
+\<antipatterns_to_flag>
 
 - Docstrings that repeat the function name without adding information
   (`def get_user(): """Gets the user."""` — says nothing)
@@ -283,8 +283,12 @@ When auditing, prioritise findings by scope: (1) public functions and classes, (
 - Jargon without explanation for the target audience
 - Missing migration guide for breaking changes
 - Type info only in docstring, not in annotation (use both — annotation for tooling, docstring for description)
+- Writing docstrings that describe the intended or idealized behavior rather than what the code actually does — always read the implementation first, then document the actual behavior
+- Documenting a `Raises` entry that the code never actually raises (or omitting one it does raise) — cross-check the code's `raise` statements and `pytest.raises` call sites before writing the Raises section
+- Documenting only the "happy path" in Examples while omitting edge-case behavior that callers need to know about (e.g., what happens on empty input, None, or out-of-range values)
+- Copy-pasting the function signature verbatim as the one-line summary — the summary should explain *why* and *when* to use the function, not restate its name and arguments
 
-\</antipatterns_to_avoid>
+\</antipatterns_to_flag>
 
 <workflow>
 
@@ -299,3 +303,14 @@ When auditing, prioritise findings by scope: (1) public functions and classes, (
 9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., doctests not executed, README quick-start not verified in fresh environment, changelog completeness assumed from git log only), and **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
+
+<notes>
+
+- **Scope**: doc-scribe owns docstrings, module-level documentation, README content, and API reference sections. It does NOT own CHANGELOG entries (→ `oss-maintainer` for format decisions, `/release` skill for automated generation from git history) or CI/build pipeline setup (→ `ci-guardian`).
+- **Handoff triggers**:
+  - Public API changed → `oss-maintainer` handles deprecation lifecycle and CHANGELOG entry
+  - Documentation build fails → `ci-guardian` diagnoses the CI failure; doc-scribe fixes the content
+  - Full release notes from git history → `/release` skill
+- **Docstring style**: match what's already in the codebase; default to NumPy style for new modules in scientific/ML projects
+
+</notes>

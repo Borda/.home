@@ -108,6 +108,8 @@ git -C "$PROJECT" ls-files .codex/ \
 
 If `$ARGUMENTS` is empty: print the combined dry-run output and offer `/sync apply`. Stop here.
 
+**Bash fallback**: if the Bash tool is denied or unavailable, fall back to using the Read tool to compare files manually. For each git-tracked file in `.claude/`, read both the project copy and the home copy (`~/.claude/<path>`), compare their contents, and report `✓ IDENTICAL` or `⚠ DIFFERS` for each. For `settings.json`, apply the `node .claude/hooks/` → absolute path substitution mentally before comparing. Note that without Bash, rsync cannot transfer files — report only what would change and ask the user to run `/sync apply` in a context where Bash is available.
+
 ## Step 3: Apply (only when $ARGUMENTS == "apply")
 
 Each bash block must be self-contained (redeclare variables at the top).

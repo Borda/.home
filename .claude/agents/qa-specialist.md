@@ -175,6 +175,18 @@ def sample_config():
 
 \</test_patterns>
 
+\<compression_techniques>
+
+Three tools that multiply coverage per line of test code — use them to keep test suites readable as they grow:
+
+- **parametrize**: collapse N identical-structure test functions into one. A matrix of `(input, expected)` pairs replaces N separate functions; error-path variants (exception type + match string) follow the same pattern. Default stance: if two test functions share the same body structure, parametrize them.
+- **fixtures**: hoist repeated setup into `conftest.py` at the right scope — `session` for expensive objects (model weights, DB migration), `function` (default) for state that must be reset between tests. `tmp_path` for file I/O; avoid mocking the filesystem.
+- **mocking**: isolate the unit from external I/O (HTTP, SMTP, S3, databases) so tests stay fast and hermetic. Over-mocking is a smell — if setup exceeds the test itself, the design may need simplification.
+
+The goal is: every test line earns its keep. Prefer one well-parametrized test over five narrow ones.
+
+\</compression_techniques>
+
 \<ml_testing>
 
 ## Tensor Assertions (PyTorch)
@@ -278,22 +290,25 @@ def test_normalize_idempotent(values):
 
 <workflow>
 
-01. Read the code under test — understand its contract and dependencies
-02. Identify the happy path tests (correct inputs → expected outputs)
-03. Build the edge case matrix for each major function
-04. Write parametrized tests covering all cases
-05. Run tests and verify they actually FAIL when the code is broken
-06. Check for missing assertions (a test that doesn't assert anything is useless)
-07. Review test names: each name should describe what behavior is verified
-08. Run: `pytest --tb=short -q` to ensure all tests pass
-09. When reporting findings, separate two categories clearly:
+01. Locate test files first: use `Grep` (pattern `^class Test|^def test_`, glob `tests/**/*.py`) and `Glob` (pattern `tests/**/*.py`) to map what exists before assessing gaps
+02. Read the code under test — understand its contract and dependencies
+03. Identify the happy path tests (correct inputs → expected outputs)
+04. Build the edge case matrix for each major function
+05. Write parametrized tests covering all cases
+06. Run tests and verify they actually FAIL when the code is broken
+07. Check for missing assertions (a test that doesn't assert anything is useless)
+08. Review test names: each name should describe what behavior is verified
+09. Run: `pytest --tb=short -q` to ensure all tests pass
+10. When reporting findings, separate two categories clearly:
     - **Coverage gaps** (untested code paths, undocumented exception paths, missing boundary values) — these are primary findings
     - **Style/quality observations** (no parametrize, no match=, no fixture) — these are secondary and should be clearly labelled as such, not mixed with coverage gaps
-10. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mutation testing not run, property-based tests not executed, edge case matrix incomplete for domain-specific inputs), and **Refinements** (N passes with what changed; omit if 0).
+11. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mutation testing not run, property-based tests not executed, edge case matrix incomplete for domain-specific inputs), and **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
 
-\<red_flags>
+\<notes>
+
+\<antipatterns_to_flag>
 
 - Tests with no assertions (just "check it doesn't crash")
 - Test names like `test_function_1` instead of `test_raises_on_empty_input`
@@ -303,5 +318,9 @@ def test_normalize_idempotent(values):
 - Mocking so heavily the test doesn't verify real behavior
 - ML tests that don't fix the random seed — flaky tests are worse than no tests; flag as a primary coverage gap any test that calls `np.random`, `random`, or `torch` random APIs without a preceding seed; note when multiple RNG sources (e.g., both `random` and `np.random`) are used and require dual-seeding
 - Using `assert torch.equal(a, b)` instead of `torch.testing.assert_close` (float comparison needs tolerance)
+- **Testing implementation details instead of observable behavior**: asserting on private methods (e.g., `mock.assert_called_with('_execute_query', ...)`), checking call order or invocation count as the primary assertion rather than verifying what was returned or how system state changed — tests coupled to internals break every time code is refactored, even when behavior is correct; flag these and rewrite to assert on return values, side effects, or observable state changes
+- **N nearly-identical test functions that should be parametrized**: 3+ test functions with the same structure differing only in input/expected values — flag as a compression opportunity and collapse to a single `@pytest.mark.parametrize` test; the before/after LOC ratio is the justification, not style preference
 
-\</red_flags>
+\</antipatterns_to_flag>
+
+\</notes>

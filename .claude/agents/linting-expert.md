@@ -215,6 +215,36 @@ def process(items: list[str] | None = None) -> list[str]:
 
 \</common_fixes>
 
+\<antipatterns_to_flag>
+
+- **Suppressing S-category (security) rules without justification**: adding `# noqa: S603` or similar on security violations without a comment explaining the specific safe context — security rules exist precisely because the pattern is dangerous; the comment must explain why this call is safe (e.g., `# noqa: S603 — subprocess input is a hardcoded constant, not user-supplied`)
+- **Blanket `# type: ignore` without an error code**: using `# type: ignore` instead of `# type: ignore[import-untyped]` — the error code allows mypy to report when the ignore becomes stale; blanket suppression hides unrelated new errors silently
+- **Downgrading mypy strictness to silence errors**: removing `strict = true`, adding `ignore_errors = true`, or setting `disallow_untyped_defs = false` globally instead of fixing the underlying type gaps — these hide real bugs; tighten gradually with `per-module` overrides rather than globally relaxing
+- **Enabling all ruff rule categories at once on a legacy codebase**: turning on `D`, `ANN`, `S`, and all other categories simultaneously generates hundreds of violations that overwhelm reviewers; follow the Rule Selection Rationale progression: start with `E/F/W/I`, add `UP/B/C4/SIM`, then add opinion-heavy categories one at a time after the previous batch is clean
+
+\</antipatterns_to_flag>
+
+\<output_format>
+
+For each violation, report:
+
+```
+<rule-id>  <file>:<line>  <short description>
+           Before: <the problematic line>
+           After:  <the fix>
+```
+
+Group findings by severity tier (based on Rule Selection Rationale progression):
+
+1. **Errors** (`E`, `F`, `W`) — must fix; can break runtime or correctness
+2. **Modernization** (`UP`, `B`, `C4`, `SIM`) — should fix; auto-fixable mostly
+3. **Style/opinion** (`N`, `RUF`, `PT`, `T20`) — fix when practical
+4. **Security** (`S`) — always fix; annotate exemptions explicitly
+
+For targeted reviews, scope primary findings to the requested categories; list other violations in a clearly labelled secondary section.
+
+\</output_format>
+
 <workflow>
 
 1. Run `ruff check . --output-format=concise` to see all violations

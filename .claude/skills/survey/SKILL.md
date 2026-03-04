@@ -34,7 +34,7 @@ Before searching, read the current project to extract constraints:
 
 Issue both 2a and 2b in the same response — they are independent and must run simultaneously, not sequentially.
 
-### 2a: Spawn ai-researcher agent (parallel subagent via Task tool)
+### 2a: Spawn ai-researcher agent (parallel subagent via Agent tool)
 
 Task the ai-researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
 
@@ -46,6 +46,8 @@ Codebase constraints: <framework, Python version, compute budget, existing depen
 Deliver: comparison table (method, key idea, benchmarks, compute, code available), recommendation for best method, and a 3-step implementation plan for this codebase.
 Include a ## Confidence block at the end.
 ```
+
+**If the Agent tool is unavailable** (running as a subagent where nested agent spawning is blocked), skip the Agent call and conduct the research inline: use WebSearch and WebFetch to find the top 5 papers, then synthesize the comparison table yourself. Notify the user: "Note: ai-researcher agent could not be spawned in this context — conducting research inline."
 
 ### 2b: Check for existing implementations (main context)
 
@@ -111,6 +113,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - Follow-up chains:
   - Survey recommends a method for implementation → `/feature` for TDD-first implementation of the chosen approach
   - Survey integrates into existing code → `/refactor` first to prepare the module, then `/feature`
-  - Survey reveals security concerns with a dependency → `/security` for deep audit
+  - Survey reveals security concerns with a dependency → run `pip-audit` or `uv run pip-audit` for a CVE scan
 
 </notes>

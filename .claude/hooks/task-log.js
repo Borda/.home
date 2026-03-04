@@ -30,7 +30,7 @@ process.stdin.on('end', () => {
     const ts = new Date().toISOString();
 
     if (hook_event_name === 'PreToolUse') {
-      if (tool_name === 'Task') {
+      if (tool_name === 'Task' || tool_name === 'Agent') {
         const agentType = tool_input?.subagent_type || 'unknown';
         const desc = tool_input?.description || '';
         const prompt = (tool_input?.prompt || '').slice(0, 200);

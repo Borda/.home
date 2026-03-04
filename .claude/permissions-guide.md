@@ -118,7 +118,7 @@ ______________________________________________________________________
 | `Bash(pip show:*)`                  | Display metadata for an installed package       | Check installed version, confirm dependency is present           |
 | `Bash(pip list:*)`                  | List all installed packages and their versions  | Dependency audit, environment snapshot                           |
 | `Bash(pip index:*)`                 | Query PyPI for available versions of a package  | Check whether a newer release is available                       |
-| `Bash(pip-audit:*)`                 | Scan installed packages for known CVEs          | `/security` dependency scan step                                 |
+| `Bash(pip-audit:*)`                 | Scan installed packages for known CVEs          | Pre-release dependency CVE scan                                  |
 | `Bash(uv run pytest:*)`             | Run tests via uv-managed pytest                 | Same as `pytest:*` but uses the project's uv-managed environment |
 | `Bash(uv run python -m pytest:*)`   | Run tests via uv python module interface        | Environment-safe pytest invocation through uv                    |
 | `Bash(uv run python -m doctest:*)`  | Execute doctests via uv python                  | Validate inline usage examples via uv-managed interpreter        |
@@ -126,7 +126,7 @@ ______________________________________________________________________
 | `Bash(uv run ruff:*)`               | Lint and auto-fix Python source via uv          | Run ruff through uv to ensure project venv rules apply           |
 | `Bash(uv run mypy:*)`               | Static type-checking via uv                     | Run mypy through uv to use project-pinned version                |
 | `Bash(uv run pre-commit run:*)`     | Run pre-commit hooks via uv                     | Verify formatting/linting via uv-managed pre-commit              |
-| `Bash(uv run pip-audit:*)`          | Scan packages for CVEs via uv                   | `/security` dependency scan through uv-managed environment       |
+| `Bash(uv run pip-audit:*)`          | Scan packages for CVEs via uv                   | Pre-release CVE scan through uv-managed environment              |
 | `Bash(uv pip show:*)`               | Display metadata for an installed package       | Check installed version in the uv-managed environment            |
 | `Bash(uv pip list:*)`               | List all packages installed via uv              | Dependency audit of a uv-managed environment                     |
 | `Bash(uv pip check:*)`              | Verify package compatibility in uv environment  | Detect dependency conflicts without installing anything          |

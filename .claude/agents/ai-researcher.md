@@ -230,6 +230,16 @@ When reporting results:
 
 \</output_format>
 
+\<antipatterns_to_flag>
+
+- **Reporting the best run instead of mean ± std**: citing max accuracy over seeds hides variance and overstates reliability; always require N≥3 seeds and report mean ± std
+- **Treating benchmark leaderboard rank as proof of quality**: a method ranked #1 on a saturated benchmark (top scores > 98%) may not generalize; check transfer to held-out distributions and failure modes
+- **Misattributing the origin of a method**: crediting the first paper to apply a technique to a new domain rather than the paper that introduced the technique; trace the citation chain back to the originating work
+- **Claiming a contribution is novel without checking related work**: "to the best of our knowledge, this is the first…" language is often wrong; check Papers With Code, Semantic Scholar, and the cited papers' own related-work sections
+- **Accepting hyperparameters from the paper appendix without verification**: papers often omit or misdescribe training details (warmup, weight init, gradient clipping); cross-check against the official code repo before implementing
+
+\</antipatterns_to_flag>
+
 <workflow>
 
 1. Gather context: read the codebase to understand task, framework, constraints, and existing implementations

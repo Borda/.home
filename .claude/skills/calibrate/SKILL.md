@@ -1,8 +1,8 @@
 ---
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
-argument-hint: '[agent-name|all|/audit|/review|/security] [fast|full] [apply]'
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+argument-hint: '[agent-name|all|/audit|/review] [fast|full] [ab] [apply]'
+allowed-tools: Read, Write, Edit, Bash, Agent
 ---
 
 <objective>
@@ -18,8 +18,9 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 - **$ARGUMENTS**: optional
   - Omitted / `all` → benchmark all agents + generate self-mentor proposals
   - `<agent-name>` → benchmark one agent + generate proposals (e.g., `sw-engineer`)
-  - `/audit`, `/review`, or `/security` → benchmark a skill (only these three skill domains have calibration support)
+  - `/audit` or `/review` → benchmark a skill (only these two skill domains have calibration support)
   - Append `full` for 10 problems instead of 3 (e.g., `sw-engineer full`, `all full`)
+  - Append `ab` to also run a `general-purpose` baseline on the same problems and report delta metrics — works for agents AND skills (e.g., `data-steward ab`, `/audit ab`, `all ab`)
   - Append `apply` to apply the proposals from the most recent run to the agent/skill files — skips benchmark (e.g., `sw-engineer apply`)
 
 </inputs>
@@ -32,6 +33,7 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 - CALIBRATION_BORDERLINE: ±0.10 (|bias| within this → calibrated; between 0.10 and 0.15 → borderline)
 - CALIBRATION_WARN: ±0.15 (bias beyond this → confidence decoupled from quality)
 - CALIBRATE_LOG: `.claude/logs/calibrations.jsonl`
+- AB_ADVANTAGE_THRESHOLD: 0.10 (delta recall or F1 above this → meaningful advantage; below → marginal or none)
 
 Problem domain by agent:
 
@@ -52,7 +54,6 @@ Skill domains:
 
 - `/audit` → synthetic `.claude/` config with N injected structural issues
 - `/review` → synthetic Python module with N cross-domain issues (arch + tests + docs + lint)
-- `/security` → synthetic Python code with N OWASP vulnerabilities
 
 </constants>
 
@@ -66,6 +67,7 @@ From `$ARGUMENTS`, determine:
 
 - Target list: one agent, one skill, or all (expand "all" to the full agent list above)
 - Mode: `fast` (N=3) or `full` (N=10) — default `fast`
+- A/B flag: `ab` present → also spawn a `general-purpose` baseline per problem and compute delta metrics
 - Fix flag: `apply` present → apply proposals only; otherwise always run benchmark + generate self-mentor proposals
 
 **If `apply` is in `$ARGUMENTS`**: skip Steps 2–5 entirely, go directly to Step 6.
@@ -76,11 +78,13 @@ Otherwise, generate timestamp: `YYYYMMDDTHHMMSSZ` (UTC, e.g. `20260303T134448Z`)
 
 Issue ALL `general-purpose` subagent spawns in a **single response** — one per target. Do not wait for one to finish before spawning the next.
 
-Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>` before spawning):
+Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>` before spawning — set `<AB_MODE>` to `true` or `false`):
 
 ______________________________________________________________________
 
-You are a calibration pipeline runner for `<TARGET>`. Complete all four phases in sequence.
+You are a calibration pipeline runner for `<TARGET>`. Complete all phases in sequence.
+
+AB mode: `<AB_MODE>` — when `true`, also run a `general-purpose` baseline on every problem and compute delta metrics.
 
 Run dir: `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/`
 
@@ -116,10 +120,18 @@ The prompt for each subagent is exactly:
 > `<input from that problem>`
 >
 > End your response with a `## Confidence` block: **Score**: 0.N (high >=0.9 / moderate 0.7-0.9 / low \<0.7) and **Gaps**: what limited thoroughness.
+>
+> Do not self-review or refine before answering — report your initial analysis directly.
 
 Write each subagent's full response to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<problem_id>.md`.
 
 For **skill targets** (target starts with `/`): spawn a `general-purpose` subagent with the skill's SKILL.md content prepended as context, running against the synthetic input from the problem.
+
+### Phase 2b — Run general-purpose baseline (skip if AB_MODE is false)
+
+Spawn one `general-purpose` subagent per problem using the **identical prompt** as Phase 2 (same task_prompt + input + Confidence instruction). Issue ALL spawns in a **single response** — no waiting between spawns.
+
+Write each response to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<problem_id>-general.md`.
 
 ### Phase 3 — Score responses in-context
 
@@ -138,6 +150,8 @@ Compute per-problem:
 - `f1 = 2·recall·precision / (recall + precision + 1e-9)`
 
 Write all per-problem scores to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array with fields: `problem_id`, `found` (array of booleans), `false_positives`, `confidence`, `recall`, `precision`, `f1`.
+
+**If AB_MODE is true**: score each general-purpose response using identical criteria. Add to each scores.json entry: `recall_general`, `precision_general`, `f1_general`, `confidence_general`. Compute `delta_recall = recall - recall_general` and `delta_f1 = f1 - f1_general`.
 
 ### Phase 4 — Aggregate, write report and result
 
@@ -169,6 +183,14 @@ Mode: <MODE> | Problems: <N> | Total known issues: M
 | Metric | Value | Status |
 | ...
 
+### A/B Comparison — specialized vs. general-purpose (AB mode only)
+| Metric      | Specialized | General | Delta  | Verdict   |
+|-------------|-------------|---------|--------|-----------|
+| Mean Recall | X.XX        | X.XX    | ±X.XX  | advantage/marginal/none |
+| Mean F1     | X.XX        | X.XX    | ±X.XX  |           |
+
+Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.10) / `none` (<0.05)
+
 ### Systematic Gaps (missed in ≥2 problems)
 ...
 
@@ -179,6 +201,8 @@ Mode: <MODE> | Problems: <N> | Total known issues: M
 Write a single-line JSONL result to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/result.jsonl`:
 
 `{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"problems":<N>,"verdict":"...","gaps":["..."]}`
+
+**If AB_MODE is true**, append these fields to the same JSON line: `"delta_recall":0.N,"delta_f1":0.N,"ab_verdict":"significant|marginal|none"`
 
 ### Phase 5 — Propose instruction edits
 
@@ -224,6 +248,8 @@ Return **only** this compact JSON (no prose before or after):
 
 `{"target":"<TARGET>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"verdict":"calibrated|borderline|overconfident|underconfident","gaps":["..."],"proposed_changes":N}`
 
+If AB_MODE is true, also include: `"delta_recall":0.N,"delta_f1":0.N,"ab_verdict":"significant|marginal|none"`
+
 ______________________________________________________________________
 
 ## Step 3: Collect results and print combined report
@@ -240,6 +266,8 @@ Print the combined benchmark report:
 | sw-engineer      | 0.83   | 0.85      | +0.02 ✓| 0.81 | calibrated | async error paths    |
 | ...              |        |           |        |      |            |                      |
 ```
+
+**If AB mode**, add two columns after F1: `ΔRecall` and `AB Verdict` — use `significant ✓`, `marginal ~`, or `none ⚠` to show whether the specialized agent earns its instruction overhead.
 
 Flag any target where recall < 0.70 or |bias| > 0.15 with ⚠.
 
@@ -337,6 +365,9 @@ After all subagents complete, collect their JSON results and print the final sum
   - Recall < 0.70 or borderline → `/calibrate <agent>` → review proposals → `/calibrate <agent> apply` → `/calibrate <agent>` to verify improvement
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
   - Recommended cadence: run before and after any significant agent instruction change
-- **Internal Quality Loop interaction**: agents with the Internal Quality Loop self-refine before reporting, so baseline confidence will be higher than before. Persistent overconfidence after the loop (high positive bias despite non-zero Refinements) is a stronger miscalibration signal than pre-loop overconfidence — it indicates score inflation without genuine improvement, not just optimism about first-draft recall.
+- **Internal Quality Loop suppressed during benchmarking**: the Phase 2 prompt explicitly tells target agents not to self-review before answering. This ensures calibration measures raw instruction quality — not the `(agent + loop)` composite. If the loop were enabled, it would inflate both recall and confidence by an unknown ratio, masking real instruction gaps and making it impossible to attribute improvement to instruction changes vs. the loop self-correcting at inference time.
+- **Skill-creator complement**: `/calibrate` benchmarks agents and skills via synthetic ground-truth problems; the official `skill-creator` from `github.com/anthropics/skills` handles skill-level eval — trigger accuracy, A/B description testing, and description optimization. The two are complementary: run `/calibrate` for quality and recall, `skill-creator` for trigger reliability.
+- **A/B mode rationale**: every specialized agent adds system-prompt tokens — if a `general-purpose` subagent matches its recall and F1, the specialization adds no value. `ab` mode quantifies this gap per-target so you can decide whether to keep, retrain, or retire an agent. `significant` (Δ>0.10) confirms the agent's domain depth earns its cost; `marginal` (0.05–0.10) suggests instruction improvements may help; `none` (\<0.05) signals the agent's current instructions add no measurable lift over a vanilla agent — consider strengthening domain-specific antipatterns and re-running. Token cost is informational (logged in scores.json) but not part of the verdict — prioritize recall/F1 delta as the primary signal.
+- **AB mode nesting**: Phase 2b spawns `general-purpose` agents inside the pipeline subagent, keeping nesting at 2 levels (main → pipeline → target/general). No additional depth is added.
 
 </notes>

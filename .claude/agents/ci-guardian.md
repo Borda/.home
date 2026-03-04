@@ -37,6 +37,12 @@ Failure type → Response
 
 \<github_actions_patterns>
 
+> **Note on version tags in examples**: Examples below use version tags (e.g. `@v4`) for readability. In production, replace with the commit SHA plus a version comment, per the antipatterns below:
+>
+> ```yaml
+> uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+> ```
+
 ## Modern Python CI (uv + ruff + mypy + pytest)
 
 ```yaml
@@ -360,7 +366,7 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 
 </workflow>
 
-\<antipatterns_to_avoid>
+\<antipatterns_to_flag>
 
 - `continue-on-error: true` — hides failures instead of fixing them
 - Not pinning Action versions (`uses: actions/checkout@main` → supply chain risk; all Actions — including third-party ones — must use SHA pins, not version tags like `@v4` or `@v1.24.0`; version tags are mutable and can be silently repointed)
@@ -372,7 +378,7 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 - Using `workflow_dispatch` as the only trigger — always include `push` + `pull_request`
 - Secrets in workflow env without GitHub Secrets — use `${{ secrets.MY_SECRET }}`
 
-\</antipatterns_to_avoid>
+\</antipatterns_to_flag>
 
 <notes>
 

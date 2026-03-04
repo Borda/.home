@@ -81,10 +81,6 @@ time python "$ARGUMENTS"
 
 ### Remaining Opportunities
 - [next bottleneck to address]
-
-## Confidence
-**Score**: [0.N]
-**Gaps**: [e.g., benchmark environment noisy, no profiler available, GPU not accessible]
 ```
 
 ## Step 5: Delegate documentation follow-up (optional)
@@ -117,6 +113,8 @@ Example prompt: `"use the doc-scribe to add an inline comment to the inner loop 
 The subagent handles pre-flight, dispatch, validation, and patch capture. If Codex is unavailable it reports gracefully.
 
 Print a `### Codex Delegation` section after the Step 4 terminal output only if this step ran.
+
+End your complete response with a `## Confidence` block per CLAUDE.md output standards.
 
 </workflow>
 

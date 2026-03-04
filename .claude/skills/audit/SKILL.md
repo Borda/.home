@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Comprehensive config audit for the entire .claude/ directory. Orchestrates self-mentor across all agents, skills, settings, and hooks to detect correctness issues, broken cross-references, interoperability problems, infinite loops, redundancy, and inefficiency. Reports findings by severity and auto-fixes critical, high, and medium findings; CLAUDE.md contradictions and missing permissions are always reported but never auto-fixed.
+description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Reports by severity; auto-fixes critical/high/medium when 'fix' is passed.
 argument-hint: '[agents|skills] [fix]'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
@@ -26,6 +26,33 @@ Run a full-sweep quality audit of the `.claude/` configuration: every agent file
 <workflow>
 
 **Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase. Mark in_progress/completed throughout. On loop retry or scope change, create a new task.
+
+## Pre-flight checks
+
+```bash
+RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; NC='\033[0m'
+
+# .claude/ directory must exist
+if [ ! -d ".claude" ]; then
+  printf "${RED}! BREAKING${NC}: .claude/ directory not found — nothing to audit\n"
+  exit 1
+fi
+
+# jq availability — Check 6 depends on it
+if ! command -v jq &>/dev/null; then
+  printf "${YEL}⚠ MISSING${NC}: jq not found — Check 6 (permissions-guide drift) will be skipped\n"
+  JQ_AVAILABLE=false
+else
+  JQ_AVAILABLE=true
+fi
+
+# git availability — used in path portability check and baseline context
+if ! command -v git &>/dev/null; then
+  printf "${YEL}⚠ MISSING${NC}: git not found — path portability check may miss repo-root references\n"
+fi
+```
+
+If `.claude/` is missing, abort immediately. Missing `jq` is a warning — the audit continues with Check 6 skipped.
 
 ## Step 1: Run pre-commit (if configured)
 
@@ -53,7 +80,7 @@ Record the full file list — this becomes the audit scope for Steps 3–4.
 
 ## Step 3: Per-file audit via self-mentor
 
-Spawn one **self-mentor** agent per file (or batch into groups of 4–5 for efficiency). Each invocation prompt must end with:
+Spawn one **self-mentor** agent per file (or batch into groups of up to 10 for efficiency). Each invocation prompt must end with:
 
 > "Include a `### Confidence` block at the end of your report: **Score**: 0.N (high ≥0.9 / moderate 0.7–0.9 / low \<0.7) and **Gaps**: what limited thoroughness."
 
@@ -66,6 +93,7 @@ Each invocation should ask self-mentor to check:
 - **Content freshness**: outdated model names, stale version pins, deprecated API references
 - **Hardcoded user paths**: any `/Users/<name>/` or `/home/<name>/` absolute path — must be `.claude/`, `~/`, or derived from `git rev-parse --show-toplevel`
 - **Infinite loops**: does file A's follow-up chain reference file B which references A creating a cycle? (flag, don't auto-fix)
+- **Example value vs. token cost**: for each inline example (code block or `## Example` section), judge whether it earns its tokens — does it demonstrate a non-obvious pattern or nuanced judgment call that prose alone cannot convey? Flag examples that merely restate the surrounding prose in code, illustrate obvious/trivial cases, or would be better served by a project-local `AGENTS.md`. Note: if the project has its own `AGENTS.md` or `CONTRIBUTING.md`, generic examples in agent files are less justified.
 
 Collect all findings from each self-mentor response into a structured list keyed by file path.
 
@@ -85,7 +113,7 @@ RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; CYN='\033[0;36m'; NC='\033
 Use Glob (`agents/*.md`, path `.claude/`) to list agent files; extract basenames and sort, then write to `/tmp/agents_disk.txt` via Bash:
 
 ```bash
-ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | sort > /tmp/agents_disk.txt
+ls .claude/agents/*.md 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.md$//' | sort > /tmp/agents_disk.txt || true
 ```
 
 Use Grep tool (pattern `^\- Agents:`, file `.claude/memory/MEMORY.md`) to read the roster line. Repeat with Glob (`skills/*/`, path `.claude/`) for skills — write to `/tmp/skills_disk.txt` — and Grep (`^\- Skills:`) for the MEMORY.md line.
@@ -105,24 +133,34 @@ Use Grep tool (pattern `/Users/|/home/`, glob `{agents/*.md,skills/*/SKILL.md}`,
 **Check 6 — permissions-guide.md drift** — every allow entry must appear in the guide, and vice versa
 
 ```bash
-# Allow entries missing from guide
-jq -r '.permissions.allow[]' .claude/settings.json | \
-while IFS= read -r perm; do
-  grep -qF "\`$perm\`" .claude/permissions-guide.md 2>/dev/null \
-    || printf "${YEL}⚠ MISSING from guide${NC}: %s\n" "$perm"
-done
+RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; NC='\033[0m'
+if [ "${JQ_AVAILABLE:-false}" = "false" ] || ! command -v jq &>/dev/null; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 6 — jq not available\n"
+elif [ ! -f ".claude/settings.json" ]; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 6 — .claude/settings.json not found\n"
+elif [ ! -f ".claude/permissions-guide.md" ]; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 6 — .claude/permissions-guide.md not found\n"
+else
+  # Allow entries missing from guide
+  jq -r '.permissions.allow[]' .claude/settings.json 2>/dev/null | \
+  while IFS= read -r perm; do
+    grep -qF "\`$perm\`" .claude/permissions-guide.md 2>/dev/null \
+      || printf "${YEL}⚠ MISSING from guide${NC}: %s\n" "$perm"
+  done
 
-# Guide entries orphaned (not in allow list)
-grep '^| `' .claude/permissions-guide.md | awk -F'`' '{print $2}' | \
-while IFS= read -r perm; do
-  jq -e --arg p "$perm" '.permissions.allow | contains([$p])' .claude/settings.json > /dev/null 2>&1 \
-    || printf "${YEL}⚠ ORPHANED in guide${NC}: %s\n" "$perm"
-done
+  # Guide entries orphaned (not in allow list)
+  grep '^| `' .claude/permissions-guide.md 2>/dev/null | awk -F'`' '{print $2}' | \
+  while IFS= read -r perm; do
+    jq -e --arg p "$perm" '.permissions.allow | contains([$p])' .claude/settings.json > /dev/null 2>&1 \
+      || printf "${YEL}⚠ ORPHANED in guide${NC}: %s\n" "$perm"
+  done
+fi
 ```
 
 **Check 7 — Skill frontmatter conflicts** — `context:fork + disable-model-invocation:true` is a broken combination: a forked skill has no model to coordinate agents or synthesize results.
 
 ```bash
+shopt -s nullglob
 for f in .claude/skills/*/SKILL.md; do
   name=$(basename "$(dirname "$f")")
   if awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'context: fork' && \
@@ -132,9 +170,43 @@ for f in .claude/skills/*/SKILL.md; do
     printf "  ${CYN}fix${NC}: remove disable-model-invocation:true (or remove context:fork if purely tool-only)\n"
   fi
 done
+shopt -u nullglob
 ```
 
 Flag any drift between MEMORY.md, README.md, settings.json, and actual disk state. Flag any hardcoded `/Users/` or `/home/` paths — these should be `.claude/`, `~/`, or `$(git rev-parse --show-toplevel)/` style. Flag any permissions-guide.md entries not in the allow list (orphaned docs) or allow entries without a guide row (undocumented permissions).
+
+**Check 8 — Model tier appropriateness**
+
+Three capability tiers define the expected model assignment for each agent:
+
+| Tier                | Profile                                                     | Current mapping |
+| ------------------- | ----------------------------------------------------------- | --------------- |
+| `plan-gated`        | Long-horizon reasoning, plan mode, governance               | `opusplan`      |
+| `deep-reasoning`    | Complex implementation, multi-file code gen, judgment calls | `opus`          |
+| `focused-execution` | Pattern matching, structured output, rule application       | `sonnet`        |
+
+Extract declared models with Bash:
+
+```bash
+shopt -s nullglob
+printf "%-30s %s\n" "AGENT" "MODEL"
+for f in .claude/agents/*.md; do
+  name=$(basename "$f" .md)
+  model=$(awk '/^---$/{c++; if(c==2)exit} c==1 && /^model:/{sub(/^model: /,""); print}' "$f")
+  printf "%-30s %s\n" "$name" "${model:-(inherit)}"
+done
+shopt -u nullglob
+```
+
+Using model reasoning, classify each agent into a tier based on its `<role>`, `description`, and `<workflow>` content. Cross-reference the classified tier against the declared model:
+
+- `focused-execution` agent using `opus` or `opusplan` → **medium** (potential overkill — may increase latency and cost without quality gain)
+- `deep-reasoning` agent using `sonnet` → **high** (likely underpowered for multi-file code gen or complex judgment)
+- `plan-gated` agent using `sonnet` → **high** (plan mode requires strong long-horizon reasoning)
+
+**Report only** — never auto-fix. Model assignments may be intentional trade-offs (e.g., cost sensitivity, latency constraints). Flag mismatches with rationale so the user can decide.
+
+**Time-resilience note**: when new model tiers or model aliases arrive, update only the tier-to-model mapping table above. The tier classification heuristic (what each agent does) is model-agnostic.
 
 ### Tool efficiency
 
@@ -236,16 +308,50 @@ Findings classification:
 - Deprecated frontmatter field, deprecated settings key, unrecognized model ID → **medium**
 - New documented feature not yet used → **low** (prefix with 💡)
 
+**Check 9 — Example value vs. token cost**
+
+First, detect whether the project has local context files that reduce the need for generic examples:
+
+```bash
+for f in AGENTS.md CONTRIBUTING.md .claude/CLAUDE.md; do
+  [ -f "$f" ] && printf "✓ found: %s\n" "$f"
+done
+```
+
+Then scan agent and skill files for inline examples:
+
+````bash
+shopt -s nullglob
+for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do
+  count=$(grep -c '^\(```\|## Example\|### Example\)' "$f" 2>/dev/null || true)
+  lines=$(wc -l < "$f" | tr -d ' ')
+  [ "$count" -gt 0 ] && printf "%s: %d example blocks, %d total lines\n" "$f" "$count" "$lines"
+done
+shopt -u nullglob
+````
+
+Using model reasoning, evaluate each file's examples against two criteria:
+
+1. **Necessity**: does the example demonstrate something that prose alone cannot — a nuanced judgment call, a non-obvious output format, a complex multi-step pattern? Or does it just restate the surrounding paragraph in code?
+2. **Project fit**: if the project has `AGENTS.md` or `CONTRIBUTING.md`, project-specific examples in agent files compete with or duplicate that local context — flag as low-value unless the example is domain-specific to the agent's specialty.
+
+Classify each example block:
+
+- **High-value**: non-obvious pattern, nuanced judgment, or output-format spec that prose cannot convey → keep
+- **Low-value**: restates prose, trivial, or superseded by project-local docs → **low** finding: suggest removing or replacing with a pointer to the local doc
+
+Report per-file: `N examples total, K high-value, M low-value (est. ~X tokens wasted)`.
+
 ## Step 5: Aggregate and classify findings
 
 Group all findings from Steps 1–4 into a severity table:
 
-| Severity     | Examples                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
-| ------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory                                                                                                                                                                                                                                                                                                                    |
-| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax), agent/skill instruction directly contradicts a `.claude/CLAUDE.md` directive, deprecated/invalid hook event name or type in use, `context:fork + disable-model-invocation:true` on the same skill (skill cannot run), tool declared in `tools:`/`allowed-tools:` that is needed but absent causing silent failures |
-| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs, deprecated frontmatter field or settings key, permissions-guide.md missing row for an allow entry or containing an orphaned row, declared tool not referenced anywhere in the workflow (unnecessary permission surface)                                                                                            |
-| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it, 💡 new documented CC feature not yet used                                                                                                                                                                                                                                                   |
+| Severity     | Examples                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| ------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **critical** | Broken cross-reference (agent/skill does not exist on disk), MEMORY.md inventory wrong, relative path that silently falls back to wrong directory                                                                                                                                                                                                                                                                                                                                                                                                                        |
+| **high**     | Dead loop in follow-up chain, missing settings.json permission for a tool in use, broken code example (undefined variable, wrong command syntax), agent/skill instruction directly contradicts a `.claude/CLAUDE.md` directive, deprecated/invalid hook event name or type in use, `context:fork + disable-model-invocation:true` on the same skill (skill cannot run), tool declared in `tools:`/`allowed-tools:` that is needed but absent causing silent failures, `deep-reasoning` or `plan-gated` agent declared on `sonnet` (underpowered for its classified tier) |
+| **medium**   | Duplication across files, stale model name, README row missing for existing skill, hardcoded `/Users/<name>/` path, undocumented modes in inputs, deprecated frontmatter field or settings key, permissions-guide.md missing row for an allow entry or containing an orphaned row, declared tool not referenced anywhere in the workflow (unnecessary permission surface), `focused-execution` agent declared on `opus`/`opusplan` (potential overkill for its classified tier)                                                                                          |
+| **low**      | Verbosity, minor formatting, incomplete follow-up chain, outdated version pin with "autoupdate" note, agent/skill omits a CLAUDE.md principle but doesn't contradict it, 💡 new documented CC feature not yet used, inline example that restates prose or is superseded by project-local `AGENTS.md`/`CONTRIBUTING.md`                                                                                                                                                                                                                                                   |
 
 ## Step 6: Cross-validate critical findings
 
@@ -276,7 +382,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness
 
 ### Findings by Severity
 
@@ -332,6 +438,7 @@ Do not add comments, docstrings, or any other improvements beyond the listed fix
 - **settings.json permission missing**: report only — structural JSON edits are risky to delegate
 - **CLAUDE.md contradiction**: raise to user — do not auto-fix (CLAUDE.md takes precedence)
 - **Dead loop**: flag for user review — requires human judgment on which link to break
+- **Model tier mismatch**: report only — model assignments may be intentional for cost/latency trade-offs; user decides whether to adjust
 
 After all subagents complete, collect their results and proceed to Step 9.
 
@@ -384,7 +491,7 @@ Output the complete audit summary:
 ### Fixes Applied
 | File | Change |
 |---|---|
-| agents/foo.md | Replaced broken ref `bar-agent` → `baz-agent` |
+| agents/foo.md | Replaced broken ref `old-agent` → `correct-agent` |
 
 ### Remaining (low/nits — manual review optional)
 - [low findings that were not auto-fixed]
@@ -419,6 +526,10 @@ Run `/sync apply` to propagate clean config to ~/.claude/
 - **Relationship to self-mentor**: `self-mentor` is a single-file reactive audit; `/audit` is the system-wide sweep that runs self-mentor at scale and adds cross-file checks
 - **Paths must be portable**: `.claude/` for project-relative paths, `~/` for home paths — never `/Users/<name>/` or `/home/<name>/`; this rule applies to ALL skill and agent files
 - This skill is the correct pre-flight before `/sync` — run `/audit` to confirm config is clean, then `/sync apply` to propagate
+- **Bash error logging**: if a bash block in Steps 0 or 4 fails unexpectedly, append a JSONL line to `.claude/logs/audit-errors.jsonl` (`{"ts":"<ISO>","check":"<N>","error":"<message>"}`) for post-mortem — do not swallow errors silently.
+- **Execution order tip**: Steps 1–2 and Step 4 bash checks are fast (seconds); Step 3 (self-mentor spawns) is expensive (seconds per file). For early signal on system-wide issues, run Steps 1–2 + Step 4 first, then spawn Step 3 agents in parallel with any Step 4 analysis that doesn't depend on per-file results.
+- **Token cost**: Step 3 (self-mentor spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
+- **Skill-creator complement**: for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official `skill-creator` from `github.com/anthropics/skills`. `/audit` checks structural quality; `skill-creator` validates that the right skill is selected by Claude Code's dispatcher when the user types a command.
 - Follow-up chains:
   - Audit clean → `/sync apply` to propagate verified config to `~/.claude/`
   - Audit found structural issues → review flagged files manually before syncing

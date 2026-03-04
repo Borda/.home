@@ -370,7 +370,7 @@ ls -d .claude/skills/*/ | xargs -n1 basename | paste -sd', ' -
 Use the Edit tool to update these two lines in MEMORY.md:
 
 - `- Agents: oss-maintainer, sw-engineer, ...` (the roster line, not the path line)
-- `- Skills: review, security, ...`
+- `- Skills: review, survey, ...`
 
 ## Step 7: Update README.md
 
@@ -449,7 +449,7 @@ End the summary report with a `## Confidence` block per CLAUDE.md Output Standar
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
 - Follow-up chains:
   - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
-  - After creating a new agent/skill → `/review` to validate generated content quality
+  - After creating a new agent/skill → `/review` to validate generated content quality; for skill trigger accuracy use `skill-creator` from `github.com/anthropics/skills` for A/B description testing
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
   - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`

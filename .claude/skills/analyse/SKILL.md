@@ -25,8 +25,6 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
 
 <workflow>
 
-**Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase. Mark in_progress/completed throughout. On loop retry or scope change, create a new task.
-
 ## Auto-Detection (for numeric arguments)
 
 When `$ARGUMENTS` is a number, determine whether it is an issue or a PR before routing.
@@ -308,6 +306,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - Run `gh auth status` first if commands fail; user may need to authenticate
 - For closed issues/PRs, note the resolution so history is useful
 - Don't post responses without explicit user instruction — only draft them
+- **Forked context**: this skill runs with `context: fork` — it operates without access to the current conversation history. All required context (PR number, issue URL, branch name) must be provided as the skill argument or in your prompt.
 - Follow-up chains:
   - Issue with confirmed bug → `/fix` to diagnose, reproduce with test, and apply targeted fix
   - Issue is a feature request → `/feature` for TDD-first implementation

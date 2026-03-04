@@ -46,12 +46,11 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 ### Skills
 
-Skills are orchestrations of agents — invoked via slash commands (`/review`, `/security`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
+Skills are orchestrations of agents — invoked via slash commands (`/review`, `/fix`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
 | Skill         | Command                            | What It Does                                                                                               |
 | ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
 | **review**    | `/review [file\|PR#]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)             |
-| **security**  | `/security [target]`               | OWASP Top 10 + Python-specific + ML supply chain audit                                                     |
 | **optimize**  | `/optimize [target]`               | Measure-change-measure performance loop                                                                    |
 | **release**   | `/release [range]`                 | Release notes, CHANGELOG, or migration guide from git history                                              |
 | **survey**    | `/survey [topic]`                  | SOTA literature survey with implementation plan                                                            |
@@ -90,15 +89,6 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   /review src/mypackage/transforms.py
   # Review latest commit (no argument)
   /review
-  ```
-
-- **`/security` — Security audit**
-
-  ```bash
-  # Audit a specific module
-  /security src/mypackage/api/auth.py
-  # Audit an entire directory
-  /security src/mypackage/
   ```
 
 - **`/analyse` — Issue and repo health**
@@ -232,17 +222,6 @@ Skills chain naturally — the output of one becomes the input for the next.
 </details>
 
 <details>
-<summary><strong>Security audit → remediate → verify</strong></summary>
-
-```
-/security src/api/     # audit for vulnerabilities
-/fix "SQL injection in user query endpoint"  # apply specific remediation
-/security src/api/     # re-verify no new issues introduced
-```
-
-</details>
-
-<details>
 <summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
 ```
@@ -334,7 +313,6 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Release preparation</strong></summary>
 
 ```
-/security src/         # pre-release vulnerability scan
 /release v1.2.0..HEAD  # generate release notes from git history
 ```
 

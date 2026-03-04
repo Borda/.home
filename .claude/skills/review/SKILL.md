@@ -44,7 +44,7 @@ If CI is red, report that without full review.
 
 ## Step 2: Spawn sub-agents in parallel
 
-Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional). Every agent prompt must end with:
+Launch agents simultaneously with the Agent tool (agents 6 and 7 are conditional). Every agent prompt must end with:
 
 > "End your response with: `## Confidence` / `**Score**: 0.N` (high ≥0.9 / moderate 0.7–0.9 / low \<0.7) / `**Gaps**: what limited your analysis (e.g., no runtime traces, no test execution, partial file read)`."
 
@@ -58,7 +58,7 @@ Launch agents simultaneously with the Task tool (agents 6 and 7 are conditional)
 
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
-**Agent 6 — `/security` skill (optional, for PRs touching auth/input/deps)**: If the diff touches authentication, user input handling, dependency updates, or serialization — spawn a general-purpose subagent that reads and executes the security skill: `Task(subagent_type="general-purpose", prompt="Read .claude/skills/security/SKILL.md and follow its workflow exactly. Scope: <files from Step 1>.")`. Skip if the PR is purely internal refactoring.
+**Security augmentation (conditional — fold into Agent 1 prompt, not a separate spawn)**: If the diff touches authentication, user input handling, dependency updates, or serialization — add to the sw-engineer agent prompt (Agent 1 above): check for SQL injection, XSS, insecure deserialization, hardcoded secrets, and missing input validation. Run `pip-audit` if dependency files changed. Skip if the PR is purely internal refactoring.
 
 **Agent 7 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
@@ -219,8 +219,8 @@ Print a `### Codex Delegation` section to the terminal summarizing what was auto
 - Follow-up chains:
   - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
   - Structural or quality issues → `/refactor` for test-first improvements
-  - Security findings in auth/input/deps → `/security` for a dedicated deep audit
+  - Security findings in auth/input/deps → run `pip-audit` for dependency CVEs; address OWASP issues inline via `/fix`
   - Mechanical issues beyond what Step 6 auto-fixed → `/codex` to delegate additional tasks
-  - Docstrings, type annotations, renames, and other mechanical findings → `/resolve` (no args) to auto-implement all fixable items via Codex
+  - Docstrings, type annotations, renames, and other mechanical findings → `/codex "<task description>"` per finding to delegate to Codex
 
 </notes>

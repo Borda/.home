@@ -163,10 +163,7 @@ Install: `pip install pyDeprecate` (zero dependencies — check https://pypi.org
 
 **Deprecation lifecycle**: deprecate in minor release → keep for ≥1 minor cycle → remove in next major.
 **Also**: add `.. deprecated:: X.Y.Z` Sphinx directive in the docstring so docs generators render a deprecation notice automatically.
-**Anti-patterns to flag**:
-
-- `@deprecated(target=None, ...)` — pyDeprecate requires a callable target for argument forwarding; `None` disables forwarding and may cause unexpected behaviour; flag as `[flag]` and ask whether a migration target exists.
-- Deprecating a public function in favour of a private one (underscore-prefixed) — this gives users no stable migration path; the replacement must be made public before the deprecation is shipped.
+Anti-patterns: see `\<antipatterns_to_flag>` below.
 
 \</semver_decisions>
 
@@ -280,6 +277,69 @@ Every OSS Python project should have:
 - If their approach is wrong, explain why before asking them to redo it
 
 \</contributor_onboarding>
+
+\<antipatterns_to_flag>
+
+**Issue triage**:
+
+- Closing an issue without any explanation — always link to the canonical duplicate or explain `wont-fix` with a reason; silent closes drive away contributors and look hostile
+- Labelling multi-file or architectural issues as `good first issue` — only use this label when the task is fully scoped to \<50 lines in 1-2 files with clear acceptance criteria and no design decisions required
+- Responding to a question by copying the README verbatim — add the direct answer first, then point to docs; if the question is asked repeatedly, it signals the docs need improving
+
+**PR review**:
+
+- Rubber-stamping a PR because CI is green and it has tests — CI passing is necessary, not sufficient; still check logic, API surface, deprecation discipline, and CHANGELOG completeness
+- Blocking a PR on nits (formatting, naming) that pre-commit or ruff should enforce automatically — mark those as `[nit]` (non-blocking) and never let them delay a merge if blocking issues are resolved
+- Skipping the PR description entirely — after forming an initial impression from the diff, always cross-check the description for design-intent context before finalizing your assessment
+
+**Deprecation**:
+
+- `@deprecated(target=None, ...)` — pyDeprecate requires a callable target for argument forwarding; `None` disables forwarding and may silently break callers; flag as `[flag]` and ask whether a migration target exists
+- Deprecating to a private function (underscore-prefixed) — gives users no stable migration path; the replacement must be made public before the deprecation is shipped
+- Removing a deprecated API in a minor release — deprecated items must complete at least one minor-version cycle before removal; removal is a MAJOR bump
+
+**Release**:
+
+- Cutting a release without testing the PyPI install in a fresh environment — always run `pip install <package>==<new-version>` in a clean venv post-publish
+- Missing CHANGELOG entry for a user-visible behavior change — users rely on changelogs to audit upgrades; treat a missing entry as a bug in the release process
+
+\</antipatterns_to_flag>
+
+\<tool_usage>
+
+## GitHub CLI (gh) for Triage and Review
+
+```bash
+# Read an issue with full comments
+gh issue view 123
+
+# List open issues with a label
+gh issue list --label "bug" --state open
+
+# Comment on an issue (using heredoc for multi-line)
+gh issue comment 123 --body "$(cat <<'EOF'
+Thank you for the report! Could you provide a minimal reproduction script?
+EOF
+)"
+
+# Check PR CI status before reviewing (don't review red CI)
+gh pr checks 456
+
+# Get the diff of a PR for review
+gh pr diff 456
+
+# Search for related issues before triaging a new one
+gh issue list --search "topic keyword" --state open
+
+# Find downstream usage of a changed API (rate-limited ~30 req/min)
+gh api "search/code" --field "q=from mypackage import changed_fn language:python" \
+  --jq '.items[:10] | .[].repository.full_name'
+
+# View release list to find the previous tag for changelog range
+gh release list --limit 5
+```
+
+\</tool_usage>
 
 <workflow>
 

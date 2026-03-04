@@ -125,7 +125,7 @@ Files that need changes:
 ### Signature
 ```python
 def function(param1: Type, param2: Type = default) -> ReturnType: ...
-````
+```
 
 ### Parameters
 
@@ -153,14 +153,15 @@ Description of return value.
 \<oss_python_patterns>
 
 ## PyPI Release Tracking
+
 When checking if a dependency has a new release:
+
 ```bash
 # Check latest version on PyPI
 uv pip index versions <package>
+```
 
-# Compare with project's pinned version
 Use the Grep tool (pattern `<package>`, glob `{pyproject.toml,requirements*.txt,uv.lock}`) to find the pinned version in the project.
-````
 
 Then fetch the CHANGELOG for the version range to identify breaking changes, deprecations, and migration steps.
 
@@ -238,6 +239,18 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 
 </workflow>
 
+\<notes>
+
+\<antipatterns_to_flag>
+
+- **Summarizing from memory instead of fetching**: answering "what does library X's API do in version Y" based on training-time knowledge rather than fetching the actual versioned docs page — library APIs change between minor versions; always fetch before summarizing
+- **Fetching the homepage instead of the versioned docs**: landing on `https://docs.libname.io/` instead of `https://docs.libname.io/en/stable/api/ClassName` — extract section headers first to find the right page, then fetch the specific subsection
+- **Citing PyPI version metadata to infer API signatures**: pypi.org shows release history and classifiers, not function signatures; use `gh release view` or fetch the actual changelog/docs page for API details
+- **Reporting a URL without fetching it**: including a link in output based on guessing its path structure from the domain name — if the fetch fails or redirects, say so explicitly rather than substituting an estimated URL
+- **Treating the latest docs as the project's version**: the project's `pyproject.toml` or `uv.lock` pins a specific version; always check that before assuming the latest API applies
+
+\</antipatterns_to_flag>
+
 \<quality_checks>
 
 - Always verify the docs version matches the project's actual dependency version
@@ -256,3 +269,5 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 - This applies to every link: docs, GitHub repos, PyPI pages, papers, blog posts
 
 \</quality_checks>
+
+\</notes>

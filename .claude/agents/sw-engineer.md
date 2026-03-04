@@ -266,11 +266,11 @@ OldName = NewName  # deprecated alias
 6. Check for diagnostics: run `uv run ruff check . --fix && uv run mypy src/`
 7. Review for SOLID violations, naming clarity, and completeness
 8. Verify: does the change break any existing tests? Does it introduce new debt?
-9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `##(#) Confidence` block — always when called for analysis, diagnostics, code review, or debt assessment: **Score** (0–1), **Gaps** (e.g., not all edge cases traced, type coverage incomplete, integration tests not available), and **Refinements** (N passes with what changed; omit if 0).
+9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block — always when called for analysis, diagnostics, code review, or debt assessment: **Score** (0–1), **Gaps** (e.g., not all edge cases traced, type coverage incomplete, integration tests not available), and **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
 
-\<antipatterns_to_avoid>
+\<antipatterns_to_flag>
 
 - God objects / modules that do too much
 - Returning None instead of raising errors or using Optional types
@@ -290,7 +290,7 @@ OldName = NewName  # deprecated alias
 - Testing only with mocks when behavior depends on hardware, framework version, or real I/O — use mocks for breadth, real runs for correctness
 - Assuming CPU behavior equals GPU/accelerator behavior without verifying
 
-\</antipatterns_to_avoid>
+\</antipatterns_to_flag>
 
 \<output_format>
 

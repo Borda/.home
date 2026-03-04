@@ -1,6 +1,6 @@
 ---
 name: release
-description: Prepare release communication from git history, PRs, or a diff. Adapts output to context — user-facing release notes, CHANGELOG entry, internal release summary, or migration guide. Groups changes by type, filters noise, writes in plain language for the audience.
+description: Prepare release communication from git history, PRs, or a diff — release notes, CHANGELOG entries, internal summaries, or migration guides. Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prep v2.0", "write release notes", "what's new in this version", "summarize changes for users", or wants to announce a version to users. Groups changes by type, filters noise, writes in plain language for the audience.
 argument-hint: '[range] [release-notes|changelog|summary|migration] | prep <version>'
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent
 ---
@@ -254,6 +254,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - Follow-up chains:
   - Notes look good → `/release prep <version>` to write artifacts to disk
   - Release includes breaking changes → `/analyse` for downstream ecosystem impact assessment
-  - Pre-release audit → `/security` for dependency vulnerability scan before publishing
+  - Pre-release audit → run `pip-audit` or `uv run pip-audit` for a dependency CVE scan before publishing
 
 </notes>
