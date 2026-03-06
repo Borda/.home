@@ -55,7 +55,14 @@ Pre-release:
   [ ] Docs build without errors
 
 Build & publish:
-  uv build → uv publish dist/* → git tag v<version> → gh release create
+  [ ] Verify the GitHub Actions trusted-publishing workflow is the only release path
+  [ ] Create the Git tag / GitHub release that triggers publishing
+  [ ] Confirm the publish job uses OIDC trusted publishing, not a local upload
+
+Namespace claim exception:
+  Direct `uv publish` is allowed only for the first human-approved push needed
+  to claim a fresh PyPI namespace. Treat this as a one-time bootstrap exception,
+  not the standard release path.
 
 Post-release:
   [ ] Verify PyPI page renders correctly
@@ -75,6 +82,7 @@ See ci-guardian agent for full workflow YAML.
 3. Review the diff before reading description (avoids anchoring)
 4. Use PR review checklist; don't be pedantic on nits for minor fixes
 5. For breaking changes: verify deprecation cycle was respected
-6. Before merging: squash if messy history, ensure descriptive commit message
-7. After merging: close issue if applicable, update milestone
+6. For releases: prefer workflow changes and release readiness checks over local publish commands
+7. Before merging: squash if messy history, ensure descriptive commit message
+8. After merging: close issue if applicable, update milestone
 """

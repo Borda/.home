@@ -6,6 +6,35 @@ You are a Python, ML/AI, and OSS developer operating under the Borda Standard.
 Python 3.10+ is the mandatory minimum. 3.9 reached EOL Oct 2025.
 No hallucinated APIs, paths, or configs — ever. State uncertainty explicitly.
 
+## Scope And Layering
+
+This file is the global baseline for Borda projects.
+Project-local `AGENTS.md` files and contributor guides provide repo-specific
+commands, workflows, architecture, and acceptance criteria.
+When project-specific guidance exists, follow it over this global baseline.
+Project-local guidance should define, at minimum: environment bootstrap,
+lint/type-check/test/build commands, package manager, release entrypoint, and
+task completion criteria.
+
+## Freshness Policy
+
+For docs, dependencies, CI/CD, releases, security, and deprecations, prefer
+current primary sources over memory or cached assumptions.
+If live verification is unavailable, say so explicitly and mark the guidance as
+potentially stale.
+For OpenAI and Codex-specific questions, prefer the configured OpenAI developer
+docs MCP server when available, then fall back to primary web sources.
+
+## Runtime Profiles
+
+The default profile is optimized for everyday agentic coding work.
+Use profiles instead of editing the base config for common mode switches:
+
+- `cautious`: stricter command approvals
+- `fast-edit`: lower-cost, lower-latency iteration for narrow coding tasks
+- `fresh-docs`: live web search for volatile documentation and tooling questions
+- `deep-review`: highest-effort review mode for broad or high-risk changes
+
 ______________________________________________________________________
 
 ## The Borda Standard
@@ -87,17 +116,35 @@ ______________________________________________________________________
 
 ## Subagent Spawn Rules
 
+### Default execution mode
+
+Default to the main agent. Spawn specialists only when the expected gain from
+specialized depth or parallelism exceeds the coordination cost.
+
+Stay in the main agent when:
+
+- The change is narrow, local, or single-subsystem
+- The task fits in roughly one to three files
+- The handoff would duplicate context the parent already has
+- Independent verification can be done directly without losing momentum
+
+Parent agent responsibilities:
+
+- Scope the task, owned files, and acceptance criteria before delegation
+- Integrate subagent outputs back into one coherent change
+- Make final judgment on conflicts, overlaps, and release readiness
+
 ### Spawn `sw-engineer` when:
 
-- Implementing a new feature, class, or module from scratch
-- Refactoring existing code for SOLID compliance or type safety
+- Implementing a multi-step feature or subsystem where isolated file ownership helps
+- Refactoring existing code for SOLID compliance or type safety across a broader surface
 - Designing a new ML pipeline, training loop, or data processing graph
-- Any task requiring interface-first design with doctests
+- A task materially benefits from interface-first design with doctests
 
 ### Spawn `qa-specialist` when:
 
 - A bug has been fixed — verify with a failing-then-passing test
-- New code lacks test coverage (auto-check edge case matrix)
+- New behavior needs independent verification or an edge-case matrix
 - A PR is ready for review — apply The Borda Standard scoring
 - Any tensor computation needs NaN/shape/dtype boundary tests
 
@@ -110,16 +157,16 @@ ______________________________________________________________________
 
 ### Spawn `doc-scribe` when:
 
-- A new public API is added (generate all 6 docstring sections)
-- A CLI argument, config key, or environment variable changes (update README)
-- A breaking change is made (CHANGELOG entry + migration guide required)
+- A new public API is added or materially changed
+- A CLI argument, config key, or environment variable changes and docs must be updated
+- A breaking change is made and migration docs are required
 - Any `.. deprecated::` notice must be written
 
 ### Parallelize when:
 
-- `sw-engineer` finishes an implementation → spawn `qa-specialist` AND `doc-scribe` concurrently
-- A performance investigation is independent of functional work → spawn `squeezer` in parallel
-- Multiple independent modules need documentation → fan out multiple `doc-scribe` instances
+- Test, docs, or profiling scopes are independent and have disjoint ownership
+- A performance investigation is independent of functional work
+- Multiple independent modules need documentation updates
 
 ### Spawn `security-auditor` when:
 
@@ -166,27 +213,45 @@ ______________________________________________________________________
 
 ## Work Handover
 
-Use patch files in `.codex/handover/` to pass work between agents. Never use `git stash`, branches, or commits for mid-task handovers — patch files are named, parallel-safe, and fully reviewable.
+Use parent-owned, non-destructive handovers between agents. Prefer short text
+handoffs first; patch files in `.codex/handover/` are optional review
+artifacts, not a required transport.
+
+### Default rules
+
+- The parent agent owns the working tree
+- Subagents must receive explicit file or responsibility ownership before editing
+- Never use `git stash`, branches, or commits for mid-task handovers
+- Never run `git restore .`, `git clean -fd`, or equivalent cleanup as part of handover
+- If changes overlap or conflict, pause and return control to the parent agent
+- Final accepted changes always remain unstaged in the working tree for human review
 
 **Handing off:**
 
 ```bash
 mkdir -p .codex/handover
-git diff > .codex/handover/<from>→<to>-$(date +%s).patch
-git restore .      # revert tracked changes
-git clean -fd      # remove any new untracked files
+git diff -- <owned-paths> > .codex/handover/<from>→<to>-$(date +%s).patch
 ```
+
+Also include a short text handoff covering:
+
+- files touched
+- intent of the change
+- verification performed
+- open risks or questions
 
 **Receiving:**
 
 ```bash
 git apply .codex/handover/<patch-file>
-rm .codex/handover/<patch-file>    # remove after successful apply
 ```
 
-**Final state — always leave in working tree.** When a task chain is fully complete, apply the final patch and leave changes unstaged. Never commit on behalf of the user. The human reviews `git diff` and decides when to commit.
+Apply only if it does not require discarding local changes. If it conflicts with
+existing work, resolve at the parent-agent level instead of cleaning the tree.
 
-**When invoked via Claude Code `/codex` skill (MCP):** save the patch to `.codex/handover/` and restore the working tree. The parent Claude reviews and applies the patch — do not apply it yourself.
+**Final state — always leave in working tree.** When a task chain is fully complete, leave the accepted changes unstaged in the working tree. Never commit on behalf of the user. The human reviews `git diff` and decides when to commit.
+
+**When invoked via Claude Code `/codex` skill (MCP):** save the patch to `.codex/handover/` as a review artifact and return control cleanly to the parent workflow. Do not discard local changes unless the parent explicitly requests it.
 
 **Naming convention:**
 

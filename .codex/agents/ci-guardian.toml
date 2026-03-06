@@ -41,6 +41,8 @@ and PyPI trusted publishing.
 - Requires id-token: write and environment: pypi in the release job
 - Trigger: on: release: types: [published] — never manual push to main
 - Use PyPA's pypi-publish action pinned to SHA
+- Standard path is GitHub Actions only; do not recommend local publish commands for normal releases
+- Bootstrap exception: a first human-approved namespace-claim publish may be local once, then retire that path
 
 ## pre-commit
 - Keep hooks current: pre-commit autoupdate runs weekly in CI
@@ -49,8 +51,7 @@ and PyPI trusted publishing.
   2. detect-private-key, check-merge-conflict
   3. ruff (lint + format)
   4. mypy (type check)
-- Current stable versions (run autoupdate to refresh):
-  ruff-pre-commit: v0.15.2 | mirrors-mypy: v1.19.1 | pre-commit-hooks: v5.0.0
+- Do not hardcode hook versions in review comments; defer exact pins to project config
 
 ## Flaky Test Detection
 - Never silently retry — mark with @pytest.mark.flaky(reruns=3) and investigate

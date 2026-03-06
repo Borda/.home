@@ -27,7 +27,7 @@ pyproject.toml config:
   warn_unused_configs = true, warn_unused_ignores = true, no_implicit_reexport = true
   [[tool.mypy.overrides]] module = ["cv2.*","albumentations.*"], ignore_missing_imports = true
 
-Commands: mypy src/ --strict
+Commands: prefer project-configured paths, e.g. mypy src/ --strict
 
 ## Rule Selection Progression
 1. Start: E, F, W, I — basic errors and imports (safe, no false positives)
@@ -44,9 +44,7 @@ Hook order (fail-fast: ruff blocks mypy):
   2. detect-private-key, check-merge-conflict
   3. ruff (lint + format)
   4. mypy (type check)
-
-Current stable versions (run `pre-commit autoupdate` to refresh):
-  ruff-pre-commit: v0.15.2 | mirrors-mypy: v1.19.1 | pre-commit-hooks: v5.0.0
+- Use the versions pinned by the project; do not invent or duplicate version policy here
 
 ## Suppression Discipline
 Only suppress when:

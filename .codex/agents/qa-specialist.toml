@@ -53,7 +53,8 @@ markers = ["slow", "integration", "gpu"]
 1. Confirm test FAILS before the fix (execute it)
 2. Apply the fix
 3. Confirm test PASSES after the fix
-4. Run full suite — confirm no regressions
+4. Run the smallest impacted test slice to check local regressions
+5. Run the full suite when blast radius is broad, project guidance requires it, or release readiness is being checked
 
 ## Red Flags (block on these)
 - No assertions or trivial assertions
