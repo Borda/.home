@@ -48,23 +48,23 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/fix`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill         | Command                            | What It Does                                                                                               |
-| ------------- | ---------------------------------- | ---------------------------------------------------------------------------------------------------------- |
-| **review**    | `/review [file\|PR#]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)             |
-| **optimize**  | `/optimize [target]`               | Measure-change-measure performance loop                                                                    |
-| **release**   | `/release [range]`                 | Release notes, CHANGELOG, or migration guide from git history                                              |
-| **survey**    | `/survey [topic]`                  | SOTA literature survey with implementation plan                                                            |
-| **analyse**   | `/analyse [#\|health]`             | Issue/PR analysis, repo health, duplicate detection, contributor activity                                  |
-| **observe**   | `/observe`                         | Meta-skill: analyze work patterns and suggest new agents or skills                                         |
-| **audit**     | `/audit [fix [high\|medium\|all]]` | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues                 |
-| **sync**      | `/sync [apply]`                    | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                            |
-| **manage**    | `/manage <op> <type>`              | Create, update, or delete agents/skills with cross-ref propagation                                         |
-| **feature**   | `/feature <desc>`                  | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle                 |
-| **refactor**  | `/refactor <target>`               | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor                  |
-| **fix**       | `/fix <bug>`                       | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks                         |
-| **calibrate** | `/calibrate [target] [fast\|full]` | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias              |
-| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                        |
-| **resolve**   | `/resolve <PR#>`                   | Resolve PR review suggestions — classify comments, dispatch actionable ones to Codex in parallel, validate |
+| Skill         | Command                            | What It Does                                                                                                                      |
+| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| **review**    | `/review [file\|PR#]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)                                    |
+| **optimize**  | `/optimize [target]`               | Measure-change-measure performance loop                                                                                           |
+| **release**   | `/release [range]`                 | Release notes, CHANGELOG, or migration guide from git history                                                                     |
+| **survey**    | `/survey [topic]`                  | SOTA literature survey with implementation plan                                                                                   |
+| **analyse**   | `/analyse [#\|health]`             | Issue/PR analysis, repo health, duplicate detection, contributor activity                                                         |
+| **observe**   | `/observe`                         | Meta-skill: analyze work patterns and suggest new agents or skills                                                                |
+| **audit**     | `/audit [fix [high\|medium\|all]]` | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues                                        |
+| **sync**      | `/sync [apply]`                    | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                   |
+| **manage**    | `/manage <op> <type>`              | Create, update, or delete agents/skills with cross-ref propagation                                                                |
+| **feature**   | `/feature <desc>`                  | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle                                        |
+| **refactor**  | `/refactor <target>`               | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor                                         |
+| **fix**       | `/fix <bug>`                       | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks                                                |
+| **calibrate** | `/calibrate [target] [fast\|full]` | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                     |
+| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                               |
+| **resolve**   | `/resolve <PR#\|comment>`          | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -195,13 +195,16 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   /codex "add return type annotations to all functions missing them" "src/mypackage/utils.py"
   ```
 
-- **`/resolve` — Implement PR review suggestions**
+- **`/resolve` — Resolve a PR end-to-end**
 
   ```bash
-  # Resolve suggestions on PR #42 in the current repo
+  # Full PR resolution: conflict check → semantic resolution → review comments
   /resolve 42
   # Also accepts a full GitHub PR URL
   /resolve https://github.com/org/repo/pull/42
+
+  # Single-comment fast path (no PR number)
+  /resolve "rename foo to bar throughout the auth module"
   ```
 
 </details>
@@ -292,8 +295,8 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>PR review feedback → resolve → verify</strong></summary>
 
 ```
-/resolve 42            # classify review comments, dispatch implement items to Codex in parallel
-/review                # full quality pass on all applied changes
+/resolve 42   # auto-detect conflicts → resolve semantically → apply review comments via Codex
+/review       # full quality pass on all applied changes
 ```
 
 </details>

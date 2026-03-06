@@ -52,6 +52,13 @@
     ]
   },
   "permissions": {
+    "deny": [
+      "Bash(git push:*)",
+      "Bash(git branch -D:*)",
+      "Bash(git branch -d:*)",
+      "Bash(git tag -d:*)",
+      "Bash(git remote:*)"
+    ],
     "allow": [
       "WebSearch",
       "Bash(curl:*)",
@@ -107,6 +114,9 @@
       "Bash(git branch:*)",
       "Bash(git tag:*)",
       "Bash(git status:*)",
+      "Bash(git merge:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git worktree:*)",
       "Bash(git add:*)",
       "Bash(git checkout:*)",
       "Bash(git stash:*)",

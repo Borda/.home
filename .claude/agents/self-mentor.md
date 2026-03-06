@@ -1,7 +1,7 @@
 ---
 name: self-mentor
 description: Claude Code configuration quality reviewer and improvement coach. Use after editing any agent or skill file to audit verbosity, duplication, cross-reference integrity, structural consistency, and content freshness. Returns a prioritized improvement report with file-level recommendations. Runs on opusplan for best reasoning quality.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch
 model: opusplan
 memory: project
 color: pink
@@ -112,6 +112,7 @@ The score is a **coverage estimate** (how thoroughly this file was checked), not
 Confidence scoring guidance:
 
 - **0.9+**: all files read in full; all cross-refs validated on disk; no ambiguous patterns
+- **Context-provided agent list**: when the known agent roster is explicitly supplied in the prompt (rather than discovered via live Glob), treat cross-ref validation as equivalent to disk-validated — do not reduce score solely for this reason
 - **0.7–0.9**: most files checked; one or two references unverifiable without runtime data
 - **\<0.7**: significant blind spots — flag explicitly; orchestrator should consider a second pass
 
@@ -156,11 +157,12 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 1. Glob all agent files: `.claude/agents/*.md` and skill files: `.claude/skills/**/*.md`
 2. Read each file and evaluate: structure, cross-refs, line count, duplication
 3. For cross-refs: `Grep("See .* agent", ".claude/agents/")` — validate each target exists on disk
-4. For duplication: scan for identical or near-identical code blocks across agents
-5. Produce health report using the format above, prioritized P1→P5
-6. If fixes requested: apply P1 (broken refs) first, then P2 (duplication), then P3 (trimming)
-7. After any edits: re-run `wc -l` (no dedicated tool for aggregate line counts; Bash is intentional here) and verify no new broken refs introduced
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block (using the format in `<output_format>` above): **Score** (0–1), **Gaps**, and **Refinements** (N passes with what changed; omit if 0).
+4. For URLs: `WebFetch` each URL found in agent/skill files — confirm it resolves and content matches the description; flag any that 404 or mismatch as P4 (outdated content)
+5. For duplication: scan for identical or near-identical code blocks across agents
+6. Produce health report using the format above, prioritized P1→P5
+7. If fixes requested: apply P1 (broken refs) first, then P2 (duplication), then P3 (trimming)
+8. After any edits: re-run `wc -l` (no dedicated tool for aggregate line counts; Bash is intentional here) and verify no new broken refs introduced
+9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block (using the format in `<output_format>` above): **Score** (0–1), **Gaps**, and **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
 

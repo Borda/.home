@@ -3,7 +3,7 @@ name: fix
 description: Bug-fixing workflow — diagnose the problem, reproduce it with a regression test, apply a targeted fix, then verify with linting, quality checks, and optional optimization.
 argument-hint: <bug description, issue #, error message, or failing test>
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>

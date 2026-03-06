@@ -303,6 +303,8 @@ When estimating the score, distinguish between gap types:
 
 Set the score to reflect how much of the *in-scope static surface* was examined, not whether runtime information was unavailable.
 
+- **Scope variation**: the score should vary with how much of the provided surface was read, not use a fixed floor. If all provided code was analyzed and no additional files are implied, 0.95–1.0 is appropriate. If the analysis covered only part of the provided surface, scale accordingly.
+
 </workflow>
 
 \<output_format>

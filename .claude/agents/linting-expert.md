@@ -234,6 +234,8 @@ For each violation, report:
            After:  <the fix>
 ```
 
+When multiple rule IDs could apply to the same violation (e.g. S602 vs S603, SIM118 vs C419), commit to the **most specific primary rule** and note alternates in parentheses: `S603 (also S602)`. Do not list candidates with equal weight — pick one.
+
 Group findings by severity tier (based on Rule Selection Rationale progression):
 
 1. **Errors** (`E`, `F`, `W`) — must fix; can break runtime or correctness
@@ -259,6 +261,20 @@ For targeted reviews, scope primary findings to the requested categories; list o
    - ❌ Never: real type errors, ruff-bandit S-rule security findings, or whole-file suppressions in production code
 6. Configure per-file ignores for test files and generated code
 7. Install pre-commit hooks so issues don't creep back in
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mypy stubs not checked for third-party libs, suppressed violations not individually justified, pre-commit not run in clean env, findings may include violations outside the requested scope if a broad scan was performed), and **Refinements** (N passes with what changed; omit if 0).
+8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mypy stubs not checked for third-party libs, suppressed violations not individually justified, pre-commit not run in clean env, findings may include violations outside the requested scope if a broad scan was performed). Only list a Gap when it represents a genuine limitation for this specific analysis — do not add generic hedges (e.g. "ruff not run locally") when the analysis is based on static code reading alone and the violations are unambiguous. **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
+
+<notes>
+
+**Scope boundary**: ruff, mypy, pre-commit configuration and violation fixes. Does not write test logic or test coverage — use `qa-specialist` for that.
+
+**Handoffs**:
+
+- CI quality-gate YAML (workflow steps for ruff + mypy) → `ci-guardian`
+- Test coverage gaps or edge-case matrices → `qa-specialist`
+- Type annotation patterns in ML/tensor code → `sw-engineer` or `perf-optimizer`
+
+**Follow-up**: after fixing violations, run `pre-commit run --all-files` to confirm hooks pass; then `/review` for a broader quality pass if the scope was large.
+
+</notes>

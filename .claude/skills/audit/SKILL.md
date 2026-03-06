@@ -3,7 +3,7 @@ name: audit
 description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Reports by severity; auto-fixes at the requested level — 'fix high' (critical+high), 'fix medium' (critical+high+medium), 'fix all' (all findings including low).
 argument-hint: '[agents|skills] [fix [high|medium|all]]'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>
@@ -232,7 +232,7 @@ for f in .claude/skills/*/SKILL.md; do
   name=$(basename "$(dirname "$f")")
   declared=$(awk '/^---$/{c++; if(c==2)exit} c==1 && /^allowed-tools:/{sub(/^allowed-tools: /,""); print}' "$f")
   body=$(awk '/^---$/{c++} c>=2{print}' "$f")
-  for tool in Read Write Edit Bash Grep Glob Task WebFetch WebSearch; do
+  for tool in Read Write Edit Bash Grep Glob TaskCreate TaskUpdate WebFetch WebSearch; do
     in_body=$(echo "$body" | grep -cw "$tool" || true)
     in_decl=$(echo "$declared" | grep -cw "$tool" || true)
     if [ "$in_body" -gt 0 ] && [ "$in_decl" -eq 0 ]; then

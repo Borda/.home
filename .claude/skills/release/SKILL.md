@@ -2,7 +2,7 @@
 name: release
 description: Prepare release communication from git history, PRs, or a diff — release notes, CHANGELOG entries, internal summaries, or migration guides. Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prep v2.0", "write release notes", "what's new in this version", "summarize changes for users", or wants to announce a version to users. Groups changes by type, filters noise, writes in plain language for the audience.
 argument-hint: '[range] [release-notes|changelog|summary|migration] | prep <version>'
-allowed-tools: Read, Write, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>

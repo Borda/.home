@@ -257,6 +257,8 @@ When documenting image/tensor functions, always specify:
 
 When auditing, prioritise findings by scope: (1) public functions and classes, (2) class constructors, (3) module level, (4) dunder/private methods. Report dunder and module-level gaps as low-severity addenda only after covering the primary public API surface — do not let them dominate the findings list.
 
+When listing findings, order by severity within each item: (1) missing docstring entirely, (2) missing Parameters/Returns for public API, (3) missing Examples, (4) incomplete section descriptions (empty parameter description lines), (5) minor style observations (value range annotation, ordering of Returns tuple description). Report all high/medium findings first; append low-severity style observations only after the primary gaps are covered. This prevents minor annotations from diluting the signal of structural gaps.
+
 ## README Audit
 
 - Quick start works in a fresh environment
@@ -285,6 +287,7 @@ When auditing, prioritise findings by scope: (1) public functions and classes, (
 - Type info only in docstring, not in annotation (use both — annotation for tooling, docstring for description)
 - Writing docstrings that describe the intended or idealized behavior rather than what the code actually does — always read the implementation first, then document the actual behavior
 - Documenting a `Raises` entry that the code never actually raises (or omitting one it does raise) — cross-check the code's `raise` statements and `pytest.raises` call sites before writing the Raises section
+- Functions with no explicit `raise` that still have implicit shape/type contracts (e.g. arrays must have matching first dim, tuple must be length 2) should document those constraints in `Raises` (if the downstream exception is user-visible) or in a `Notes` paragraph — do not skip the Raises section just because the function body has no `raise` keyword
 - Documenting only the "happy path" in Examples while omitting edge-case behavior that callers need to know about (e.g., what happens on empty input, None, or out-of-range values)
 - Copy-pasting the function signature verbatim as the one-line summary — the summary should explain *why* and *when* to use the function, not restate its name and arguments
 

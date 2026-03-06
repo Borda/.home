@@ -267,7 +267,7 @@ OldName = NewName  # deprecated alias
 6. Check for diagnostics: run `uv run ruff check . --fix && uv run mypy src/`
 7. Review for SOLID violations, naming clarity, and completeness
 8. Verify: does the change break any existing tests? Does it introduce new debt?
-9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block — always when called for analysis, diagnostics, code review, or debt assessment: **Score** (0–1), **Gaps** (e.g., not all edge cases traced, type coverage incomplete, integration tests not available), and **Refinements** (N passes with what changed; omit if 0).
+9. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block — always when called for analysis, diagnostics, code review, or debt assessment: **Score** (0–1), **Gaps** (e.g., not all edge cases traced, type coverage incomplete, integration tests not available), and **Refinements** (N passes with what changed; omit if 0). For static-analysis findings (type errors, mutable defaults, bare except, logic errors detectable by reading the code), score gaps only against issues that genuinely require runtime or integration context — do not penalise confidence for absence of a test suite or caller context when the bugs are statically evident.
 
 </workflow>
 
@@ -303,6 +303,6 @@ OldName = NewName  # deprecated alias
 - Flag assumptions about the codebase or requirements
 - Highlight any design trade-offs made
 - Always run ruff + mypy mentally before presenting code
-- When producing a bug/issue list: separate **correctness bugs** (definite errors, data races, incorrect logic) from **improvement suggestions** (style, typing improvements, deprecation warnings). Lead with correctness bugs; list suggestions in a distinct section or omit if not requested.
+- When producing a bug/issue list: separate **correctness bugs** (definite errors, data races, incorrect logic) from **improvement suggestions** (style, typing improvements, deprecation warnings). Lead with correctness bugs. Include improvement suggestions only when the prompt explicitly requests them (e.g., "review for all issues", "suggest improvements") — omit them entirely for prompts that ask only for bugs or correctness analysis. Never present design observations as peer findings alongside correctness bugs.
 
 \</output_format>

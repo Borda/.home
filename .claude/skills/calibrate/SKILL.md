@@ -1,8 +1,8 @@
 ---
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
-argument-hint: '[agent-name|all|/audit|/review] [fast|full] [ab] [apply]'
-allowed-tools: Read, Write, Edit, Bash, Agent
+argument-hint: '{all|agents|skills|<name>} [fast|full] [ab] [apply]'
+allowed-tools: Read, Write, Edit, Bash, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>
@@ -15,13 +15,23 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 
 <inputs>
 
-- **$ARGUMENTS**: optional
-  - Omitted / `all` → benchmark all agents + generate self-mentor proposals
-  - `<agent-name>` → benchmark one agent + generate proposals (e.g., `sw-engineer`)
-  - `/audit` or `/review` → benchmark a skill (only these two skill domains have calibration support)
-  - Append `full` for 10 problems instead of 3 (e.g., `sw-engineer full`, `all full`)
-  - Append `ab` to also run a `general-purpose` baseline on the same problems and report delta metrics — works for agents AND skills (e.g., `data-steward ab`, `/audit ab`, `all ab`)
-  - Append `apply` to apply the proposals from the most recent run to the agent/skill files — skips benchmark (e.g., `sw-engineer apply`)
+- **$ARGUMENTS**: `{all|agents|skills|<name>} [fast|full] [ab] [apply]`
+
+  - **Target** (first token — defaults to `all`):
+    - `all` — all agents + all calibratable skills (`/audit`, `/review`)
+    - `agents` — all agents only
+    - `skills` — calibratable skills only (`/audit`, `/review`)
+    - `<agent-name>` — single agent (e.g., `sw-engineer`)
+    - `/audit` or `/review` — single skill
+  - **Pace** (optional, default `fast`):
+    - `fast` — 3 problems per target
+    - `full` — 10 problems per target
+  - **`ab`** (optional): also run a `general-purpose` baseline and report delta metrics
+  - **`apply`** (optional):
+    - With `fast` or `full`: run the calibration benchmark then immediately apply the new proposals at the end
+    - Without `fast`/`full`: skip benchmark; apply proposals from the most recent past run
+
+  Every invocation surfaces a report: benchmark runs print the new results; bare `apply` prints the saved report from the last run before applying any changes.
 
 </inputs>
 
@@ -59,24 +69,46 @@ Skill domains:
 
 <workflow>
 
-**Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase. Mark in_progress/completed throughout. On loop retry or scope change, create a new task.
+**Task tracking**: create tasks at the start of execution (Step 1) for each phase that will run:
+
+- "Calibrate agents" — Step 2a (benchmark mode, when target includes agents)
+- "Calibrate skills" — Step 2b (benchmark mode, when target includes skills)
+- "Analyse and report" — Steps 3–5 (benchmark mode)
+- "Apply findings" — Step 6 (apply mode only)
+  Mark each in_progress when starting, completed when done. On loop retry or scope change, create a new task.
 
 ## Step 1: Parse targets and create run directory
 
 From `$ARGUMENTS`, determine:
 
-- Target list: one agent, one skill, or all (expand "all" to the full agent list above)
-- Mode: `fast` (N=3) or `full` (N=10) — default `fast`
-- A/B flag: `ab` present → also spawn a `general-purpose` baseline per problem and compute delta metrics
-- Fix flag: `apply` present → apply proposals only; otherwise always run benchmark + generate self-mentor proposals
+- **Target list** — parse the first token:
+  - `all` or omitted → all agents + `/audit` + `/review`
+  - `agents` → all agents only (the full agent list in `<constants>`)
+  - `skills` → `/audit` and `/review` only
+  - Any other token → single agent or skill name
+- **Mode**: look for `fast` or `full` in remaining tokens — default `fast`
+- **A/B flag**: `ab` present → also spawn a `general-purpose` baseline per problem
+- **Apply flag**:
+  - `apply` without `fast`/`full` → pure apply mode: skip Steps 2–5; go directly to Step 6
+  - `apply` with `fast`/`full` → benchmark + auto-apply: run Steps 2–5 then continue to Step 6
 
-**If `apply` is in `$ARGUMENTS`**: skip Steps 2–5 entirely, go directly to Step 6.
+If benchmark will run (i.e., `fast` or `full` is present, with or without `apply`): generate timestamp `YYYYMMDDTHHMMSSZ` (UTC, e.g. `20260303T134448Z`). All run dirs use this timestamp.
 
-Otherwise, generate timestamp: `YYYYMMDDTHHMMSSZ` (UTC, e.g. `20260303T134448Z`). All run dirs use this timestamp.
+Create tasks before proceeding:
 
-## Step 2: Spawn per-target pipeline subagents (parallel)
+- Benchmark only (no `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Analyse and report"
+- Benchmark + auto-apply (`fast`/`full` + `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Analyse and report", TaskCreate "Apply findings"
+- Pure apply mode (only `apply`, no `fast`/`full`): TaskCreate "Apply findings" only
 
-Issue ALL `general-purpose` subagent spawns in a **single response** — one per target. Do not wait for one to finish before spawning the next.
+## Step 2a: Spawn agent pipeline subagents
+
+Mark "Calibrate agents" in_progress. Issue all agent pipeline subagent spawns.
+
+## Step 2b: Spawn skill pipeline subagents
+
+Mark "Calibrate skills" in_progress. Issue all skill pipeline subagent spawns.
+
+Issue all subagents from both 2a and 2b in a **single response** — agents and skills are independent and run concurrently. One `general-purpose` subagent per target; do not wait for one to finish before spawning the next.
 
 Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>` before spawning — set `<AB_MODE>` to `true` or `false`):
 
@@ -254,7 +286,7 @@ ______________________________________________________________________
 
 ## Step 3: Collect results and print combined report
 
-After all pipeline subagents complete, parse the compact JSON summary from each.
+After all pipeline subagents complete: mark "Calibrate agents" and "Calibrate skills" completed. Mark "Analyse and report" in_progress. Parse the compact JSON summary from each.
 
 Print the combined benchmark report:
 
@@ -271,12 +303,16 @@ Print the combined benchmark report:
 
 Flag any target where recall < 0.70 or |bias| > 0.15 with ⚠.
 
-After the table, print the full content of each `proposal.md` for targets where `proposed_changes > 0`. Then print:
+After the table, print the full content of each `proposal.md` for targets where `proposed_changes > 0`.
+
+If `apply` was **not** set, print:
 
 ```
-→ Review proposals above, then run `/calibrate <targets> apply` to apply them.
+→ Review proposals above, then run `/calibrate <targets> [fast|full] apply` to apply them.
 → Proposals saved to: .claude/calibrate/runs/<TIMESTAMP>/<TARGET>/proposal.md
 ```
+
+If `apply` **was** set (benchmark + auto-apply mode), print `→ Auto-applying proposals now…` and proceed to Step 6.
 
 Targets with verdict `calibrated` and no proposed changes get a single line: `✓ <target> — no instruction changes needed`.
 
@@ -297,21 +333,31 @@ For each flagged target (recall < 0.70 or |bias| > 0.15):
 - **Bias > 0.15**: `→ Raise effective re-run threshold for <target> in MEMORY.md (default 0.70 → ~<mean_confidence>)`
 - **Bias < −0.15**: `→ <target> is conservative; threshold can stay at default`
 
-Proposals shown in Step 3 already surface the actionable signals. End with:
+Proposals shown in Step 3 already surface the actionable signals. If `apply` was **not** set, end with:
 
-`→ Run /calibrate <target> apply to apply the proposals above.`
+`→ Run /calibrate <target> [fast|full] apply to run a fresh benchmark and apply proposals.`
 
-## Step 6: Apply proposals (apply mode only)
+Mark "Analyse and report" completed. If `apply` was set: proceed to Step 6.
 
-Find the most recent run that contains `proposal.md` files:
+## Step 6: Apply proposals (apply mode)
+
+Mark "Apply findings" in_progress.
+
+**Determine run directory**:
+
+- Benchmark + auto-apply mode (`fast`/`full` + `apply`): use the TIMESTAMP already generated in Step 1 — proposals were just written by Steps 2–5.
+- Pure apply mode (only `apply`, no `fast`/`full`): find the most recent run:
 
 ```bash
 LATEST=$(ls -td .claude/calibrate/runs/*/ 2>/dev/null | head -1)
+TIMESTAMP=$(basename "$LATEST")
 ```
 
-For each target in the target list, check whether `$LATEST/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
+For each target in the target list, check whether `.claude/calibrate/runs/<TIMESTAMP>/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
 
-Print `⚠ No proposal found for <target> — run /calibrate <target> first` for each missing target.
+Print `⚠ No proposal found for <target> — run /calibrate <target> [fast|full] first` for each missing target.
+
+**Print the run's report before applying**: for each found target, read and print `.claude/calibrate/runs/<TIMESTAMP>/<target>/report.md` verbatim so the user sees the benchmark basis before any file is changed.
 
 **Spawn one `general-purpose` subagent per found target. Issue ALL spawns in a single response — no waiting between spawns.**
 
@@ -347,6 +393,8 @@ After all subagents complete, collect their JSON results and print the final sum
 → Run /calibrate <targets> to verify improvement.
 ```
 
+Mark "Apply findings" completed.
+
 </workflow>
 
 <notes>
@@ -359,10 +407,11 @@ After all subagents complete, collect their JSON results and print the final sum
 - **Do NOT use real project files**: benchmark only against synthetic inputs — no sensitive data and real files have no ground truth.
 - **Skill benchmarks** run the skill as a subagent against synthetic config or code; scored identically to agent benchmarks.
 - **Improvement loop**: systematic gaps → `<antipatterns_to_flag>` | consistent low recall → consider model tier upgrade (sonnet → opus) | large calibration bias → document adjusted threshold in MEMORY.md | re-calibrate after instruction changes to quantify improvement.
-- **benchmark + propose by default**: every run (except `apply`) benchmarks and generates self-mentor proposals. `apply` reads the proposals from the most recent run and applies them. The two-step design keeps a human review gate between diagnosis and mutation: you see exactly what will change before any file is touched.
+- **Report always**: every invocation surfaces a report — benchmark runs print the new results table; bare `apply` (no `fast`/`full`) prints the saved report from the last run before applying, so the user always sees the basis for any changes before files are touched.
+- **`apply` semantics**: `fast apply` / `full apply` = run fresh benchmark then auto-apply the new proposals in one go. `apply` alone (no `fast`/`full`) = apply proposals from the most recent past run without re-running the benchmark.
 - **Stale proposals**: `apply` uses verbatim text matching (`old_string` = **Current** from proposal). If the agent file was edited between the benchmark run and `apply`, any change whose **Current** text no longer matches is skipped with a warning — no silent clobbering of intermediate edits.
 - Follow-up chains:
-  - Recall < 0.70 or borderline → `/calibrate <agent>` → review proposals → `/calibrate <agent> apply` → `/calibrate <agent>` to verify improvement
+  - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
   - Recommended cadence: run before and after any significant agent instruction change
 - **Internal Quality Loop suppressed during benchmarking**: the Phase 2 prompt explicitly tells target agents not to self-review before answering. This ensures calibration measures raw instruction quality — not the `(agent + loop)` composite. If the loop were enabled, it would inflate both recall and confidence by an unknown ratio, masking real instruction gaps and making it impossible to attribute improvement to instruction changes vs. the loop self-correcting at inference time.

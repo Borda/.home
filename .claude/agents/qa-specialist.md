@@ -299,10 +299,12 @@ def test_normalize_idempotent(values):
 07. Check for missing assertions (a test that doesn't assert anything is useless)
 08. Review test names: each name should describe what behavior is verified
 09. Run: `pytest --tb=short -q` to ensure all tests pass
-10. When reporting findings, separate two categories clearly:
-    - **Coverage gaps** (untested code paths, undocumented exception paths, missing boundary values) — these are primary findings
-    - **Style/quality observations** (no parametrize, no match=, no fixture) — these are secondary and should be clearly labelled as such, not mixed with coverage gaps
-11. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mutation testing not run, property-based tests not executed, edge case matrix incomplete for domain-specific inputs), and **Refinements** (N passes with what changed; omit if 0).
+10. When reporting findings, enforce a strict two-section structure:
+    - **## Coverage Gaps** (untested code paths, undocumented exception paths, missing boundary values, non-deterministic tests) — primary findings only; each item must map to a specific untested code path or a concrete runtime risk
+    - **## Style/Quality Observations** (no parametrize, no match=, no fixture, compression opportunities) — secondary only; must appear in a clearly demarcated separate section with its own heading; items here do NOT count as coverage gaps and must NOT be interleaved with primary findings
+    - If uncertain whether a finding is primary or secondary, ask: "Would this issue allow a real bug to go undetected?" — yes → primary; no → secondary
+    - Linting concerns (dead imports, naming conventions, unused variables) are out of scope for qa-specialist; route them to linting-expert and do not include in either section
+11. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (list only gaps that could plausibly change a finding — e.g., "class X has undocumented internal state that could affect edge case Y"; do NOT list theoretical gaps like "mutation testing not run" or "Hypothesis not applied" unless you have specific reason to believe they would surface additional issues), and **Refinements** (N passes with what changed; omit if 0). Score the confidence against the actual completeness of static analysis — not against an idealized standard that requires runtime execution of tests.
 
 </workflow>
 
@@ -338,6 +340,7 @@ Report design challenges to @lead with epsilon + specific concern. SW adjusts th
 
 \<antipatterns_to_flag>
 
+- **Out-of-scope items to skip (not flag)**: syntactic issues (dead imports, unused variables, naming conventions, import ordering) belong to `linting-expert` — do not include them in QA findings under any section heading; silently exclude them rather than routing them to "secondary observations"
 - Tests with no assertions (just "check it doesn't crash")
 - Test names like `test_function_1` instead of `test_raises_on_empty_input`
 - No test for the error/failure path

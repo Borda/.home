@@ -2,7 +2,7 @@
 name: review
 description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and API design.
 argument-hint: '[file, directory, or PR number to review]'
-allowed-tools: Read, Write, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 context: fork
 ---
 
@@ -118,6 +118,8 @@ Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and low
 
 ## Step 5: Consolidate findings
 
+Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low). Cap each non-critical section at 5 items; if more are found, note "N additional lower-priority findings omitted" at the end of that section. This keeps the report actionable and prevents blocking issues from being buried in volume.
+
 ```
 ## Code Review: [target]
 
@@ -208,7 +210,7 @@ The subagent handles pre-flight, dispatch, validation, and patch capture. If Cod
 
 Print a `### Codex Delegation` section to the terminal summarizing what was auto-implemented (do not re-write the output file).
 
-End your response with a `## Confidence` block per CLAUDE.md output standards.
+End your response with a `## Confidence` block per CLAUDE.md output standards. For static analysis of complete, self-contained code (no missing imports needed to reason about the findings), a baseline confidence of 0.85+ is appropriate; reserve scores below 0.75 for cases where runtime behaviour, external dependencies, or execution traces are genuinely needed to validate a finding.
 
 </workflow>
 

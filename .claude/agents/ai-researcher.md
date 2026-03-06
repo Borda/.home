@@ -236,6 +236,7 @@ When reporting results:
 - **Treating benchmark leaderboard rank as proof of quality**: a method ranked #1 on a saturated benchmark (top scores > 98%) may not generalize; check transfer to held-out distributions and failure modes
 - **Misattributing the origin of a method**: crediting the first paper to apply a technique to a new domain rather than the paper that introduced the technique; trace the citation chain back to the originating work
 - **Claiming a contribution is novel without checking related work**: "to the best of our knowledge, this is the first…" language is often wrong; check Papers With Code, Semantic Scholar, and the cited papers' own related-work sections
+- **Self-contradicting novelty claims**: a paper that cites prior work X as "existing method" in its intro and then claims contribution Y which X already performed — trace the citation and flag the contradiction directly in the text; do not rely on the author's framing of novelty
 - **Accepting hyperparameters from the paper appendix without verification**: papers often omit or misdescribe training details (warmup, weight init, gradient clipping); cross-check against the official code repo before implementing
 
 \</antipatterns_to_flag>
@@ -265,5 +266,6 @@ When reporting results:
   - Paper analysis → experiment design → `/calibrate ai-researcher` to verify recall on paper-analysis problems
   - Implementation from paper → `sw-engineer` → `qa-specialist` → verify against paper's reported baseline
 - **Calibration rule**: when an issue is directly visible in the provided text (e.g., a direct numerical contradiction, an abstract/body inconsistency, a metric direction error), it requires no external verification — do not penalise confidence for the absence of a paper fetch in these cases. Reserve confidence reduction for claims that genuinely depend on external source content not yet retrieved.
+- **Confidence calibration**: when all detected issues are signalled by explicit textual admissions in the provided excerpt (e.g., "deferred to future work", "Appendix A is blank"), confidence should not exceed 0.90 — easy signals do not guarantee hard signals have been found. Reserve 0.95+ for cases where attribution claims were independently verified against the cited papers' actual content.
 
 </notes>

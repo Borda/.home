@@ -1,10 +1,21 @@
 # `.claude/settings.json` Permissions Reference
 
-Annotated companion to the `permissions.allow` list in `settings.json`.
+Annotated companion to the `permissions.allow` and `permissions.deny` lists in `settings.json`.
 Every entry here must have a matching entry there, and vice versa — kept in sync by `/audit` (drift check) and `/manage add perm` / `/manage remove perm`.
 
-**Remote/upstream operations are intentionally absent from the allow list.**
-`git push`, `git fetch`, `git pull`, `git remote`, `git commit` always prompt the user — only the owner decides when to project changes to a remote or create a commit.
+**Remote/upstream operations and destructive git commands are explicitly denied** — see the Deny List section below. Deny rules are evaluated before allow rules; a matching deny always blocks execution regardless of any allow entry.
+
+______________________________________________________________________
+
+## Deny List — always blocked
+
+| Permission              | Description                    | Why denied                                    |
+| ----------------------- | ------------------------------ | --------------------------------------------- |
+| `Bash(git push:*)`      | Push commits to a remote       | Remote mutations require explicit user action |
+| `Bash(git branch -D:*)` | Force-delete a local branch    | Destructive; may lose unmerged work           |
+| `Bash(git branch -d:*)` | Delete a merged local branch   | Requires explicit user intent                 |
+| `Bash(git tag -d:*)`    | Delete a local tag             | Tags are release markers; user-only           |
+| `Bash(git remote:*)`    | Add, remove, or modify remotes | Remote config changes are user-owned          |
 
 ______________________________________________________________________
 
@@ -92,14 +103,17 @@ ______________________________________________________________________
 
 ## Git — local write
 
-| Permission             | Description                                            | Typical use case                                            |
-| ---------------------- | ------------------------------------------------------ | ----------------------------------------------------------- |
-| `Bash(git add:*)`      | Stage files for the next commit                        | Stage changes after an edit before prompting user to commit |
-| `Bash(git checkout:*)` | Switch branches or restore individual files from a ref | Switch to a feature branch; restore a file to HEAD state    |
-| `Bash(git stash:*)`    | Shelve uncommitted changes temporarily                 | Save work in progress before pulling or switching context   |
-| `Bash(git restore:*)`  | Discard working-directory changes for specific paths   | Undo accidental edits to a file                             |
-| `Bash(git clean:*)`    | Delete untracked files                                 | Ensure a clean build directory before running tests         |
-| `Bash(git apply:*)`    | Apply a patch file to the working tree                 | Apply a generated diff or a contributor's patch             |
+| Permission               | Description                                                         | Typical use case                                                                                                                                          |
+| ------------------------ | ------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Bash(git merge:*)`      | Merge a branch into the current branch (with or without committing) | `/resolve` merges the PR head branch to detect and stage conflict resolution; `--no-commit --no-ff` for inspection, `--ff-only` for clean pointer advance |
+| `Bash(git merge-base:*)` | Find the common ancestor commit of two branches                     | `/resolve` uses this to find the diverge point between source and target for diff analysis                                                                |
+| `Bash(git worktree:*)`   | Add, list, or remove linked working trees                           | `/resolve` creates a temporary isolated worktree in `/tmp` to run the merge without touching the user's main working directory                            |
+| `Bash(git add:*)`        | Stage files for the next commit                                     | Stage changes after an edit before prompting user to commit                                                                                               |
+| `Bash(git checkout:*)`   | Switch branches or restore individual files from a ref              | Switch to a feature branch; restore a file to HEAD state                                                                                                  |
+| `Bash(git stash:*)`      | Shelve uncommitted changes temporarily                              | Save work in progress before pulling or switching context                                                                                                 |
+| `Bash(git restore:*)`    | Discard working-directory changes for specific paths                | Undo accidental edits to a file                                                                                                                           |
+| `Bash(git clean:*)`      | Delete untracked files                                              | Ensure a clean build directory before running tests                                                                                                       |
+| `Bash(git apply:*)`      | Apply a patch file to the working tree                              | Apply a generated diff or a contributor's patch                                                                                                           |
 
 ______________________________________________________________________
 

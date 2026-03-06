@@ -63,15 +63,17 @@ Teams are always user-invoked. When executing in team mode:
 
 1. **Plan First**: Write plan to `tasks/todo.md` with checkable items
 2. **Verify Plan**: Check in before starting implementation
-3. **Track Progress**: Mark items complete as you go
-4. **Explain Changes**: High-level summary at each step
-5. **Document Results**: Add review section to `tasks/todo.md`
-6. **Capture Lessons**: Update `tasks/lessons.md` after corrections
+3. **Plan approved → create tasks**: once the user approves the plan, convert each major phase into a live progress view (Applies to any agent — main session or spawned subagent)
+4. **Track Progress**: Mark items complete as you go
+5. **Explain Changes**: High-level summary at each step
+6. **Document Results**: Add review section to `tasks/todo.md`
+7. **Capture Lessons**: Update `tasks/lessons.md` after corrections
 
 ### In-session task tracking
 
 - Skills with 5+ steps or looping paths → TaskCreate per major phase, TaskUpdate in_progress/completed
 - Any multi-step main-session work (fix, investigation, debug — 3+ tool calls) → TaskCreate at the start, before the first tool call; don't wait to understand the root cause
+- **Plan-mode exit → task-list entry**: when exiting plan mode after user approval, the first action is always TaskCreate for each major phase — never start implementation without the task list in place
 - On pivot (unplanned work discovered mid-skill) → create a new task for the new work
 - Skip for: single-task actions, simple skills (sync, observe, survey), subagent work
 - Mark tasks complete before producing final output — TaskUpdate(completed) must come before the closing report/summary

@@ -369,14 +369,14 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 \<antipatterns_to_flag>
 
 - `continue-on-error: true` — hides failures instead of fixing them
-- Not pinning Action versions (`uses: actions/checkout@main` → supply chain risk; all Actions — including third-party ones — must use SHA pins, not version tags like `@v4` or `@v1.24.0`; version tags are mutable and can be silently repointed)
+- Not pinning Action versions — all Actions (first-party and third-party) must use SHA pins, not version tags or branch refs; three tiers of risk in increasing order: version tags like `@v4` (mutable, can be repointed), named branch refs like `@main` or `@master` (worst — tracks live branch tip, changes on every push), and `@latest` aliases; correct form: `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4`
 - Running all tests in a single large job when parallelism is available
 - Skipping `fail-fast: false` — early exit hides failures in other matrix cells
 - Hard-coded Python versions without a matrix — always test on at least 2 versions
 - `pip install .` without a lockfile — non-reproducible; use `uv sync` or pinned requirements
 - Placing `actions/cache` after the steps it is meant to accelerate — cache restore runs at step execution time; if the cache step is last, the restore never fires and only the post-step save occurs, making the cache useless for that run
-- Using `workflow_dispatch` as the only trigger — always include `push` + `pull_request`
-- Secrets in workflow env without GitHub Secrets — use `${{ secrets.MY_SECRET }}`
+- `workflow_dispatch` as the only trigger — always include `push: branches: [main]` and `pull_request` so CI runs automatically; `workflow_dispatch`-only means CI never blocks a PR merge
+- Secrets in workflow env without GitHub Secrets (e.g. `env: API_KEY: "hardcoded-value"` or `env: API_KEY: ${{ env.API_KEY }}` sourced from a committed file) — always use `${{ secrets.MY_SECRET }}`; hardcoded secrets are visible in workflow run logs and git history
 
 \</antipatterns_to_flag>
 

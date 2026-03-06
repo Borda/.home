@@ -297,11 +297,13 @@ Every OSS Python project should have:
 - `@deprecated(target=None, ...)` — pyDeprecate requires a callable target for argument forwarding; `None` disables forwarding and may silently break callers; flag as `[flag]` and ask whether a migration target exists
 - Deprecating to a private function (underscore-prefixed) — gives users no stable migration path; the replacement must be made public before the deprecation is shipped
 - Removing a deprecated API in a minor release — deprecated items must complete at least one minor-version cycle before removal; removal is a MAJOR bump
+- Changing documented behavior without a prior deprecation cycle — if a function previously had documented/user-relied-upon behavior (return value, exception type, argument semantics) and that behavior changes, it must follow the same deprecation lifecycle as an API removal: warn in minor, remove/change in MAJOR. Shipping a behavior change silently under `### Changed` is a breaking change dressed as a non-breaking one; flag it as critical and require a MAJOR bump or a deprecation cycle.
 
 **Release**:
 
 - Cutting a release without testing the PyPI install in a fresh environment — always run `pip install <package>==<new-version>` in a clean venv post-publish
 - Missing CHANGELOG entry for a user-visible behavior change — users rely on changelogs to audit upgrades; treat a missing entry as a bug in the release process
+- Breaking change in a 0.x project version: some 0.x projects document that minor bumps may include breaking changes (unstable API contract). When reviewing a 0.x release, check the project's documented stability policy (README, CONTRIBUTING, or prior CHANGELOG) before raising a MAJOR bump requirement. If the policy is absent, flag as critical and recommend either (a) bumping to MAJOR or (b) explicitly documenting the 0.x instability contract.
 
 \</antipatterns_to_flag>
 

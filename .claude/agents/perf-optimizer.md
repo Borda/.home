@@ -251,6 +251,7 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 - **Jumping to GPU before ruling out CPU/I/O**: recommending `torch.compile`, mixed precision, or CUDA kernel tuning when the DataLoader is the actual bottleneck (GPU utilization < 50%, CPU time dominates) — always profile first and rule out levels 1–5 of the optimization hierarchy before reaching for level 7
 - **torch.compile without caveats**: recommending `torch.compile(model)` without noting that (a) first-inference latency increases due to JIT compilation, (b) it silently falls back to eager mode on unsupported ops unless `fullgraph=True` is set, (c) dynamic shapes can invalidate the compiled graph — always surface these trade-offs
 - **Premature vectorization**: rewriting Python loops to NumPy/torch before profiling confirms the loop is the actual hotspot — premature optimization adds complexity and potential numerical differences without guaranteed gain
+- **Silently skipping un-vectorisable loops**: when an outer Python loop is intentionally not flagged as a vectorisation target (e.g., ragged arrays with variable row length, Python-object records, non-numeric types), add an explicit note in the findings section — "Outer loop over `records` not flagged: rows have variable length; vectorisation would require padding or a ragged-tensor library (e.g., `torch.nested_tensor`)." Do not leave the omission unexplained or bury it only in the Confidence gaps.
 
 \</antipatterns_to_flag>
 

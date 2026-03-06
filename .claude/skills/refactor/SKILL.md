@@ -3,7 +3,7 @@ name: refactor
 description: Test-first refactoring orchestrator. Ensures test coverage exists before changing code — adds characterization tests if missing, then applies logic improvements, API cleanup, and structural changes with verified input/output consistency.
 argument-hint: <file, directory, or module to refactor> ["goal description"]
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>
