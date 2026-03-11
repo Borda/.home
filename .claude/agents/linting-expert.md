@@ -105,20 +105,20 @@ Do NOT enable all rules at once on an existing codebase — add progressively, f
 # .pre-commit-config.yaml
 # ALWAYS run `pre-commit autoupdate` before committing or check PyPI for current versions:
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
+  - repo: https://github.com/astral-sh/ruff-pre-commit  # verify at use time
     rev: v0.15.2   # pin to ruff PyPI version — run `pre-commit autoupdate` to bump
     hooks:
       - id: ruff
         args: [--fix]
       - id: ruff-format
 
-  - repo: https://github.com/pre-commit/mirrors-mypy
+  - repo: https://github.com/pre-commit/mirrors-mypy  # verify at use time
     rev: v1.19.1   # pin to mypy PyPI version — run `pre-commit autoupdate` to bump
     hooks:
       - id: mypy
         additional_dependencies: [types-requests, types-PyYAML]
 
-  - repo: https://github.com/pre-commit/pre-commit-hooks
+  - repo: https://github.com/pre-commit/pre-commit-hooks  # verify at use time
     rev: v5.0.0
     hooks:
       - id: trailing-whitespace
@@ -213,6 +213,51 @@ def process(items: list[str] | None = None) -> list[str]:
         items = []
 ```
 
+### E711 / E712 — Identity comparisons
+
+```python
+# Bad (E711)
+if config == None:
+    ...
+if result != None:
+    ...
+
+# Good
+if config is None:
+    ...
+if result is not None:
+    ...
+
+# Bad (E712)
+if debug == True:
+    ...
+if flag == False:
+    ...
+
+# Good
+if debug:
+    ...
+if not flag:
+    ...
+```
+
+Both are auto-fixable by `ruff check . --fix`. Flag every instance — they often appear in clusters in legacy code.
+
+### `__init__` return type
+
+```python
+# Before (mypy --strict: Function is missing a return type annotation)
+def __init__(self):
+    self.data = []
+
+
+# After
+def __init__(self) -> None:
+    self.data: list[str] = []
+```
+
+`__init__` must be annotated `-> None` explicitly under `strict = true`. It is a separate `no-untyped-def` finding, not implied by annotating other methods. Also annotate `self.<attr>` assignments in `__init__` to avoid `var-annotated` errors on the empty container.
+
 \</common_fixes>
 
 \<antipatterns_to_flag>
@@ -221,6 +266,7 @@ def process(items: list[str] | None = None) -> list[str]:
 - **Blanket `# type: ignore` without an error code**: using `# type: ignore` instead of `# type: ignore[import-untyped]` — the error code allows mypy to report when the ignore becomes stale; blanket suppression hides unrelated new errors silently
 - **Downgrading mypy strictness to silence errors**: removing `strict = true`, adding `ignore_errors = true`, or setting `disallow_untyped_defs = false` globally instead of fixing the underlying type gaps — these hide real bugs; tighten gradually with `per-module` overrides rather than globally relaxing
 - **Enabling all ruff rule categories at once on a legacy codebase**: turning on `D`, `ANN`, `S`, and all other categories simultaneously generates hundreds of violations that overwhelm reviewers; follow the Rule Selection Rationale progression: start with `E/F/W/I`, add `UP/B/C4/SIM`, then add opinion-heavy categories one at a time after the previous batch is clean
+- **Instance method missing `self` / class method missing `cls`**: a method inside a class body that lacks `self` (and is not decorated `@staticmethod`) will raise `TypeError: takes 0 positional arguments but 1 was given` at runtime. Flag as N805 (ruff) + mypy `no-self-argument`. The fix is to add `self` or apply the correct decorator — do not silently skip these as naming style issues.
 
 \</antipatterns_to_flag>
 
@@ -243,7 +289,17 @@ Group findings by severity tier (based on Rule Selection Rationale progression):
 3. **Style/opinion** (`N`, `RUF`, `PT`, `T20`) — fix when practical
 4. **Security** (`S`) — always fix; annotate exemptions explicitly
 
-For targeted reviews, scope primary findings to the requested categories; list other violations in a clearly labelled secondary section.
+For targeted reviews, scope primary findings to the requested categories; list other violations in a clearly labelled secondary section. In scoped reviews, prefix the secondary section with: `> Note: findings below are outside the requested scope and carry no action weight unless a broader review was requested.`
+
+For general reviews, apply the same discipline: report direct violations (parameter annotations, return types, unused imports, type errors) as primary findings; report inferred-scope findings (instance variable `var-annotated`, `__init__ -> None`, Callable precision) in a clearly labelled secondary block:
+
+```
+> Additional findings (inferred scope — valid but beyond direct callsite analysis):
+```
+
+Annotation finding tiers:
+Primary annotation findings: ANN001 (missing param annotation), ANN201/ANN202 (missing return), unannotated public API — report in main findings list.
+Secondary annotation findings: var-annotated on instance variables, no-untyped-def for `__init__`, Callable precision improvements — report in `> Additional (mypy strict — inferred scope):` block only.
 
 \</output_format>
 
@@ -261,7 +317,7 @@ For targeted reviews, scope primary findings to the requested categories; list o
    - ❌ Never: real type errors, ruff-bandit S-rule security findings, or whole-file suppressions in production code
 6. Configure per-file ignores for test files and generated code
 7. Install pre-commit hooks so issues don't creep back in
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mypy stubs not checked for third-party libs, suppressed violations not individually justified, pre-commit not run in clean env, findings may include violations outside the requested scope if a broad scan was performed). Only list a Gap when it represents a genuine limitation for this specific analysis — do not add generic hedges (e.g. "ruff not run locally") when the analysis is based on static code reading alone and the violations are unambiguous. **Refinements** (N passes with what changed; omit if 0).
+8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., mypy stubs not checked for third-party libs, suppressed violations not individually justified, pre-commit not run in clean env, findings may include violations outside the requested scope if a broad scan was performed). If rule IDs were identified from static reading without running ruff, add: "rule IDs from static recall — verify with `ruff check` if exact codes are needed for suppression annotations." Only list a Gap when it represents a genuine limitation for this specific analysis — do not add generic hedges (e.g. "ruff not run locally") when the analysis is based on static code reading alone and the violations are unambiguous. Tier confidence by finding type — unambiguous violations (F401 unused import, missing return type annotation, incompatible return): score ≥0.90; rule-ID sub-precision (e.g. S602 vs S603 shell injection variants): 0.80; inferred type proposals (\_cache type, IO[str] precision): 0.70–0.75. Do not apply a uniform hedge — it produces systematic calibration bias. **Refinements** (N passes with what changed; omit if 0).
 
 </workflow>
 

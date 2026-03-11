@@ -44,6 +44,10 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 - CALIBRATION_WARN: ±0.15 (bias beyond this → confidence decoupled from quality)
 - CALIBRATE_LOG: `.claude/logs/calibrations.jsonl`
 - AB_ADVANTAGE_THRESHOLD: 0.10 (delta recall or F1 above this → meaningful advantage; below → marginal or none)
+- PHASE_TIMEOUT_MIN: 5 (per-phase budget — if spawned subagents haven't all returned, collect partial results and continue)
+- PIPELINE_TIMEOUT_MIN: 10 (hard cutoff — pipeline not notified within 10 min of launch is timed out; extendable if the agent explains the delay)
+- HEALTH_CHECK_INTERVAL_MIN: 5 (orchestrator polls each running pipeline every 5 min for liveness)
+- EXTENSION_MIN: 5
 
 Problem domain by agent:
 
@@ -71,8 +75,8 @@ Skill domains:
 
 **Task tracking**: create tasks at the start of execution (Step 1) for each phase that will run:
 
-- "Calibrate agents" — Step 2a (benchmark mode, when target includes agents)
-- "Calibrate skills" — Step 2b (benchmark mode, when target includes skills)
+- "Calibrate agents" — Step 2 (benchmark mode, when target includes agents)
+- "Calibrate skills" — Step 2 Skills sub-section (benchmark mode, when target includes skills)
 - "Analyse and report" — Steps 3–5 (benchmark mode)
 - "Apply findings" — Step 6 (apply mode only)
   Mark each in_progress when starting, completed when done. On loop retry or scope change, create a new task.
@@ -100,15 +104,15 @@ Create tasks before proceeding:
 - Benchmark + auto-apply (`fast`/`full` + `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Analyse and report", TaskCreate "Apply findings"
 - Pure apply mode (only `apply`, no `fast`/`full`): TaskCreate "Apply findings" only
 
-## Step 2a: Spawn agent pipeline subagents
+## Step 2: Spawn pipeline subagents
 
 Mark "Calibrate agents" in_progress. Issue all agent pipeline subagent spawns.
 
-## Step 2b: Spawn skill pipeline subagents
+### Skills
 
 Mark "Calibrate skills" in_progress. Issue all skill pipeline subagent spawns.
 
-Issue all subagents from both 2a and 2b in a **single response** — agents and skills are independent and run concurrently. One `general-purpose` subagent per target; do not wait for one to finish before spawning the next.
+Issue all subagents from both agents and skills in a **single response** — agents and skills are independent and run concurrently. One `general-purpose` subagent per target; do not wait for one to finish before spawning the next.
 
 Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>` before spawning — set `<AB_MODE>` to `true` or `false`):
 
@@ -137,6 +141,7 @@ Rules:
 - Issues must be unambiguous — a domain expert would confirm them
 - Cover ≥1 easy and ≥1 medium problem; hard is optional
 - Each problem has 2–5 known issues; no runtime-only-detectable issues
+- **Include exactly 1 out-of-scope problem** (difficulty: `"scope"`): input is clearly outside the agent's domain (e.g., for `linting-expert`, a natural-language question; for `ci-guardian`, a Python data pipeline). Set `ground_truth: []`. A correct response is declining, redirecting, or returning no findings. Any findings reported = false positives (scope failure). This tests scope discipline directly.
 - Return a valid JSON array only (no prose)
 
 Write the JSON array to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/problems.json` (use Bash `mkdir -p` to create dirs).
@@ -157,6 +162,8 @@ The prompt for each subagent is exactly:
 
 Write each subagent's full response to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<problem_id>.md`.
 
+**Phase timeout (PHASE_TIMEOUT_MIN = 5 min)**: if any spawned subagent has not returned within 5 minutes, do not wait — collect the responses that arrived, mark missing ones as `{"timed_out": true}` in scores.json, and proceed to the next phase with partial data. Never block indefinitely on a single response.
+
 For **skill targets** (target starts with `/`): spawn a `general-purpose` subagent with the skill's SKILL.md content prepended as context, running against the synthetic input from the problem.
 
 ### Phase 2b — Run general-purpose baseline (skip if AB_MODE is false)
@@ -165,34 +172,59 @@ Spawn one `general-purpose` subagent per problem using the **identical prompt** 
 
 Write each response to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<problem_id>-general.md`.
 
-### Phase 3 — Score responses in-context
+**Phase timeout**: same 5-minute budget applies — proceed with partial baseline data if any response hangs.
 
-Score each (problem, response) pair directly in this context — no separate scorer subagents.
+### Phase 3 — Score responses (parallel scorer subagents)
 
-For each ground truth issue: mark `true` if the target identified the same issue type at the same location (exact match or semantically equivalent description), `false` otherwise.
+Spawn one `general-purpose` scorer subagent per problem. Issue ALL spawns in a **single response** — no waiting between spawns.
 
-Extract confidence from the target's `## Confidence` block. If absent, use `0.5` and note the gap.
+Each scorer receives this prompt (substitute `<PROBLEM_ID>`, `<GROUND_TRUTH_JSON>`, `<RUN_DIR>`, `<AB_MODE>`):
 
-Count false positives: target-reported issues that have no corresponding ground truth item.
+> You are scoring agent responses against calibration ground truth.
+>
+> **Problem ID**: `<PROBLEM_ID>`
+>
+> **Ground truth** (JSON array — each entry has `issue`, `location`, `severity`):
+>
+> ```text
+> <GROUND_TRUTH_JSON>
+> ```
+>
+> Read the target response from `<RUN_DIR>/response-<PROBLEM_ID>.md`.
+> \[If AB_MODE is true: also read `<RUN_DIR>/response-<PROBLEM_ID>-general.md`.\]
+>
+> For each ground truth issue: mark `true` if the response identified the same issue type at the same location (exact match or semantically equivalent). Count false positives: reported issues with no corresponding ground truth entry. Extract confidence from the `## Confidence` block (use 0.5 if absent).
+>
+> **For out-of-scope problems** (`ground_truth: []`): recall = N/A (skip from recall aggregate). Count all reported findings as false positives. If the response declines or reports nothing, false_positives = 0 (correct scope discipline). Set severity_accuracy = N/A and format_score = N/A for this problem.
+>
+> **Measure response length**: count the number of characters in the target response and (if AB_MODE) the general response. This is a token efficiency proxy — shorter is more focused.
+>
+> **Severity accuracy**: for each found issue (true positive), check whether the response assigned the same severity as ground truth. Allow ±1 tier (tiers ordered: critical > high > medium > low — "critical" vs "high" is a 1-tier miss; "critical" vs "low" is a 3-tier miss). Count exact-or-adjacent matches. `severity_accuracy = correct_severity / found_count` (N/A if found_count = 0). This is orthogonal to recall — an agent can find everything but mislabel severity.
+>
+> **Format score**: for each found issue (true positive), check whether the response includes all three of: (a) a location reference (line number, function name, or section), (b) a severity or priority label, (c) a fix or action suggestion. `format_score = fully_structured_count / found_count` (N/A if found_count = 0). Measures actionability of findings, not just whether the issue was detected.
+>
+> Compute: `recall = found / total` (skip if total=0), `precision = found / (found + fp + 1e-9)`, `f1 = 2·r·p / (r+p+1e-9)`.
+>
+> Return **only** this JSON (no prose):
+> `{"problem_id":"<PROBLEM_ID>","found":[true/false,...],"false_positives":N,"confidence":0.N,"recall":0.N,"precision":0.N,"f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"target_chars":N}`
+>
+> \[If AB_MODE is true, also include: `"recall_general":0.N,"precision_general":0.N,"f1_general":0.N,"confidence_general":0.N,"severity_accuracy_general":0.N,"format_score_general":0.N,"general_chars":N`\]
 
-Compute per-problem:
-
-- `recall = found_count / total_issues`
-- `precision = found_count / (found_count + false_positives + 1e-9)`
-- `f1 = 2·recall·precision / (recall + precision + 1e-9)`
-
-Write all per-problem scores to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array with fields: `problem_id`, `found` (array of booleans), `false_positives`, `confidence`, `recall`, `precision`, `f1`.
-
-**If AB_MODE is true**: score each general-purpose response using identical criteria. Add to each scores.json entry: `recall_general`, `precision_general`, `f1_general`, `confidence_general`. Compute `delta_recall = recall - recall_general` and `delta_f1 = f1 - f1_general`.
+Collect the compact JSON from each scorer (each ~200 bytes). Write all to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array.
 
 ### Phase 4 — Aggregate, write report and result
 
-Compute aggregates:
+Compute aggregates (exclude out-of-scope problem from recall/F1/severity/format averages; include in FP count):
 
-- `mean_recall` = mean of all `recall` values
+- `mean_recall` = mean of `recall` values for in-scope problems only
 - `mean_confidence` = mean of all `confidence` values
 - `calibration_bias` = `mean_confidence − mean_recall`
-- `mean_f1` = mean of all `f1` values
+- `mean_f1` = mean of `f1` values for in-scope problems only
+- `scope_fp` = false_positives from the out-of-scope problem (0 = correct discipline, >0 = scope failure)
+- `mean_severity_accuracy` = mean of `severity_accuracy` values for in-scope problems with found_count > 0 (omit if no found issues)
+- `mean_format_score` = mean of `format_score` values for in-scope problems with found_count > 0
+- `token_ratio` = mean(target_chars) / mean(general_chars) across all problems — if AB_MODE, else omit (ratio < 1.0 = specialist more concise)
+- **Recall by difficulty**: `recall_easy`, `recall_medium`, `recall_hard` — mean recall for in-scope problems at each difficulty level (omit if fewer than 1 problem at that level). Not a separate metric — surfaced in report display only to show where the agent struggles.
 
 Verdict:
 
@@ -205,22 +237,35 @@ Write full report to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/report.md` usi
 
 ```
 ## Benchmark Report — <TARGET> — <date>
-Mode: <MODE> | Problems: <N> | Total known issues: M
+Mode: <MODE> | Problems: <N> (in-scope) + 1 (out-of-scope) | Total known issues: M
 
 ### Per-Problem Results
-| Problem ID | Difficulty | Recall | Precision | Confidence | Cal. Δ |
+| Problem ID | Difficulty | Recall | Precision | SevAcc | Fmt  | Confidence | Cal. Δ |
 | ...
+| <scope-id> | scope      | —      | —         | —      | —    | —          | scope_fp=N |
+
+*Recall: issues found / total. Precision: found / (found + FP). SevAcc: severity match rate for found issues (±1 tier). Fmt: fraction of found issues with location + severity + fix. Cal. Δ: confidence − recall (negative = conservative).*
 
 ### Aggregate
-| Metric | Value | Status |
+| Metric            | Value | Status |
 | ...
+| Severity accuracy | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
+| Format score      | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
+| Scope discipline  | scope_fp=0 ✓ / scope_fp=N ⚠ | pass/fail |
+
+Recall by difficulty: easy=X.XX | medium=X.XX | hard=X.XX (omit levels with 0 problems)
 
 ### A/B Comparison — specialized vs. general-purpose (AB mode only)
-| Metric      | Specialized | General | Delta  | Verdict   |
-|-------------|-------------|---------|--------|-----------|
-| Mean Recall | X.XX        | X.XX    | ±X.XX  | advantage/marginal/none |
-| Mean F1     | X.XX        | X.XX    | ±X.XX  |           |
+| Metric            | Specialized | General | Delta  | Verdict   |
+|-------------------|-------------|---------|--------|-----------|
+| Mean Recall       | X.XX        | X.XX    | ±X.XX  | significant ✓ / marginal ~ / none ⚠ |
+| Mean F1           | X.XX        | X.XX    | ±X.XX  |           |
+| Severity accuracy | X.XX        | X.XX    | ±X.XX  | better ✓ / similar ~ / worse ⚠ |
+| Format score      | X.XX        | X.XX    | ±X.XX  | better ✓ / similar ~ / worse ⚠ |
+| Token ratio       | X.XX        | 1.00    | ±X.XX  | concise ✓ / verbose ⚠ |
+| Scope FP          | N           | N       | —      | pass/fail |
 
+*ΔRecall: specialist recall − general recall. SevAcc: correct severity assignment rate (±1 tier) — independent of recall; high recall with low SevAcc means issues found but misprioritized. Fmt: fraction of findings with location + severity + fix — measures actionability, not just detection. Token ratio: specialist chars / general chars (below 1.0 = more focused). Scope FP: findings on out-of-scope input (0 = correct discipline).*
 Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.10) / `none` (<0.05)
 
 ### Systematic Gaps (missed in ≥2 problems)
@@ -232,9 +277,9 @@ Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.
 
 Write a single-line JSONL result to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/result.jsonl`:
 
-`{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"problems":<N>,"verdict":"...","gaps":["..."]}`
+`{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"problems":<N>,"scope_fp":N,"verdict":"...","gaps":["..."]}`
 
-**If AB_MODE is true**, append these fields to the same JSON line: `"delta_recall":0.N,"delta_f1":0.N,"ab_verdict":"significant|marginal|none"`
+**If AB_MODE is true**, append these fields to the same JSON line: `"delta_recall":0.N,"delta_f1":0.N,"delta_severity_accuracy":0.N,"delta_format_score":0.N,"token_ratio":0.N,"scope_fp_general":N,"ab_verdict":"significant|marginal|none"`
 
 ### Phase 5 — Propose instruction edits
 
@@ -278,28 +323,54 @@ Write the self-mentor response verbatim to `.claude/calibrate/runs/<TIMESTAMP>/<
 
 Return **only** this compact JSON (no prose before or after):
 
-`{"target":"<TARGET>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"verdict":"calibrated|borderline|overconfident|underconfident","gaps":["..."],"proposed_changes":N}`
+`{"target":"<TARGET>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"scope_fp":N,"verdict":"calibrated|borderline|overconfident|underconfident","gaps":["..."],"proposed_changes":N}`
 
-If AB_MODE is true, also include: `"delta_recall":0.N,"delta_f1":0.N,"ab_verdict":"significant|marginal|none"`
+If AB_MODE is true, also include: `"delta_recall":0.N,"delta_f1":0.N,"delta_severity_accuracy":0.N,"delta_format_score":0.N,"token_ratio":0.N,"scope_fp_general":N,"ab_verdict":"significant|marginal|none"`
 
 ______________________________________________________________________
 
 ## Step 3: Collect results and print combined report
 
-After all pipeline subagents complete: mark "Calibrate agents" and "Calibrate skills" completed. Mark "Analyse and report" in_progress. Parse the compact JSON summary from each.
+**Health monitoring** — apply the protocol from CLAUDE.md §8 (Background Agent Health Monitoring). Run dir for liveness checks: `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/`. Constants below tighten the global defaults for this skill:
+
+```bash
+# Initialise checkpoints after all pipeline spawns
+LAUNCH_AT=$(date +%s)
+for TARGET in <target-list>; do touch /tmp/calibrate-check-$TARGET; done
+
+# Every HEALTH_CHECK_INTERVAL_MIN (5 min): check each still-running pipeline
+NEW=$(find .claude/calibrate/runs/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')
+touch /tmp/calibrate-check-$TARGET
+ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
+[ "$NEW" -gt 0 ] && echo "✓ $TARGET active" || { [ "$ELAPSED" -ge 10 ] && echo "⏱ $TARGET TIMED OUT"; }
+```
+
+**On timeout**: read `tail -100 <output_file>` for partial JSON; if none use: `{"target":"<TARGET>","verdict":"timed_out","mean_recall":null,"gaps":["pipeline timed out at 10 min — re-run individually with /calibrate <target> fast"]}`. Timed-out targets appear in the report with ⏱ prefix and null metrics.
+
+After all pipeline subagents have completed or timed out: mark "Calibrate agents" and "Calibrate skills" completed. Mark "Analyse and report" in_progress. Parse the compact JSON summary from each.
 
 Print the combined benchmark report:
 
 ```
 ## Calibrate — <date> — <MODE>
 
-| Target           | Recall | Confidence | Bias   | F1   | Verdict    | Top Gap              |
-|------------------|--------|-----------|--------|------|------------|----------------------|
-| sw-engineer      | 0.83   | 0.85      | +0.02 ✓| 0.81 | calibrated | async error paths    |
-| ...              |        |           |        |      |            |                      |
+| Target           | Recall | SevAcc | Fmt  | Confidence | Bias    | F1   | Scope | Verdict    | Top Gap              |
+|------------------|--------|--------|------|------------|---------|------|-------|------------|----------------------|
+| sw-engineer      | 0.83   | 0.91   | 0.87 | 0.85       | +0.02 ✓ | 0.81 | 0 ✓   | calibrated | async error paths    |
+| ...              |        |        |      |            |         |      |       |            |                      |
+
+*Recall: in-scope issues found / total. SevAcc: severity match rate for found issues (±1 tier) — high recall + low SevAcc = issues found but misprioritized. Fmt: fraction of found issues with location + severity + fix (actionability). Bias: confidence − recall (+ = overconfident). Scope: FP on out-of-scope input (0 ✓).*
 ```
 
-**If AB mode**, add two columns after F1: `ΔRecall` and `AB Verdict` — use `significant ✓`, `marginal ~`, or `none ⚠` to show whether the specialized agent earns its instruction overhead.
+**If AB mode**, add `ΔRecall`, `ΔSevAcc`, `ΔFmt`, `ΔTokens`, and `AB Verdict` columns after F1. ΔTokens = token_ratio − 1.0 (negative = specialist more concise).
+
+```
+| Target      | Recall | SevAcc | Fmt  | Bias    | F1   | ΔRecall | ΔSevAcc | ΔFmt  | ΔTokens | Scope | AB Verdict |
+|-------------|--------|--------|------|---------|------|---------|---------|-------|---------|-------|------------|
+| sw-engineer | 0.83   | 0.91   | 0.87 | +0.02 ✓ | 0.81 | +0.05 ~ | +0.12 ✓ | +0.15 ✓ | −0.18 ✓ | 0 ✓ | marginal ~ |
+
+*ΔRecall/ΔSevAcc/ΔFmt: specialist − general (positive = specialist better). ΔTokens: token_ratio − 1.0 (negative = more focused). AB Verdict covers ΔRecall and ΔF1 only; use ΔSevAcc and ΔFmt as supplementary evidence for agents where ΔRecall ≈ 0.*
+```
 
 Flag any target where recall < 0.70 or |bias| > 0.15 with ⚠.
 
@@ -399,9 +470,10 @@ Mark "Apply findings" completed.
 
 <notes>
 
-- **Context safety**: each target runs in its own pipeline subagent — only a compact JSON (~200 bytes) returns to the main context. `all` mode with 12 targets returns ~2.4KB total, well within context limits.
-- **In-context scoring**: Phase 3 scores responses directly inside the pipeline subagent (3 responses × ~2KB = ~6KB for fast mode). No separate scorer agents needed. `full` mode (10 responses × ~2KB = ~20KB) still fits comfortably in one context.
-- **Nesting depth**: main → pipeline subagent → target agent (2 levels). The pipeline subagent spawns target agents but does not nest further.
+- **Timeout handling**: phases have a 5-min budget (`PHASE_TIMEOUT_MIN`); the orchestrator hard-cuts at 10 min of no progress (`PIPELINE_TIMEOUT_MIN`) with a 5-min health pulse (`HEALTH_CHECK_INTERVAL_MIN`). Extension is granted once if the pipeline explicitly explains its delay in its output file — a second unexplained stall still triggers the cutoff. The most common hang cause is a nested subagent waiting indefinitely for a response — the phase timeout prevents this from cascading to the whole run. Timed-out pipelines appear in the report with ⏱ prefix and `verdict:"timed_out"`; re-run individually with `/calibrate <target> fast` after the session.
+- **Context safety**: each target runs in its own pipeline subagent — only a compact JSON (~200 bytes) returns to the main context. `all full ab` with 14 targets returns ~2.8KB total, well within limits.
+- **Scorer delegation**: Phase 3 delegates scoring to per-problem `general-purpose` subagents. Each scorer reads response files from disk, returns ~200 bytes. The pipeline subagent holds only compact JSONs regardless of N or A/B mode — no context budget concern.
+- **Nesting depth**: main → pipeline subagent → target/scorer agents (2 levels). Pipeline spawns both target agents (Phase 2) and scorer agents (Phase 3) at the same depth — no additional nesting.
 - **Quasi-ground-truth limitation**: problems are generated by Claude — the same model family as the agents under test. A truly adversarial benchmark requires expert-authored problems. This benchmark reliably catches systematic blind spots and calibration drift even with this limitation.
 - **Calibration bias is the key signal**: positive bias (overconfident) → raise the agent's effective re-run threshold in MEMORY.md. Negative bias (underconfident) → confidence is conservative, no action needed. Near-zero → confidence is trustworthy.
 - **Do NOT use real project files**: benchmark only against synthetic inputs — no sensitive data and real files have no ground truth.
@@ -411,12 +483,13 @@ Mark "Apply findings" completed.
 - **`apply` semantics**: `fast apply` / `full apply` = run fresh benchmark then auto-apply the new proposals in one go. `apply` alone (no `fast`/`full`) = apply proposals from the most recent past run without re-running the benchmark.
 - **Stale proposals**: `apply` uses verbatim text matching (`old_string` = **Current** from proposal). If the agent file was edited between the benchmark run and `apply`, any change whose **Current** text no longer matches is skipped with a warning — no silent clobbering of intermediate edits.
 - Follow-up chains:
-  - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement
+  - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement — stop and escalate to user if recall is still < 0.70 after this cycle (max 1 apply cycle per run)
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
   - Recommended cadence: run before and after any significant agent instruction change
 - **Internal Quality Loop suppressed during benchmarking**: the Phase 2 prompt explicitly tells target agents not to self-review before answering. This ensures calibration measures raw instruction quality — not the `(agent + loop)` composite. If the loop were enabled, it would inflate both recall and confidence by an unknown ratio, masking real instruction gaps and making it impossible to attribute improvement to instruction changes vs. the loop self-correcting at inference time.
 - **Skill-creator complement**: `/calibrate` benchmarks agents and skills via synthetic ground-truth problems; the official `skill-creator` from the anthropics/skills repository handles skill-level eval — trigger accuracy, A/B description testing, and description optimization. The two are complementary: run `/calibrate` for quality and recall, `skill-creator` for trigger reliability.
 - **A/B mode rationale**: every specialized agent adds system-prompt tokens — if a `general-purpose` subagent matches its recall and F1, the specialization adds no value. `ab` mode quantifies this gap per-target so you can decide whether to keep, retrain, or retire an agent. `significant` (Δ>0.10) confirms the agent's domain depth earns its cost; `marginal` (0.05–0.10) suggests instruction improvements may help; `none` (\<0.05) signals the agent's current instructions add no measurable lift over a vanilla agent — consider strengthening domain-specific antipatterns and re-running. Token cost is informational (logged in scores.json) but not part of the verdict — prioritize recall/F1 delta as the primary signal.
-- **AB mode nesting**: Phase 2b spawns `general-purpose` agents inside the pipeline subagent, keeping nesting at 2 levels (main → pipeline → target/general). No additional depth is added.
+- **A/B blind spot — role-specificity beyond recall**: for any agent whose domain is well-covered by general training data (structured rule application, documented conventions, standard code patterns), `none` AB verdict does NOT mean "retire the agent". Their specialization shows up in severity accuracy, output actionability, token efficiency, and scope discipline — not recall alone. The benchmark measures all four: `delta_severity_accuracy` (correct prioritization), `delta_format_score` (structured, actionable output), `token_ratio` (conciseness), and `scope_fp` (domain refusal). A `none` ΔRecall result paired with positive ΔSevAcc, ΔFmt, and negative ΔTokens still confirms the specialist earns its cost — use ΔSevAcc and ΔFmt as the primary evidence in this case.
+- **AB mode nesting**: Phase 2b spawns `general-purpose` baseline agents inside the pipeline subagent. Phase 3 spawns `general-purpose` scorer agents inside the same pipeline subagent. All at 2 levels (main → pipeline → agents) — no additional depth.
 
 </notes>

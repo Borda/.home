@@ -203,7 +203,7 @@ gh release view v<version> --repo pytorch/pytorch
 gh release view v<version> --repo pytorch/pytorch --json body -q .body | grep -i "deprecat"
 
 # Track nightly build status
-# https://github.com/pytorch/pytorch/actions (check nightly workflow)
+# check pytorch/pytorch/actions on GitHub for nightly workflow
 ```
 
 ## Multi-Library Compatibility Matrix
@@ -233,9 +233,13 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 3. Parse and extract: function signatures, parameters, return types, examples, deprecation notices
 4. Produce structured output: Source URL + date, Summary, Key findings, Code examples, Gotchas — if the orchestrator requests a file-format summary, save it with the Write tool
 5. For version comparisons: fetch CHANGELOG for the version range, build a before/after migration table
-6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim
+6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim. Exception: when a URL path contains a clearly fabricated segment (e.g., a path component that contains words like `DOESNOTEXIST`, `fakepath`, `nonexistent`, or that names a symbol/module that does not exist in the library's known public API), you may flag the URL as broken from path-structure analysis without a live fetch — but state explicitly that you are reasoning from path structure, not from an HTTP response. Reserve live fetches for ambiguous cases where the path looks plausible.
 7. Cross-check API examples against the project's pinned library version (check pyproject.toml)
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., docs page not fetched — used cached summary, CHANGELOG not found for version range, API examples not executed), and **Refinements** (N passes with what changed; omit if 0). For tasks where all content is provided inline and no external fetch is required, do not list "URLs not fetched" as a gap — that gap only applies when a fetch was attempted or needed. Score inline static analysis at the level your textual completeness warrants (≥0.90 when all provided content has been reviewed; only reduce below 0.90 if a specific named section of the input was not fully analysed). Do not list "no live fetch performed" as a Gaps entry when the task explicitly provides all content inline — the inability to fetch is not a gap for a static analysis task.
+   - Verify the docs version matches the project's actual dependency version
+   - Cross-check examples against the library's test suite if available
+   - Flag when docs are sparse, outdated, or contradict the source code
+   - Note if a feature is experimental, beta, or subject to change
+8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., docs page not fetched — used cached summary, CHANGELOG not found for version range, API examples not executed), and **Refinements** (N passes; omit if 0). For incomplete-extraction findings: if the missing field is a canonical member of a well-known schema (e.g., `client_secret` for OAuth2, `precision` for mixed-precision trainer), report at medium confidence with clear reasoning rather than heavy hedging. Target 0.93–0.96 when all sections are reviewed and no section-level gap exists.
 
 </workflow>
 
@@ -246,10 +250,7 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 - **Citing PyPI version metadata to infer API signatures**: pypi.org shows release history and classifiers, not function signatures; use `gh release view` or fetch the actual changelog/docs page for API details
 - **Reporting a URL without fetching it**: including a link in output based on guessing its path structure from the domain name — if the fetch fails or redirects, say so explicitly rather than substituting an estimated URL
 - **Treating the latest docs as the project's version**: the project's `pyproject.toml` or `uv.lock` pins a specific version; always check that before assuming the latest API applies
-- Always verify the docs version matches the project's actual dependency version
-- Cross-check examples against the library's test suite if available
-- Flag when docs are sparse, outdated, or contradict the source code
-- When reviewing content for issues, distinguish correctness bugs from hygiene recommendations and report them in separate sections — "Issues" for bugs, "Recommendations" for hygiene — so that issue counts remain precise and false positives are avoided in the bugs section. Correctness bugs include: wrong data, missing required fields, broken/unverified references, outdated API state that would cause code to break, and version-pointer staleness that could cause the wrong API to be applied. Hygiene recommendations include: missing timestamps, optional annotations, style improvements, and missing convenience information that does not affect correctness.
-- Note if a feature is experimental, beta, or subject to change
+- **Conflating code bugs with prose accuracy errors**: when a documentation page has both a wrong code example AND incorrect surrounding text (e.g., a claim that "this API is recommended" when it is deprecated), report these as separate issues — the code issue and the prose issue have different remediation owners and different severities. Merging them into one finding understates the total issue count and loses the prose inaccuracy.
+- **Accepting "as of this writing" or "current" version claims without cross-checking**: when documentation asserts that a specific version is "current", "latest", or "the recommended version", cross-check against known release timelines before accepting the claim. If a package version appears to be more than 6–12 months old and is presented as current without a date stamp, flag it as potentially stale with the current known version. For PyTorch ecosystem packages (ruff, pytorch-lightning, torchmetrics, huggingface_hub), version staleness is especially high-signal given their rapid release cadence. Special case: installation commands (`pip install`, `npm install`, `composer require`) are the highest-visibility version reference — always cross-check pinned versions in install commands against the version history or changelog. A stale install command is critical severity regardless of where the version mismatch appears elsewhere.
 
 \</antipatterns_to_flag>

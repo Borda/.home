@@ -30,9 +30,11 @@ Run a full-sweep quality audit of the `.claude/` configuration: every agent file
 
 **Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase and mark status live so the user can see progress in real time:
 
-- Phase 1: system-wide checks (Steps 1–4) → mark in_progress when starting, completed when all checks done
-- Phase 2: per-file self-mentor spawns (Step 3) → mark in_progress when agents launch, completed when all reports received
-- Phase 3: aggregate + fix + re-audit (Steps 5–9) → mark in_progress, then completed before the final report
+- Phase 1: setup + collect (Pre-flight + Steps 1–2) → mark in_progress when starting, completed when file list is ready
+- Phase 2: per-file audit (Step 3) → mark in_progress when agents launch, completed when all reports received
+- Phase 3: system-wide checks (Step 4) → mark in_progress when checks start, completed when all checks done
+- Phase 4: aggregate + fix (Steps 5–9) → mark in_progress, then completed when fixes land
+- Phase 5: final report (Step 10) → mark in_progress, then completed before output
 - On loop retry or scope change → create a new task; do not reuse the completed task
 
 Surface progress to the user at natural milestones: after system-wide checks ("✓ Checks 1-9 complete, N findings so far — spawning per-file audits"), after agent reports ("Agent reports received — N medium, N low findings"), and before each fix batch ("Fixing N medium findings in parallel").
@@ -86,24 +88,28 @@ Enumerate everything in scope using built-in tools:
 - **Settings**: Read tool on `.claude/settings.json`
 - **Hooks**: Glob tool, pattern `hooks/*`, path `.claude/`
 
-Record the full file list — this becomes the audit scope for Steps 3–4.
+Record the full file list — this becomes the audit scope for Steps 3–4. Cross-reference checks in Step 3 depend on this inventory being current. If MEMORY.md has not been updated since the last agent or skill was added or removed, run a live disk scan now rather than relying on the cached roster. Stale inventory is the primary cause of false-negative cross-reference findings.
 
 ## Step 3: Per-file audit via self-mentor
 
 Spawn one **self-mentor** agent per file (or batch into groups of up to 10 for efficiency). Each invocation prompt must end with:
 
 > "Include a `### Confidence` block at the end of your report: **Score**: 0.N (high ≥0.9 / moderate 0.7–0.9 / low \<0.7) and **Gaps**: what limited thoroughness."
+>
+> Confidence scores should reflect actual uncertainty. A confidence score < 0.8 typically indicates either: (a) the inventory was not available for cross-reference checks, (b) the severity table was not consulted for a finding, or (c) a finding was made conditionally without confirmation. If the confidence score would be < 0.8 on a finding, either confirm it (using the inventory or severity table) or flag it explicitly in Gaps — do not report unconfirmed findings as if confirmed.
 
 Each invocation should ask self-mentor to check:
 
 - **Purpose and logical coherence**: is the agent's/skill's role clearly defined? Does its scope make sense — not too broad, not too narrow? Would a new user understand when to reach for it vs a similar one?
 - **Structural completeness**: required sections present, tags balanced, step numbering sequential
-- **Cross-reference validity**: every agent/skill name mentioned must exist on disk
+- **Cross-reference validity**: every agent/skill name mentioned must exist on disk. When auditing a file, cross-reference names against the disk inventory established in Step 2. Any agent or skill name that is not in the Step 2 inventory is a **broken cross-reference** (critical). Do not use conditional language ("if X doesn't exist") — by Step 3, the inventory is known. If the inventory was not collected (e.g., running in isolation), flag with: "unverified reference — requires disk inventory check." **Antipattern to flag**: writing "potentially missing" or "likely doesn't exist" or "if this agent doesn't exist" or "pending verification" or "should be checked against inventory" when the inventory was collected in Step 2. These phrases indicate the agent is not using the inventory. If a name appears in the workflow and is absent from the Step 2 inventory list, it is a confirmed broken cross-reference — report it as critical, not conditional. Conditional language is only acceptable when Step 2 was genuinely not run (e.g., auditing a single file in isolation without a disk inventory).
 - **Verbosity and duplication**: bloated steps, repeated instructions, copy-paste between files
 - **Content freshness**: outdated model names, stale version pins, deprecated API references
-- **Hardcoded user paths**: any `/Users/<name>/` or `/home/<name>/` absolute path — must be `.claude/`, `~/`, or derived from `git rev-parse --show-toplevel`
+- **Hardcoded user paths**: any `/Users/<name>/` or `/home/<name>/` absolute path — must be `.claude/`, `~/`, or derived from `git rev-parse --show-toplevel`. Flag every occurrence regardless of context — paths in "negative example" notes, "do not do this" callouts, or instructional text are not exempt. The rule is: if the literal path string appears in the file, it must be flagged at medium severity.
 - **Infinite loops**: does file A's follow-up chain reference file B which references A creating a cycle? (flag, don't auto-fix)
 - **Example value vs. token cost**: for each inline example (code block or `## Example` section), judge whether it earns its tokens — does it demonstrate a non-obvious pattern or nuanced judgment call that prose alone cannot convey? Flag examples that merely restate the surrounding prose in code, illustrate obvious/trivial cases, or would be better served by a project-local `AGENTS.md`. Note: if the project has its own `AGENTS.md` or `CONTRIBUTING.md`, generic examples in agent files are less justified.
+
+**Scope constraint**: report only findings within the above check list. Do not add out-of-scope findings (e.g., "no error handling described," "missing inputs section for a skill") unless that specific check is in the list above. Extra findings not corresponding to a listed check are noise — they dilute precision and distract from confirmed issues.
 
 Collect all findings from each self-mentor response into a structured list keyed by file path.
 
@@ -114,7 +120,7 @@ Beyond per-file analysis, run cross-file checks that self-mentor cannot do alone
 Run the following checks. For file-listing steps use Glob; for content-search steps use Grep. Bash is only needed for the pipeline comparisons and the `printf`/`jq` blocks below.
 
 ```bash
-# Color helpers — makes severity levels and source agents scannable in terminal output
+# Redeclare color helpers per Bash tool call — shell env does not persist across calls; CYN (agent name/fix hint) is added here and absent from the pre-flight block.
 RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; CYN='\033[0;36m'; NC='\033[0m'
 # RED → breaking / critical  |  YELLOW → warning / medium  |  GREEN → pass  |  CYAN → agent name / source
 ```
@@ -126,7 +132,7 @@ Use Glob (`agents/*.md`, path `.claude/`) to list agent files; extract basenames
 ls .claude/agents/*.md 2>/dev/null | xargs -n1 basename 2>/dev/null | sed 's/\.md$//' | sort > /tmp/agents_disk.txt || true
 ```
 
-Use Grep tool (pattern `^\- Agents:`, file `.claude/memory/MEMORY.md`) to read the roster line. Repeat with Glob (`skills/*/`, path `.claude/`) for skills — write to `/tmp/skills_disk.txt` — and Grep (`^\- Skills:`) for the MEMORY.md line.
+Read the `- Agents:` and `- Skills:` roster lines from the MEMORY.md content injected in the conversation context (available as auto-memory at session start). Do not attempt to Grep a file path — the MEMORY.md is not stored under `.claude/` but in Claude Code's auto-memory system. Repeat with Glob (`skills/*/`, path `.claude/`) for skills on disk — write to `/tmp/skills_disk.txt`.
 
 **Check 2 — README vs disk**
 Use Grep tool (pattern `^\| \*\*`, file `README.md`, output mode `content`) to extract agent/skill table rows.
@@ -139,6 +145,8 @@ Use Grep tool (pattern `` `/[a-z-]*` ``, glob `skills/*/SKILL.md`, path `.claude
 
 **Check 5 — Hardcoded user paths**
 Use Grep tool (pattern `/Users/|/home/`, glob `{agents/*.md,skills/*/SKILL.md}`, path `.claude/`, output mode `content`) to flag non-portable paths.
+
+**Important**: run this check on every file regardless of whether critical or high findings were already found — path portability issues are orthogonal to other severity classes and must not be deprioritized due to presence of more serious findings in the same file.
 
 **Check 6 — permissions-guide.md drift** — every allow entry must appear in the guide, and vice versa
 
@@ -170,7 +178,6 @@ fi
 **Check 7 — Skill frontmatter conflicts** — `context:fork + disable-model-invocation:true` is a broken combination: a forked skill has no model to coordinate agents or synthesize results.
 
 ```bash
-shopt -s nullglob
 for f in .claude/skills/*/SKILL.md; do
   name=$(basename "$(dirname "$f")")
   if awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'context: fork' && \
@@ -180,7 +187,6 @@ for f in .claude/skills/*/SKILL.md; do
     printf "  ${CYN}fix${NC}: remove disable-model-invocation:true (or remove context:fork if purely tool-only)\n"
   fi
 done
-shopt -u nullglob
 ```
 
 Flag any drift between MEMORY.md, README.md, settings.json, and actual disk state. Flag any hardcoded `/Users/` or `/home/` paths — these should be `.claude/`, `~/`, or `$(git rev-parse --show-toplevel)/` style. Flag any permissions-guide.md entries not in the allow list (orphaned docs) or allow entries without a guide row (undocumented permissions).
@@ -198,14 +204,12 @@ Three capability tiers define the expected model assignment for each agent:
 Extract declared models with Bash:
 
 ```bash
-shopt -s nullglob
 printf "%-30s %s\n" "AGENT" "MODEL"
 for f in .claude/agents/*.md; do
   name=$(basename "$f" .md)
   model=$(awk '/^---$/{c++; if(c==2)exit} c==1 && /^model:/{sub(/^model: /,""); print}' "$f")
   printf "%-30s %s\n" "$name" "${model:-(inherit)}"
 done
-shopt -u nullglob
 ```
 
 Using model reasoning, classify each agent into a tier based on its `<role>`, `description`, and `<workflow>` content. Cross-reference the classified tier against the declared model:
@@ -276,6 +280,8 @@ Read `.claude/CLAUDE.md` and extract its governance directives (Workflow Orchest
 Major contradictions → **high** severity, raised to user (CLAUDE.md takes precedence — the agent/skill needs updating, but the user decides how).
 Minor drift (slightly different wording of the same idea, or missing but not contradicting) → **low**.
 
+- **Direct contradiction** includes explicit instructions to skip a required behavior (e.g., "Do not create task tracking entries" contradicts the Task Management directive as directly as saying "never track tasks"). The test is whether a reasonable reader would interpret the instruction as overriding the CLAUDE.md mandate — if yes, it is high; if the file simply does not mention the behavior, it is low (omission).
+
 ### Claude Code docs freshness
 
 Spawn a **web-explorer** agent to fetch the current Claude Code documentation. Try the direct paths below; if they don't resolve, navigate from the Claude Code homepage (`code.claude.com`) to find the current schema pages:
@@ -334,13 +340,11 @@ done
 Then scan agent and skill files for inline examples:
 
 ````bash
-shopt -s nullglob
 for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do
-  count=$(grep -c '^\(```\|## Example\|### Example\)' "$f" 2>/dev/null || true)
+  count=$(grep -cE '^```|^## Example|^### Example' "$f" 2>/dev/null || true)
   lines=$(wc -l < "$f" | tr -d ' ')
   [ "$count" -gt 0 ] && printf "%s: %d example blocks, %d total lines\n" "$f" "$count" "$lines"
 done
-shopt -u nullglob
 ````
 
 Using model reasoning, evaluate each file's examples against two criteria:
@@ -356,6 +360,13 @@ Classify each example block:
 Report per-file: `N examples total, K high-value, M low-value (est. ~X tokens wasted)`.
 
 ## Step 5: Aggregate and classify findings
+
+**Antipatterns that indicate severity under-classification** (common failure modes from calibration):
+
+- Classifying `context:fork + disable-model-invocation:true` as "possibly contradictory" (low) rather than **critical** — this combination is always breaking; no conditional language
+- Classifying inventory drift (MEMORY.md vs disk) as "out of sync" (medium) rather than **critical** — any cross-reference using the stale roster will fail at runtime
+- Classifying a `deep-reasoning` agent on `sonnet` as "possibly underpowered" (medium) rather than **high** — the tier classification table provides the authority for this judgment; use it
+- Classifying a direct CLAUDE.md contradiction as a "best practice concern" (medium) rather than **high** — any instruction that explicitly overrides a CLAUDE.md directive is high severity per the governance hierarchy
 
 Group all findings from Steps 1–4 into a severity table:
 
@@ -538,7 +549,7 @@ Run `/sync apply` to propagate clean config to ~/.claude/
 - **Max 2 re-audit cycles**: if fixes don't converge after 2 loops, surface the remaining issues to the user rather than spinning
 - **Relationship to self-mentor**: `self-mentor` is a single-file reactive audit; `/audit` is the system-wide sweep that runs self-mentor at scale and adds cross-file checks
 - **Paths must be portable**: `.claude/` for project-relative paths, `~/` for home paths — never `/Users/<name>/` or `/home/<name>/`; this rule applies to ALL skill and agent files
-- This skill is the correct pre-flight before `/sync` — run `/audit` to confirm config is clean, then `/sync apply` to propagate
+- Pre-flight for `/sync` — run clean before `/sync apply`.
 - **Bash error logging**: if a bash block in Pre-flight checks or Step 4 fails unexpectedly, append a JSONL line to `.claude/logs/audit-errors.jsonl` (`{"ts":"<ISO>","check":"<N>","error":"<message>"}`) for post-mortem — do not swallow errors silently.
 - **Execution order tip**: Steps 1–2 and Step 4 bash checks are fast (seconds); Step 3 (self-mentor spawns) is expensive (seconds per file). For early signal on system-wide issues, run Steps 1–2 + Step 4 first, then spawn Step 3 agents in parallel with any Step 4 analysis that doesn't depend on per-file results.
 - **Token cost**: Step 3 (self-mentor spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.

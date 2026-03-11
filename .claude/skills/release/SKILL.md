@@ -121,7 +121,7 @@ Omit any section that has no content.
 A special welcome to our new contributors and a big thank you to everyone who helped with this release:
 
 * **Full Name** (@handle) ([LinkedIn](url)) – *What they built or fixed*
-* **Full Name** (@handle) – *What they built or fixed*
+* @handle – *What they built or fixed* (use this form when real name is not confirmed)
 
 ---
 
@@ -184,14 +184,22 @@ Bad/good examples:
 **Contributors rules:**
 
 - List every external contributor, even for a one-liner fix
-- Format: `* **Full Name** (@handle) ([LinkedIn](url)) – *noun phrase of what they built/fixed*`
-- LinkedIn is optional — include only if known; never guess
+- **NEVER guess or hallucinate a real name.** A wrong name in public release notes is a serious error. When in doubt, omit the name entirely.
+- **Name lookup protocol** — run for every contributor @handle before writing their entry:
+  1. `gh api /users/<handle> --jq '.name'` — if non-null and non-empty, use as the real name (high confidence)
+  2. If empty: spawn `web-explorer` to search `site:linkedin.com "<handle>" developer` — use the name only if the profile clearly matches (same avatar, repos, or employer). Note the LinkedIn URL for inclusion.
+  3. If still uncertain: use `@handle` only — no name field at all
+- Format when name is confirmed: `* **Full Name** (@handle) ([LinkedIn](url)) – *noun phrase*`
+- Format when name is not confirmed: `* @handle – *noun phrase*`
+- LinkedIn is optional — include only if found via lookup; never construct a URL by guessing
 - New contributors get a welcome sentence above the list
 - Maintainer always listed last with infra / CI / docs scope
 
 After applying the guidelines above to polish the output, write the full content to `tasks/output-release-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-release-$(date +%Y-%m-%d).md`
 
 ## Step 5: Publish (after writing notes)
+
+End your response with a `## Confidence` block per CLAUDE.md output standards: **Score**: 0.N (high ≥0.9 / moderate 0.7–0.9 / low \<0.7), **Gaps**: what limited thoroughness, **Refinements**: N passes.
 
 Use project-level tooling to build, publish, and create the GitHub release. Refer to the project's CLAUDE.md or `oss-maintainer` agent for the specific commands.
 

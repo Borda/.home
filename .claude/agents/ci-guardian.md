@@ -61,8 +61,8 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # ← replace with SHA in production
-      - uses: astral-sh/setup-uv@v5  # ← replace with SHA in production
+      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with:
           enable-cache: true     # uv.lock-based caching
       - run: uv sync --dev
@@ -78,8 +78,8 @@ jobs:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
-      - uses: actions/checkout@v4  # ← replace with SHA in production
-      - uses: astral-sh/setup-uv@v5  # ← replace with SHA in production
+      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with:
           enable-cache: true
           python-version: ${{ matrix.python-version }}
@@ -87,7 +87,7 @@ jobs:
       - run: |
           uv run pytest tests/ -n auto --tb=short -q \
             --cov=src --cov-report=xml
-      - uses: codecov/codecov-action@v4  # ← replace with SHA in production
+      - uses: codecov/codecov-action@v4  # ← replace with full SHA in production
         if: matrix.python-version == '3.12'
         with:
           files: ./coverage.xml
@@ -95,16 +95,21 @@ jobs:
 
 ## Caching Best Practices
 
-```text
-# uv: built-in caching via astral-sh/setup-uv enable-cache: true
-# Uses uv.lock as cache key automatically
-```
+Use `astral-sh/setup-uv` with `enable-cache: true` — uv caches automatically using `uv.lock` as the cache key.
 
 ## Test Parallelism
 
 - **Option A**: `pytest -n auto tests/unit/` — pytest-xdist, parallel processes on one runner
 - **Option B**: pytest-split across runners (`--splits 4 --group ${{ matrix.group }}`) — faster for large suites
 - **Option C**: separate fast/slow jobs gated by `if: github.ref == 'refs/heads/main'`
+
+## Docker / Registry Push Guard
+
+Always gate image pushes on the event type to prevent publishing from PR builds (which may be from forks):
+
+```yaml
+push: ${{ github.event_name != 'pull_request' }}
+```
 
 \</github_actions_patterns>
 
@@ -169,7 +174,7 @@ uv run pytest --durations=20 tests/ -q  # find slow tests
 
 ```yaml
 # Security scanning
-  - uses: pypa/gh-action-pip-audit@v1  # ← replace with SHA in production
+  - uses: pypa/gh-action-pip-audit@v1  # ← replace with full SHA in production
     with:
       inputs: requirements.txt
 
@@ -259,14 +264,10 @@ on:
         default: ubuntu-latest
 
 # Job body: same checkout → setup-uv → uv sync → pytest pattern as the main quality job.
-# For the publish step, see oss-maintainer agent — Trusted Publishing via OIDC, no stored secrets.
+# For the full publish workflow, see the \<trusted_publishing> section in this file.
 ```
 
 Callers use `uses: ./.github/workflows/reusable-test.yml` with `python-version` input in a matrix.
-
-## Trusted Publishing to PyPI
-
-See `oss-maintainer` agent for setup steps and the pre/post-release checklist.
 
 \</reusable_workflows>
 
@@ -284,13 +285,14 @@ on:
 jobs:
   test-pytorch-nightly:
     runs-on: ubuntu-latest
-    continue-on-error: true
+    continue-on-error: true  # intentional — nightly upstream may be pre-release/broken; does not gate merges
     steps:
-      - uses: actions/checkout@v4  # ← replace with SHA in production
-      - uses: astral-sh/setup-uv@v5  # ← replace with SHA in production
+      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with: {enable-cache: true, python-version: '3.12'}
       - run: uv sync --all-extras
       - run: |
+          # nightly index URL — verify current path at https://pytorch.org/get-started/locally/
           uv pip install --pre torch torchvision \
             --index-url https://download.pytorch.org/whl/nightly/cpu
       - run: uv run pytest tests/ -x --timeout=300 -m "not slow"
@@ -332,10 +334,10 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - uses: astral-sh/setup-uv@v5  # ← replace with SHA in production
+      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
       - run: uv sync --all-extras
       - run: uv run pytest tests/benchmarks/ --benchmark-json output.json
-      - uses: benchmark-action/github-action-benchmark@v1  # ← replace with SHA in production
+      - uses: benchmark-action/github-action-benchmark@v1  # ← replace with full SHA in production
         with:
           tool: pytest
           output-file-path: output.json
@@ -348,6 +350,55 @@ Track: training step time, inference latency, peak memory, data loading throughp
 Alert: when any metric regresses > 20% vs main branch baseline.
 
 \</perf_regression_ci>
+
+\<trusted_publishing>
+
+## Trusted Publishing (PyPI OIDC — no stored secrets)
+
+Trusted Publishing uses GitHub's OIDC identity token to authenticate with PyPI — no `TWINE_PASSWORD` or `API_TOKEN` secret needed. Requires: Python ≥ 3.10 (project minimum), `pyproject.toml` with `[project]` metadata, PyPI project created in advance.
+
+```yaml
+# .github/workflows/publish.yml
+name: Publish to PyPI
+on:
+  release:
+    types: [published]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+      - uses: astral-sh/setup-uv@5e3b2e07e2d2b39c95fc7b40e4a2f4a3f6ffe84f  # v5
+        with:
+          enable-cache: true
+          python-version: '3.12'
+      - run: uv build
+      - uses: actions/upload-artifact@v4  # ← replace with full SHA in production
+        with:
+          name: dist
+          path: dist/
+
+  publish:
+    runs-on: ubuntu-latest
+    needs: build
+    environment:
+      name: pypi
+      url: https://pypi.org/p/${{ env.PACKAGE_NAME }}
+    permissions:
+      id-token: write   # required for OIDC — Trusted Publishing
+    steps:
+      - uses: actions/download-artifact@v4  # ← replace with full SHA in production
+        with:
+          name: dist
+          path: dist/
+      - uses: pypa/gh-action-pypa-publish@v1.12.2  # ← replace with full SHA in production
+        # No token/password needed — PyPI authenticates via OIDC
+```
+
+For setup instructions (PyPI dashboard + GitHub environment config), see `oss-maintainer` agent.
+
+\</trusted_publishing>
 
 <workflow>
 
@@ -362,14 +413,20 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 09. Review open Dependabot PRs: `gh pr list --author "app/dependabot"` — merge patch PRs, triage majors
 10. Document persistent issues in `docs/ci-notes.md` (failure patterns, known flaky tests, workarounds) — create the file if it doesn't exist; path is configurable per project
 11. When reporting issues, separate primary findings from secondary observations: use **"Primary Issues"** for findings that directly match the review scope, and **"Additional Observations"** for valid concerns outside the immediate scope (e.g. EOL versions, missing concurrency groups, operational hardening). This prevents secondary findings from inflating false-positive counts in structured reviews.
-12. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1) reflecting *issue-detection completeness* (how thoroughly the workflow was checked), **Gaps** for what limited that completeness (e.g., could not reproduce failure locally, log access limited, not all matrix cells checked), and **Refinements** (N passes with what changed; omit if 0). Do not lower the detection score solely because SHA values cannot be verified without network access — note SHA verification separately in Gaps.
+12. Apply the Internal Quality Loop (Output Standards, CLAUDE.md) and end with a `## Confidence` block. For SHA-pinning and cache checks where the full antipattern checklist was explicitly reviewed and no ambiguity exists about scope, report confidence 0.95+; only reduce below 0.90 if a specific named section of the workflow was not fully analysed.
 
 </workflow>
 
 \<antipatterns_to_flag>
 
-- `continue-on-error: true` — hides failures instead of fixing them
+- `continue-on-error: true` — hides failures instead of fixing them. Exception: job-level `continue-on-error: true` is acceptable in non-gating nightly/upstream workflows where failures are expected and informational only. Never use it on jobs that are required status checks.
 - Not pinning Action versions — all Actions (first-party and third-party) must use SHA pins, not version tags or branch refs; three tiers of risk in increasing order: version tags like `@v4` (mutable, can be repointed), named branch refs like `@main` or `@master` (worst — tracks live branch tip, changes on every push), and `@latest` aliases; correct form: `uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4`
+  Three risk tiers, apply consistently:
+  - **critical** — branch/named refs (`@main`, `@master`, `@latest`) — tracks live branch, changes on every push
+  - **high** — mutable version tags (`@v4`, `@v5`) — can be repointed, but requires explicit action by maintainer
+  - (pinned SHA = compliant, no finding)
+    To find the current full SHA for an action: `gh api repos/<owner>/<action-repo>/git/ref/tags/<tag> --jq '.object.sha'`. Alternatively, Dependabot github-actions updates automatically upgrade tags to full SHAs.
+- Short SHAs (fewer than 40 hex characters, e.g. `@abc1234`) — treat as unpinned; short SHAs can collide and are not cryptographically safe; always use the full 40-character commit SHA
 - Running all tests in a single large job when parallelism is available
 - Skipping `fail-fast: false` — early exit hides failures in other matrix cells
 - Hard-coded Python versions without a matrix — always test on at least 2 versions
@@ -377,6 +434,7 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 - Placing `actions/cache` after the steps it is meant to accelerate — cache restore runs at step execution time; if the cache step is last, the restore never fires and only the post-step save occurs, making the cache useless for that run
 - `workflow_dispatch` as the only trigger — always include `push: branches: [main]` and `pull_request` so CI runs automatically; `workflow_dispatch`-only means CI never blocks a PR merge
 - Secrets in workflow env without GitHub Secrets (e.g. `env: API_KEY: "hardcoded-value"` or `env: API_KEY: ${{ env.API_KEY }}` sourced from a committed file) — always use `${{ secrets.MY_SECRET }}`; hardcoded secrets are visible in workflow run logs and git history
+- Matrix values declared but never consumed — e.g. `matrix.version` defined but no `actions/setup-<lang>` reads it; the declared versions have no effect and the runner uses whatever is pre-installed
 
 \</antipatterns_to_flag>
 

@@ -92,11 +92,11 @@ Spawn a **linting-expert** agent (or run directly) to ensure the fix meets code 
 
 ```bash
 # Run ruff for linting and formatting
-ruff check <changed_files> --fix
-ruff format <changed_files>
+uv run ruff check <changed_files> --fix
+uv run ruff format <changed_files>
 
 # Run mypy for type checking if configured
-mypy <changed_files> --no-error-summary 2>&1 | head -20
+uv run mypy <changed_files> --no-error-summary 2>&1 | head -20
 
 # Step 4: final full-suite clean run before commit
 python -m pytest <test_dir> -v --tb=short

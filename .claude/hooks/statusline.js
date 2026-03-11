@@ -11,6 +11,7 @@
 //   Subscription quota % is not exposed in hook data. Check /status for monthly usage.
 
 const fs = require("fs");
+const os = require("os");
 const path = require("path");
 
 let raw = "";
@@ -34,9 +35,7 @@ process.stdin.on("end", () => {
     } else {
       planName = "Sub";
       try {
-        const sub = JSON.parse(
-          fs.readFileSync(path.join(process.env.HOME || "/tmp", ".claude/state/subscription.json"), "utf8"),
-        );
+        const sub = JSON.parse(fs.readFileSync(path.join(os.homedir(), ".claude/state/subscription.json"), "utf8"));
         if (sub.subscriptionType) planName = sub.subscriptionType[0].toUpperCase() + sub.subscriptionType.slice(1);
       } catch (_) {}
     }
@@ -57,7 +56,7 @@ process.stdin.on("end", () => {
     }
 
     if (remaining !== null) {
-      const pct = Math.max(0, Math.min(100, 100 - remaining));
+      const pct = Math.max(0, Math.min(100, 100 - remaining)); // pct = context used (100 - remaining_pct)
       const bar = "█".repeat(Math.round(pct / 10)) + "░".repeat(10 - Math.round(pct / 10));
       const color = pct < 50 ? 32 : pct < 75 ? 33 : 31; // green / yellow / red
       parts.push(`\x1b[${color}m${bar} ${Math.round(pct)}%\x1b[0m`);

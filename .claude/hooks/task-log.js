@@ -49,6 +49,7 @@ process.stdin.on("end", () => {
     } else if (hook_event_name === "SubagentStop") {
       // Subagent finished — remove from active state and log completion
       mutateAgents(stateFile, stateDir, (agents) => (agent_id ? agents.filter((a) => a.id !== agent_id) : agents));
+      // tool name not available at stop time; "Task" used as placeholder (matches start event convention)
       appendLog(logFile, logsDir, { ts, event: "completed", tool: "Task", agent: agent_type || "unknown" });
     }
   } catch (_) {

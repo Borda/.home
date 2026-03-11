@@ -9,10 +9,12 @@
 
 ### 2. Subagent Strategy
 
-- Use subagents liberally to keep main context window clean
-- Offload research, exploration, and parallel analysis to subagents
-- For complex problems, throw more compute at it via subagents
-- One tack per subagent for focused execution
+- Use sub-agents liberally to keep main context clean
+- Prefer specialised agents (`sw-engineer`, `ai-researcher`, etc.) over general-purpose
+- Offload research and exploration to sub-agents
+- Run independent subtasks in parallel, not serially
+- One tack per sub-agent — no multi-tasking within a single agent
+- For complex problems, throw more compute at it via sub-agents
 
 ### 3. Self-Improvement Loop
 
@@ -48,6 +50,20 @@
 - **Delegate to the right agent** — when a task has a designated owner (e.g. `linting-expert`, `qa-specialist`, `doc-scribe`), hand it off; don't attempt it yourself
 - **No territorial behaviour** — never contradict or redo another agent's output to assert ownership; build on it or flag a concern constructively
 - **One voice per domain** — if two agents could both handle something, the orchestrator picks one; the other stays silent rather than competing
+
+### 8. Background Agent Health Monitoring
+
+Any orchestrator — main session or skill — that spawns background agents or actions with non-deterministic execution time **must** monitor them actively. Applies to: any orchestrator that spawns background agents writing output into a run directory — `/calibrate` is the canonical implementation; other skills implement the protocol in their own `<constants>` block when applicable.
+
+**Protocol**:
+
+1. Record launch time per agent (`LAUNCH_AT=$(date +%s)`) and create a per-agent file checkpoint (`touch /tmp/calibrate-check-<id>`)
+2. Every **5 minutes**: run `find <run-dir> -newer /tmp/<checkpoint> -type f | wc -l` — new files = alive; no files = stalled
+3. **Hard cutoff at 15 minutes** of no file activity — declare timed out, do not wait further
+4. **One extension (+5 min)** granted if the agent's output file explicitly explains the delay (read via `tail -20 <output_file>`) (use `tail -100` when reading for partial results at final timeout) — a second unexplained stall still triggers the cutoff
+5. On timeout: read output file for partial results; if none, construct `{"verdict":"timed_out","gaps":["re-run individually"]}` — always surface timed-out agents with ⏱ in the report; never silently omit them
+
+**Skills with non-deterministic sub-agent execution inherit these defaults** and may tighten (not loosen) the constants in their own `<constants>` block.
 
 ## Agent Teams
 

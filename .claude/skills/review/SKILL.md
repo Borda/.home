@@ -50,11 +50,33 @@ Launch agents simultaneously with the Agent tool (security augmentation is folde
 
 **Agent 1 — sw-engineer**: Review architecture, SOLID adherence, type safety, error handling, and code structure. Check for Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking issues vs suggestions.
 
-**Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for ML-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added.
+**Severity anchors for common security patterns (Agent 1)**:
+
+- `pickle.load` or `torch.load` without `weights_only=True` on any data from outside the process = **CRITICAL** (arbitrary code execution via insecure deserialization)
+
+- Hardcoded secret in source (password, API key, token) = **CRITICAL**
+
+- `debug=True` in a web server production entry point = **CRITICAL**
+
+- Missing input validation on external HTTP input = **HIGH** (not MEDIUM)
+
+- **Atomicity check for registry/store patterns**: if code updates an in-memory index and then performs a filesystem operation (copy, delete, rename), flag as HIGH if these are not atomic. A crash between the two steps leaves the system in an inconsistent state. Look for: `save_index()` + `shutil.copytree()`, `delete from dict` + `os.remove()`, or any two-phase commit done without a temp-then-rename pattern.
+
+**Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for ML-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are GT-level findings, not afterthoughts):
+
+- Concurrent access to shared state (when locks or shared variables are present)
+- Error paths: calling methods in wrong order (e.g., `log()` before `start()`)
+- Resource cleanup on exception (file handles, database connections)
+- Boundary conditions for division, empty collections, and zero-count inputs
+- Type-coercion boundary inputs: for functions that parse or convert strings to typed values (int(), float(), datetime), test with inputs that are near-valid (float strings for int parsers, empty strings, very large values, None) — these are common omissions.
+
+**Consolidation rule**: Report each test gap as one finding with a concise list of test scenarios, not as separate findings per scenario. Format: "Missing tests for `parse_numeric()`: empty string, None, very large integers, float-string for int parser." This keeps the test coverage section actionable and prevents the section from exceeding 5 items.
 
 **Agent 3 — perf-optimizer**: Analyze code for performance issues. Look for algorithmic complexity issues, Python loops that should be NumPy/torch ops, repeated computation, unnecessary I/O. For ML code: check DataLoader config, mixed precision usage. Prioritize by impact.
 
 **Agent 4 — doc-scribe**: Check documentation completeness. Find public APIs without docstrings, missing NumPy/Google style sections, outdated README sections, and CHANGELOG gaps. Verify examples actually run.
+
+- **Algorithmic accuracy check**: For functions that compute mathematical results (moving averages, statistics, transforms, distances), verify that the docstring's behavioral claims match what the implementation actually computes. Specifically: does the described output shape/length match the actual algorithm? Does the standard name (e.g. "moving average") correspond to the actual implementation behavior (expanding-window vs. sliding-window)? If the implementation deviates from the conventional definition, flag as MEDIUM — the docstring must document the deviation, not just state the standard definition. **Deprecation check**: Always check whether datetime, os.path, or other stdlib functions used in the code have been deprecated in Python 3.10+ (e.g., `datetime.utcnow()` deprecated in 3.12, `os.path` vs `pathlib`). Flag deprecated stdlib usage as MEDIUM with the replacement. This is a frequent omission in general review but reliably caught by doc-scribe with this explicit trigger.
 
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
@@ -118,7 +140,11 @@ Only apply cross-validation to `CRITICAL`/`[blocking]` findings — high and low
 
 ## Step 5: Consolidate findings
 
-Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low). Cap each non-critical section at 5 items; if more are found, note "N additional lower-priority findings omitted" at the end of that section. This keeps the report actionable and prevents blocking issues from being buried in volume.
+Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low).
+
+**Signal-to-noise filter**: Before writing the report, classify each finding as either (a) a genuine defect or architectural issue or (b) a style/completeness observation (unused import, print-vs-logging, missing class-level docstring on a class that has method-level docstrings). For well-scoped modules with ≤5 public APIs, limit (b) items to at most 1 per section. **Target: report no more than GT+2 findings total per module** — a review with 10 nits obscures the 2 critical fixes. Prefer depth (why it matters, how to fix) over breadth (finding volume). **Annotation completeness rule**: If ≥2 HIGH or CRITICAL findings are present, omit LOW-severity type annotation nits entirely — they will be handled by `linting-expert` or pre-commit hooks. Never report annotation completeness findings when doing so pushes total count above GT+2.
+
+Cap each non-critical section at 5 items; if more are found, note "N additional lower-priority findings omitted" at the end of that section. This keeps the report actionable and prevents blocking issues from being buried in volume.
 
 ```
 ## Code Review: [target]
@@ -210,7 +236,7 @@ The subagent handles pre-flight, dispatch, validation, and patch capture. If Cod
 
 Print a `### Codex Delegation` section to the terminal summarizing what was auto-implemented (do not re-write the output file).
 
-End your response with a `## Confidence` block per CLAUDE.md output standards. For static analysis of complete, self-contained code (no missing imports needed to reason about the findings), a baseline confidence of 0.85+ is appropriate; reserve scores below 0.75 for cases where runtime behaviour, external dependencies, or execution traces are genuinely needed to validate a finding.
+End your response with a `## Confidence` block per CLAUDE.md output standards. For static analysis of complete, self-contained code (no missing imports needed to reason about the findings), a baseline confidence of 0.88+ is appropriate; reserve scores below 0.80 for cases where runtime behaviour, external dependencies, or execution traces are genuinely needed to validate a finding.
 
 </workflow>
 

@@ -194,7 +194,7 @@ Output a structured report:
 - Follow-up chains:
   - Refactored code needs quality validation → `/review` for full multi-agent code review
   - Cleaned-up module is ready to extend → `/feature` to add new capability on the improved foundation
-  - Refactoring touched `.claude/` config files → run `self-mentor` on changed files, then `/sync` to propagate
+  - Refactoring touched `.claude/` config files → spawn `self-mentor` on changed files, then `/sync` to propagate
   - Mechanical cleanup needed beyond what Step 5 handled → `/codex` to delegate additional tasks
 
 </notes>

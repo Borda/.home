@@ -76,7 +76,7 @@ Thresholds for recommendation:
 
 ## Step 4: Check for duplication
 
-Before recommending anything:
+Before recommending anything, run through both the overlap check and the anti-pattern checklist:
 
 ```
 For each candidate agent/skill:
@@ -84,6 +84,12 @@ For each candidate agent/skill:
 - Is the name/description confusingly similar to an existing one? → rename existing
 - Does it overlap with a GitHub Copilot agent? → acceptable if serving different tool
 ```
+
+Anti-pattern checklist — reject the candidate if any apply:
+
+1. **Role vs task confusion**: agents are roles, not tasks. Do not create an agent for every different topic.
+2. **Near-duplicate**: the candidate duplicates an existing agent with a slightly different name. Enhance the existing one instead.
+3. **Thin wrapper**: the candidate skill just calls one agent with fixed args. That is not enough value to justify a new skill file.
 
 ## Step 5: Report
 
@@ -121,14 +127,6 @@ For each candidate agent/skill:
 </workflow>
 
 <notes>
-
-## Anti-patterns to Avoid
-
-- Creating an agent for every different topic (agents are roles, not tasks)
-
-- Duplicating an existing agent with a slightly different name
-
-- Creating a skill that just calls one agent with fixed args (not enough value)
 
 - This skill is introspective: it looks at the tooling itself, not just the code
 

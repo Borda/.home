@@ -154,11 +154,11 @@ Run the full quality stack:
 
 ```bash
 # Linting and formatting
-ruff check <changed_files> --fix
-ruff format <changed_files>
+uv run ruff check <changed_files> --fix
+uv run ruff format <changed_files>
 
 # Type checking
-mypy <changed_files> --no-error-summary 2>&1 | head -30
+uv run mypy <changed_files> --no-error-summary 2>&1 | head -30
 
 # Full test suite
 python -m pytest <test_dir> -v --tb=short -q

@@ -124,7 +124,7 @@ Branch into one of six modes:
 
 1. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/sub-agents` <!-- verified 2026-03-02 -->
+   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/sub-agents`
    - Confirm valid frontmatter fields: `name`, `description`, `tools`, `disallowedTools`,
      `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`,
      `background`, `isolation`
@@ -180,7 +180,7 @@ Remove any tool that serves no purpose for the declared domain. A minimal, preci
 
 1. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/skills` <!-- verified 2026-03-02 -->
+   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/skills`
    - Confirm valid frontmatter fields: `name`, `description`, `argument-hint`,
      `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
      `context`, `agent`, `hooks`
@@ -353,7 +353,9 @@ Use the Grep tool to find all references to the name across the config:
 
 **For create:** No cross-ref propagation needed (new names have no existing references).
 
-## Step 6: Update memory/MEMORY.md
+## Step 6: Update MEMORY.md roster (auto-memory)
+
+MEMORY.md is Claude Code's auto-memory file — it is **not** stored under `.claude/`. It is injected into the conversation context at session start. The absolute path appears near the top of the system prompt (e.g. `~/.claude/projects/.../memory/MEMORY.md`). Use that absolute path with the Edit tool.
 
 Regenerate the inventory lines from what actually exists on disk:
 
@@ -367,7 +369,7 @@ ls .claude/agents/*.md | xargs -n1 basename | sed 's/\.md$//' | paste -sd', ' -
 ls -d .claude/skills/*/ | xargs -n1 basename | paste -sd', ' -
 ```
 
-Use the Edit tool to update these two lines in MEMORY.md:
+Use the Edit tool with the **absolute auto-memory path** from the conversation context to update these two roster lines in MEMORY.md — they must stay in sync with disk state:
 
 - `- Agents: oss-maintainer, sw-engineer, ...` (the roster line, not the path line)
 - `- Skills: review, survey, ...`
@@ -449,7 +451,7 @@ End the summary report with a `## Confidence` block per CLAUDE.md Output Standar
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
 - Follow-up chains:
   - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
-  - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official `skill-creator` tool from the anthropics/skills repository
+  - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official `skill-creator` tool from the github.com/anthropics/skills repository
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
   - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`

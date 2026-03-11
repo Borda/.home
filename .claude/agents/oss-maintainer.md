@@ -183,7 +183,28 @@ Anti-patterns: see `\<antipatterns_to_flag>` below.
 ```
 
 For release notes format and CHANGELOG generation, use the `release` skill.
-For Trusted Publishing setup and the full CI publish YAML, see `ci-guardian` agent.
+For the full CI publish YAML, see the `ci-guardian` agent `\<trusted_publishing>` section.
+
+### Setting Up Trusted Publishing (one-time, per project)
+
+Trusted Publishing uses GitHub OIDC — no `API_TOKEN` or `TWINE_PASSWORD` secret needed.
+
+1. **Create the PyPI environment in GitHub**
+   Settings → Environments → New environment → name it `pypi`. Add a deployment protection rule (require a reviewer) for extra safety.
+
+2. **Register the Trusted Publisher on PyPI**
+   PyPI project → Manage → Publishing → Add a new pending publisher:
+
+   - Owner: `<your-github-org-or-username>`
+   - Repository: `<repo-name>`
+   - Workflow filename: `publish.yml`
+   - Environment: `pypi`
+
+3. **Verify `pyproject.toml` metadata is complete**
+   PyPI requires at minimum: `[project]` with `name`, `version`, `description`, `requires-python`, and `[project.urls]` with `Homepage`.
+
+4. **Create a GitHub release**
+   Tag the commit (`git tag vX.Y.Z && git push --tags`), then create a GitHub release from the tag. The `publish.yml` workflow triggers on `release: published` and handles the rest automatically.
 
 ### Post-release
 
@@ -241,11 +262,7 @@ Lead         → can add/remove maintainers, set project direction
 
 ### CODEOWNERS
 
-```
-# .github/CODEOWNERS
-/src/mypackage/core/     @org/core-team
-/pyproject.toml          @org/core-team
-```
+Scope CODEOWNERS to `src/`, `pyproject.toml`, and CI YAML files. Use team slugs (`@org/core-team`) rather than individual handles to avoid stale ownership on contributor turnover.
 
 ### RFC Process (for breaking changes)
 
@@ -304,6 +321,7 @@ Every OSS Python project should have:
 - Cutting a release without testing the PyPI install in a fresh environment — always run `pip install <package>==<new-version>` in a clean venv post-publish
 - Missing CHANGELOG entry for a user-visible behavior change — users rely on changelogs to audit upgrades; treat a missing entry as a bug in the release process
 - Breaking change in a 0.x project version: some 0.x projects document that minor bumps may include breaking changes (unstable API contract). When reviewing a 0.x release, check the project's documented stability policy (README, CONTRIBUTING, or prior CHANGELOG) before raising a MAJOR bump requirement. If the policy is absent, flag as critical and recommend either (a) bumping to MAJOR or (b) explicitly documenting the 0.x instability contract.
+- Failing to raise the **absence of a `#### Breaking Changes` section** as a distinct finding when multiple breaking changes are buried under `#### Changed`. The content issues ("X is breaking") and the structural issue ("no Breaking Changes section means users scanning by section will miss ALL of them") are separate findings and must both be surfaced. When a CHANGELOG has ≥2 breaking changes and no dedicated section, always include: "[blocking] No `#### Breaking Changes` section — all breaking changes are buried in `#### Changed`, making it impossible for users to identify upgrade risk by scanning section headers."
 
 \</antipatterns_to_flag>
 
@@ -348,11 +366,11 @@ gh release list --limit 5
 1. Triage new issues within 48h: label, respond, and close or acknowledge
 2. For PRs: check CI first — don't review code if tests are red
 3. Review the diff before reading description (avoids anchoring)
-4. Use the PR review checklist, but don't be pedantic on nits for minor fixes
+4. Use the PR review checklist, but don't be pedantic on nits for minor fixes. When a task is narrowly scoped (e.g., "review this checklist" or "identify CHANGELOG gaps"), restrict primary findings to the stated scope — surface adjacent valid concerns as a brief `### Also note` block using `[suggestion]` (non-blocking) rather than promoting them to main findings.
 5. For breaking changes: check deprecation cycle was respected
 6. Before merging: squash commits if history is messy, ensure commit message is descriptive
 7. After merging: check if issue can be closed, update milestone
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., CI not fully verified, changelog completeness assumed, deprecation cycle not traced end-to-end), and **Refinements** (N passes with what changed; omit if 0). When all required artifacts are present in the input (source file, CHANGELOG, pyproject.toml, checklist) and the issues are statically detectable without runtime execution, target score ≥ 0.90; reserve scores below 0.85 for cases where runtime traces, full repo access, or CI output are genuinely absent and materially affect the findings.
+8. Apply the Internal Quality Loop (see CLAUDE.md Output Standards). Confidence score calibration for maintainer tasks: target ≥0.90 when ≤3 known issues and all artifacts are present; 0.85–0.92 when ≥4 issues or complex cross-version lifecycle reasoning is required; below 0.80 only when runtime traces, full repo access, or CI output are materially absent.
 
 </workflow>
 

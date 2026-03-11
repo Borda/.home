@@ -14,6 +14,9 @@ tasks/
 # Calibration run artifacts (ephemeral benchmarks)
 .claude/calibrate/runs/
 
+# Agent auto-memory (machine-local, not source)
+.claude/agent-memory/
+
 # JetBrains IDEs
 .idea/
 *.iml

@@ -21,7 +21,7 @@ process.stdin.on("end", () => {
     if (hook_event_name === "TeammateIdle" && team_name) {
       // Look for pending tasks in the shared task list — redirect if any exist
       try {
-        const tasksDir = path.join(process.env.HOME || "/tmp", ".claude", "tasks", team_name);
+        const tasksDir = path.join(process.cwd(), ".claude", "tasks", team_name);
         const taskFiles = fs.readdirSync(tasksDir).filter((f) => f.endsWith(".json"));
         const pendingTasks = taskFiles
           .map((f) => {

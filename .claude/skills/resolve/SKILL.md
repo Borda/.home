@@ -190,7 +190,9 @@ The merge commit will be created when the user runs `git commit` — do not auto
 ## Step 6: Conflict resolution verdict
 
 ```bash
-git diff HEAD~1 HEAD --stat   # show what the merge brought in (merge commit now exists on BASE_REF)
+# Case B only: merge commit exists — show what the merge brought in
+git diff HEAD~1 HEAD --stat
+# Case A: no merge commit yet — user must run `git commit` first; then inspect with git diff HEAD~1 HEAD
 ```
 
 Print an interim report:
@@ -212,6 +214,8 @@ gh pr view <PR#> --comments
 ```
 
 Filter out non-actionable items: "LGTM", "nice catch", "looks good", emoji-only, and any already-closed/resolved threads.
+
+> **Guard**: If actionable comments > 10: process the first 10, report the remaining count, and ask the user whether to continue. This prevents runaway execution on large PRs.
 
 For each actionable comment:
 
