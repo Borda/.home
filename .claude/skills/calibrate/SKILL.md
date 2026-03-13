@@ -52,17 +52,17 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 Problem domain by agent:
 
 - `sw-engineer` → Python bugs: type errors, logic errors, anti-patterns, bare `except:`, mutable defaults
-- `qa-specialist` → coverage gaps: uncovered edge cases, missing exception tests, ML non-determinism
+- `qa-specialist` → coverage gaps: uncovered edge cases, missing exception tests, Machine Learning (ML) non-determinism
 - `linting-expert` → violations: ruff rules, mypy errors, annotation gaps
 - `self-mentor` → config issues: broken cross-refs, missing workflow blocks, wrong model, step gaps
 - `doc-scribe` → docs gaps: missing docstrings, incomplete NumPy sections, broken examples
 - `perf-optimizer` → perf issues: unnecessary loops, repeated computation, wrong dtype, missing vectorisation
-- `ci-guardian` → CI issues: non-pinned action SHAs, missing cache, inefficient matrix
+- `ci-guardian` → Continuous Integration (CI) issues: non-pinned action Secure Hash Algorithms (SHAs), missing cache, inefficient matrix
 - `data-steward` → data issues: label leakage, split contamination, augmentation order bugs
 - `ai-researcher` → paper analysis: missed contributions, wrong method attribution
-- `solution-architect` → design issues: leaky abstractions, circular dependencies, missing ADR, backward-compat violations without deprecation path
-- `web-explorer` → content quality: broken or unverified URLs, outdated docs, incomplete extraction from fetched pages
-- `oss-maintainer` → OSS governance: incorrect SemVer decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
+- `solution-architect` → design issues: leaky abstractions, circular dependencies, missing Architecture Decision Record (ADR), backward-compat violations without deprecation path
+- `web-explorer` → content quality: broken or unverified Uniform Resource Locators (URLs), outdated docs, incomplete extraction from fetched pages
+- `oss-maintainer` → Open Source Software (OSS) governance: incorrect Semantic Versioning (SemVer) decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
 
 Skill domains:
 
@@ -96,7 +96,7 @@ From `$ARGUMENTS`, determine:
   - `apply` without `fast`/`full` → pure apply mode: skip Steps 2–5; go directly to Step 6
   - `apply` with `fast`/`full` → benchmark + auto-apply: run Steps 2–5 then continue to Step 6
 
-If benchmark will run (i.e., `fast` or `full` is present, with or without `apply`): generate timestamp `YYYYMMDDTHHMMSSZ` (UTC, e.g. `20260303T134448Z`). All run dirs use this timestamp.
+If benchmark will run (i.e., `fast` or `full` is present, with or without `apply`): generate timestamp `YYYYMMDDTHHMMSSZ` (Coordinated Universal Time (UTC), e.g. `20260303T134448Z`). All run dirs use this timestamp.
 
 Create tasks before proceeding:
 
@@ -214,7 +214,7 @@ Collect the compact JSON from each scorer (each ~200 bytes). Write all to `.clau
 
 ### Phase 4 — Aggregate, write report and result
 
-Compute aggregates (exclude out-of-scope problem from recall/F1/severity/format averages; include in FP count):
+Compute aggregates (exclude out-of-scope problem from recall/F1/severity/format averages; include in False Positive (FP) count):
 
 - `mean_recall` = mean of `recall` values for in-scope problems only
 - `mean_confidence` = mean of all `confidence` values

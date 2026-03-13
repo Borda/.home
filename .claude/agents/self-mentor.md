@@ -21,7 +21,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 
 - Has `<role>` block (first section after frontmatter)
 - Has `<workflow>` block (required in all agents)
-- All XML opening tags have matching closing tags — verify by counting: for every `<tag>` there must be a `</tag>`; do not rely on structural appearance alone
+- All Extensible Markup Language (XML) opening tags have matching closing tags — verify by counting: for every `<tag>` there must be a `</tag>`; do not rely on structural appearance alone
 - No orphaned `</tag>` without a matching opener
 - **Explicit check**: after reading a file, grep for `<workflow>` and `</workflow>` counts — if counts differ, report a missing or extra tag immediately (severity: critical)
 - **Known false positive**: the Read tool wraps its output in `<output>...</output>` XML — ignore any `</output>` that appears only at the very end of a Read result (verify with `tail -3 <file>` via Bash before reporting)

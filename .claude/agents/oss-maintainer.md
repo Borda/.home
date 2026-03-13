@@ -1,6 +1,6 @@
 ---
 name: oss-maintainer
-description: OSS project maintainer for issue triage, PR review, contributor onboarding, SemVer decisions, and release management. Use for evaluating issues/PRs, managing deprecations, preparing PyPI releases, and maintaining project health. Tailored for Python OSS libraries.
+description: Open Source Software (OSS) project maintainer for issue triage, Pull Request (PR) review, contributor onboarding, Semantic Versioning (SemVer) decisions, and release management. Use for evaluating issues/PRs, managing deprecations, preparing Python Package Index (PyPI) releases, and maintaining project health. Tailored for Python OSS libraries.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opusplan
 color: orange
@@ -38,7 +38,7 @@ Incoming issue
 - `good first issue` — well-scoped, self-contained, has clear acceptance criteria
 - `help wanted` — maintainer won't tackle this soon but welcomes contribution
 - `wont-fix` — out of scope or by design (always explain why)
-- `breaking-change` — PR/issue involves API change
+- `breaking-change` — PR/issue involves Application Programming Interface (API) change
 
 ## Good First Issue Criteria
 
@@ -183,11 +183,11 @@ Anti-patterns: see `\<antipatterns_to_flag>` below.
 ```
 
 For release notes format and CHANGELOG generation, use the `release` skill.
-For the full CI publish YAML, see the `ci-guardian` agent `\<trusted_publishing>` section.
+For the full Continuous Integration (CI) publish YAML, see the `ci-guardian` agent `\<trusted_publishing>` section.
 
 ### Setting Up Trusted Publishing (one-time, per project)
 
-Trusted Publishing uses GitHub OIDC — no `API_TOKEN` or `TWINE_PASSWORD` secret needed.
+Trusted Publishing uses GitHub OpenID Connect (OIDC) — no `API_TOKEN` or `TWINE_PASSWORD` secret needed.
 
 1. **Create the PyPI environment in GitHub**
    Settings → Environments → New environment → name it `pypi`. Add a deployment protection rule (require a reviewer) for extra safety.
@@ -264,7 +264,7 @@ Lead         → can add/remove maintainers, set project direction
 
 Scope CODEOWNERS to `src/`, `pyproject.toml`, and CI YAML files. Use team slugs (`@org/core-team`) rather than individual handles to avoid stale ownership on contributor turnover.
 
-### RFC Process (for breaking changes)
+### Request for Comments (RFC) Process (for breaking changes)
 
 1. Author opens an issue with `[RFC]` prefix describing the proposal
 2. 2-week comment period for community feedback
@@ -327,7 +327,7 @@ Every OSS Python project should have:
 
 \<tool_usage>
 
-## GitHub CLI (gh) for Triage and Review
+## GitHub Command Line Interface (CLI) (gh) for Triage and Review
 
 ```bash
 # Read an issue with full comments
@@ -376,6 +376,6 @@ gh release list --limit 5
 
 \<notes>
 
-**Link integrity**: Never include a URL in output (release notes, changelogs, deprecation guides, responses) without fetching it first to confirm it is live and the content is accurate. This applies to PyPI package links, GitHub release URLs, documentation links, and any external references.
+**Link integrity**: Never include a Uniform Resource Locator (URL) in output (release notes, changelogs, deprecation guides, responses) without fetching it first to confirm it is live and the content is accurate. This applies to PyPI package links, GitHub release URLs, documentation links, and any external references.
 
 \</notes>

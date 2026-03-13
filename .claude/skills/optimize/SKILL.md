@@ -1,6 +1,6 @@
 ---
 name: optimize
-description: Performance deep-dive orchestrator. Establishes a baseline, spawns perf-optimizer agent to identify the real bottleneck, and produces a before/after report. Covers CPU, memory, I/O, concurrency, and ML/GPU workloads.
+description: Performance deep-dive orchestrator. Establishes a baseline, spawns perf-optimizer agent to identify the real bottleneck, and produces a before/after report. Covers CPU, memory, Input/Output (I/O), concurrency, and Machine Learning (ML) / Graphics Processing Unit (GPU) workloads.
 argument-hint: <file, module, or directory>
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate

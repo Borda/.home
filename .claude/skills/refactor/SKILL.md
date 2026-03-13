@@ -1,6 +1,6 @@
 ---
 name: refactor
-description: Test-first refactoring orchestrator. Ensures test coverage exists before changing code — adds characterization tests if missing, then applies logic improvements, API cleanup, and structural changes with verified input/output consistency.
+description: Test-first refactoring orchestrator. Ensures test coverage exists before changing code — adds characterization tests if missing, then applies logic improvements, Application Programming Interface (API) cleanup, and structural changes with verified input/output consistency.
 argument-hint: <file, directory, or module to refactor> ["goal description"]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
@@ -101,7 +101,7 @@ Now apply the refactoring changes. For each change:
 - **Logic simplification**: replace complex conditionals, flatten nesting, extract helper functions
 - **API cleanup**: rename for clarity, consolidate overloaded parameters, add type annotations
 - **Structural**: extract classes/modules, reduce coupling, apply design patterns
-- **Performance**: replace loops with vectorized ops, reduce allocations, batch I/O
+- **Performance**: replace loops with vectorized ops, reduce allocations, batch Input/Output (I/O)
 - **Dead code removal**: remove unused imports, unreachable branches, commented-out code; scan for private functions/methods (`_` prefix) with no call sites anywhere in the package — flag for removal unless annotated `# subclass hook` or `# keep: <reason>`; flag public methods/classes absent from `__init__.py` exports and unreferenced in any docstring or documentation — either expose them properly, convert to private, or remove
 
 ## Step 5: Delegate implementation follow-up (optional)

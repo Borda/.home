@@ -1,6 +1,6 @@
 ---
 name: review
-description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and API design.
+description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and Application Programming Interface (API) design.
 argument-hint: '[file, directory, or PR number to review]'
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 context: fork
@@ -14,7 +14,7 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
 
 <inputs>
 
-- **$ARGUMENTS**: optional file path, directory, or PR number to review.
+- **$ARGUMENTS**: optional file path, directory, or Pull Request (PR) number to review.
   - If a number is given (e.g. `42`): review the PR diff
   - If a path is given: review those files
   - If omitted: review recently changed files
@@ -40,7 +40,7 @@ gh pr view $ARGUMENTS --json reviews,labels,milestone
 git diff --name-only HEAD~1 HEAD
 ```
 
-If CI is red, report that without full review.
+If Continuous Integration (CI) is red, report that without full review.
 
 ## Step 2: Spawn sub-agents in parallel
 
@@ -58,11 +58,11 @@ Launch agents simultaneously with the Agent tool (security augmentation is folde
 
 - `debug=True` in a web server production entry point = **CRITICAL**
 
-- Missing input validation on external HTTP input = **HIGH** (not MEDIUM)
+- Missing input validation on external HyperText Transfer Protocol (HTTP) input = **HIGH** (not MEDIUM)
 
 - **Atomicity check for registry/store patterns**: if code updates an in-memory index and then performs a filesystem operation (copy, delete, rename), flag as HIGH if these are not atomic. A crash between the two steps leaves the system in an inconsistent state. Look for: `save_index()` + `shutil.copytree()`, `delete from dict` + `os.remove()`, or any two-phase commit done without a temp-then-rename pattern.
 
-**Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for ML-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are GT-level findings, not afterthoughts):
+**Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for Machine Learning (ML)-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are Ground Truth (GT)-level findings, not afterthoughts):
 
 - Concurrent access to shared state (when locks or shared variables are present)
 - Error paths: calling methods in wrong order (e.g., `log()` before `start()`)
@@ -72,7 +72,7 @@ Launch agents simultaneously with the Agent tool (security augmentation is folde
 
 **Consolidation rule**: Report each test gap as one finding with a concise list of test scenarios, not as separate findings per scenario. Format: "Missing tests for `parse_numeric()`: empty string, None, very large integers, float-string for int parser." This keeps the test coverage section actionable and prevents the section from exceeding 5 items.
 
-**Agent 3 — perf-optimizer**: Analyze code for performance issues. Look for algorithmic complexity issues, Python loops that should be NumPy/torch ops, repeated computation, unnecessary I/O. For ML code: check DataLoader config, mixed precision usage. Prioritize by impact.
+**Agent 3 — perf-optimizer**: Analyze code for performance issues. Look for algorithmic complexity issues, Python loops that should be NumPy/torch ops, repeated computation, unnecessary Input/Output (I/O). For ML code: check DataLoader config, mixed precision usage. Prioritize by impact.
 
 **Agent 4 — doc-scribe**: Check documentation completeness. Find public APIs without docstrings, missing NumPy/Google style sections, outdated README sections, and CHANGELOG gaps. Verify examples actually run.
 
@@ -80,9 +80,9 @@ Launch agents simultaneously with the Agent tool (security augmentation is folde
 
 **Agent 5 — linting-expert**: Static analysis audit. Check ruff and mypy would pass. Identify type annotation gaps on public APIs, suppressed violations without explanation, and any missing pre-commit hooks. Flag mismatched target Python version.
 
-**Security augmentation (conditional — fold into Agent 1 prompt, not a separate spawn)**: If the diff touches authentication, user input handling, dependency updates, or serialization — add to the sw-engineer agent prompt (Agent 1 above): check for SQL injection, XSS, insecure deserialization, hardcoded secrets, and missing input validation. Run `pip-audit` if dependency files changed. Skip if the PR is purely internal refactoring.
+**Security augmentation (conditional — fold into Agent 1 prompt, not a separate spawn)**: If the diff touches authentication, user input handling, dependency updates, or serialization — add to the sw-engineer agent prompt (Agent 1 above): check for Structured Query Language (SQL) injection, Cross-Site Scripting (XSS), insecure deserialization, hardcoded secrets, and missing input validation. Run `pip-audit` if dependency files changed. Skip if the PR is purely internal refactoring.
 
-**Agent 6 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or ABCs, changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
+**Agent 6 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or Abstract Base Classes (ABCs), changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
 ## Step 3: Post-agent checks (run in parallel)
 
@@ -103,7 +103,7 @@ done
 git diff HEAD~1 HEAD | grep -A2 "deprecated"
 ```
 
-### 3b: OSS checks
+### 3b: Open Source Software (OSS) checks
 
 ```bash
 # Check for new dependencies — license compatibility
@@ -249,7 +249,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards. F
 - Follow-up chains:
   - `[blocking]` bugs or regressions → `/fix` to reproduce with test and apply targeted fix
   - Structural or quality issues → `/refactor` for test-first improvements
-  - Security findings in auth/input/deps → run `pip-audit` for dependency CVEs; address OWASP issues inline via `/fix`
+  - Security findings in auth/input/deps → run `pip-audit` for dependency Common Vulnerabilities and Exposures (CVEs); address Open Web Application Security Project (OWASP) issues inline via `/fix`
   - Mechanical issues beyond what Step 6 auto-fixed → `/codex` to delegate additional tasks
   - Docstrings, type annotations, renames, and other mechanical findings → `/codex "<task description>"` per finding to delegate to Codex
 

@@ -1,6 +1,6 @@
 ---
 name: survey
-description: Survey SOTA literature for an AI/ML topic, method, or architecture. Finds relevant papers, builds a comparison table, and recommends the best implementation strategy for the current codebase. Delegates deep analysis to the ai-researcher agent.
+description: Survey State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, and recommends the best implementation strategy for the current codebase. Delegates deep analysis to the ai-researcher agent.
 argument-hint: <topic, method, or problem>
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
 context: fork
@@ -137,8 +137,8 @@ Compact Instructions: preserve paper titles, benchmarks, code links. Discard pro
 - This skill orchestrates — it gathers context and delegates research to `ai-researcher`. For direct hypothesis/experiment work, use the agent directly.
 - **Link integrity**: All URLs cited in the survey report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
 - Follow-up chains:
-  - Survey recommends a method for implementation → `/feature` for TDD-first implementation of the chosen approach
+  - Survey recommends a method for implementation → `/feature` for Test-Driven Development (TDD)-first implementation of the chosen approach
   - Survey integrates into existing code → `/refactor` first to prepare the module, then `/feature`
-  - Survey reveals security concerns with a dependency → run `pip-audit` or `uv run pip-audit` for a CVE scan
+  - Survey reveals security concerns with a dependency → run `pip-audit` or `uv run pip-audit` for a Common Vulnerabilities and Exposures (CVE) scan
 
 </notes>

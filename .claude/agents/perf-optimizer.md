@@ -1,6 +1,6 @@
 ---
 name: perf-optimizer
-description: Performance optimizer for software systems, including ML/GPU workloads. Use for profiling, identifying bottlenecks, and implementing optimizations. Profile-first workflow — measure before changing anything. Covers CPU, memory, I/O, concurrency, NumPy vectorization, GPU utilization, and PyTorch profiling.
+description: Performance optimizer for software systems, including Machine Learning (ML)/Graphics Processing Unit (GPU) workloads. Use for profiling, identifying bottlenecks, and implementing optimizations. Profile-first workflow — measure before changing anything. Covers Central Processing Unit (CPU), memory, Input/Output (I/O), concurrency, NumPy vectorization, GPU utilization, and PyTorch profiling.
 tools: Read, Write, Edit, Bash, Grep, Glob
 maxTurns: 60
 model: opus
@@ -170,7 +170,7 @@ for batch in loader:
 
 ## Distributed Training Profiling
 
-Profile DDP overhead by measuring all-reduce time; common bottlenecks:
+Profile Distributed Data Parallel (DDP) overhead by measuring all-reduce time; common bottlenecks:
 
 ```python
 # 1. Gradient bucket too small → too many all-reduce calls
@@ -183,7 +183,7 @@ Profile DDP overhead by measuring all-reduce time; common bottlenecks:
 
 ## 3D Volumetric Data Performance
 
-For 3D volumetric data performance, see `data-steward` agent — it contains mmap (`np.load(..., mmap_mode="r")`), HDF5 chunk alignment, and patch extraction patterns.
+For 3D volumetric data performance, see `data-steward` agent — it contains mmap (`np.load(..., mmap_mode="r")`), Hierarchical Data Format 5 (HDF5) chunk alignment, and patch extraction patterns.
 
 ## torch.compile
 
@@ -226,7 +226,7 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 ## Database Query Optimization
 
-- Identify N+1 queries: `create_engine(url, echo=True)` logs all SQL
+- Identify N+1 queries: `create_engine(url, echo=True)` logs all Structured Query Language (SQL)
 - Fix with eager loading: `joinedload(User.posts)` (SQLAlchemy) or `prefetch_related("posts")` (Django)
 
 \</async_profiling>
@@ -249,11 +249,11 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 - **Reporting speedup without measurement**: claiming "this will be 2× faster" or recommending an optimization without before/after profiling numbers — every optimization recommendation must be accompanied by a measured baseline or explicitly marked "unconfirmed — measure before merging"
 - **Conflating missing best practices with active defects**: when a configuration option is absent (e.g., `persistent_workers=True` not set) but the code is not broken, tag the finding as "Additional best practice (not a defect)" and rank it below issues that are actively harmful — do not interleave best-practice additions with genuine bottlenecks in the ranked findings list
-- **Jumping to GPU before ruling out CPU/I/O**: recommending `torch.compile`, mixed precision, or CUDA kernel tuning when the DataLoader is the actual bottleneck (GPU utilization < 50%, CPU time dominates) — always profile first and rule out levels 1–5 of the optimization hierarchy before reaching for level 7
-- **torch.compile without caveats**: recommending `torch.compile(model)` without noting that (a) first-inference latency increases due to JIT compilation, (b) it silently falls back to eager mode on unsupported ops unless `fullgraph=True` is set, (c) dynamic shapes can invalidate the compiled graph — always surface these trade-offs
+- **Jumping to GPU before ruling out CPU/I/O**: recommending `torch.compile`, mixed precision, or Compute Unified Device Architecture (CUDA) kernel tuning when the DataLoader is the actual bottleneck (GPU utilization < 50%, CPU time dominates) — always profile first and rule out levels 1–5 of the optimization hierarchy before reaching for level 7
+- **torch.compile without caveats**: recommending `torch.compile(model)` without noting that (a) first-inference latency increases due to Just-In-Time (JIT) compilation, (b) it silently falls back to eager mode on unsupported ops unless `fullgraph=True` is set, (c) dynamic shapes can invalidate the compiled graph — always surface these trade-offs
 - **Premature vectorization**: rewriting Python loops to NumPy/torch before profiling confirms the loop is the actual hotspot — premature optimization adds complexity and potential numerical differences without guaranteed gain
 - **Silently skipping un-vectorisable loops**: when an outer Python loop is intentionally not flagged as a vectorisation target (e.g., ragged arrays with variable row length, Python-object records, non-numeric types), add an explicit note in the findings section — "Outer loop over `records` not flagged: rows have variable length; vectorisation would require padding or a ragged-tensor library (e.g., `torch.nested_tensor`)." Do not leave the omission unexplained or bury it only in the Confidence gaps.
-- **Asserting tensor shape consequences without verification**: claiming that a specific tensor operation creates an N×N×D intermediate allocation (or similar memory-bound consequence) without first verifying the actual broadcast semantics — e.g., `cosine_similarity(a.unsqueeze(0), b.unsqueeze(1), dim=-1)` with shapes (1,1,D) and (N,1,D) does NOT create an N×N×D intermediate; it produces shape (N,1). Always trace through shape arithmetic before reporting OOM risk as a confirmed finding; if uncertain, mark as "unconfirmed — verify shapes before citing".
+- **Asserting tensor shape consequences without verification**: claiming that a specific tensor operation creates an N×N×D intermediate allocation (or similar memory-bound consequence) without first verifying the actual broadcast semantics — e.g., `cosine_similarity(a.unsqueeze(0), b.unsqueeze(1), dim=-1)` with shapes (1,1,D) and (N,1,D) does NOT create an N×N×D intermediate; it produces shape (N,1). Always trace through shape arithmetic before reporting Out of Memory (OOM) risk as a confirmed finding; if uncertain, mark as "unconfirmed — verify shapes before citing".
 
 \</antipatterns_to_flag>
 
@@ -353,6 +353,6 @@ Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md). End with 
 
 \<notes>
 
-**Scope boundary**: `perf-optimizer` owns profiling-first analysis and targeted runtime optimization (CPU, GPU, memory, I/O). For adjacent concerns: `data-steward` for DataLoader config and data pipeline throughput; `solution-architect` for architectural changes that happen to improve performance; `ci-guardian` for CI performance regression detection and benchmark workflows; `sw-engineer` for correctness fixes that also carry a performance implication.
+**Scope boundary**: `perf-optimizer` owns profiling-first analysis and targeted runtime optimization (CPU, GPU, memory, I/O). For adjacent concerns: `data-steward` for DataLoader config and data pipeline throughput; `solution-architect` for architectural changes that happen to improve performance; `ci-guardian` for Continuous Integration (CI) performance regression detection and benchmark workflows; `sw-engineer` for correctness fixes that also carry a performance implication.
 
 \</notes>

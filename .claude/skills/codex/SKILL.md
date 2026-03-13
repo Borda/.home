@@ -1,6 +1,6 @@
 ---
 name: codex
-description: Delegate narrow, mechanical coding tasks to OpenAI Codex CLI — Claude orchestrates and judges, Codex executes. Pre-flight checks ensure graceful degradation on machines without Codex.
+description: Delegate narrow, mechanical coding tasks to OpenAI Codex Command Line Interface (CLI) — Claude orchestrates and judges, Codex executes. Pre-flight checks ensure graceful degradation on machines without Codex.
 argument-hint: '"<task description>" ["target file or directory"]'
 disable-model-invocation: true
 allowed-tools: Read, Bash, Grep, Glob, TaskCreate, TaskUpdate
@@ -104,7 +104,7 @@ Select the Codex agent based on task type. The "internal chain" column shows whi
 | Implementation, refactoring, renaming, type annotations | `sw-engineer`    | `sw-engineer` → `qa-specialist` + `doc-scribe` |
 | Lint / type-check fixes                                 | `linting-expert` | single agent                                   |
 | Test writing or improvements                            | `qa-specialist`  | single agent                                   |
-| CI config, GitHub Actions                               | `ci-guardian`    | single agent                                   |
+| Continuous Integration (CI) config, GitHub Actions      | `ci-guardian`    | single agent                                   |
 | Data pipeline changes                                   | `data-steward`   | single agent                                   |
 | Release prep, deprecation notices                       | `oss-maintainer` | single agent                                   |
 

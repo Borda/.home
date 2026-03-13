@@ -1,6 +1,6 @@
 ---
 name: resolve
-description: 'Given a PR number, resolves in two phases: (1) automatically detects and semantically resolves merge conflicts — distills source-branch intent and target-branch drift before touching any markers; (2) processes review comments via Codex. Also accepts bare comment text for single-comment dispatch.'
+description: 'Given a Pull Request (PR) number, resolves in two phases: (1) automatically detects and semantically resolves merge conflicts — distills source-branch intent and target-branch drift before touching any markers; (2) processes review comments via Codex. Also accepts bare comment text for single-comment dispatch.'
 argument-hint: <PR number or URL> | <review comment text>
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate

@@ -1,6 +1,6 @@
 ---
 name: release
-description: 'Prepare release communication and check release readiness. Modes — notes (writes PUBLIC-NOTES.md), changelog (prepends CHANGELOG.md), summary (internal brief), migration (breaking-changes guide), prepare (full pipeline: audit → notes + changelog + summary + migration if breaking changes), audit (pre-release readiness check: blockers, docs alignment, version consistency, CVEs). Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prepare v2.0", "write release notes", "am I ready to release", "check release readiness", or wants to announce a version to users.'
+description: 'Prepare release communication and check release readiness. Modes — notes (writes PUBLIC-NOTES.md), changelog (prepends CHANGELOG.md), summary (internal brief), migration (breaking-changes guide), prepare (full pipeline: audit → notes + changelog + summary + migration if breaking changes), audit (pre-release readiness check: blockers, docs alignment, version consistency, Common Vulnerabilities and Exposures (CVEs)). Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prepare v2.0", "write release notes", "am I ready to release", "check release readiness", or wants to announce a version to users.'
 argument-hint: <mode> [range] | migration <from> <to> | prepare <version> | audit [version]
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
@@ -71,7 +71,7 @@ gh pr list --state merged --base main --limit 100 \
   --json number,title,body,labels,mergedAt 2>/dev/null
 ```
 
-Cross-reference commit bodies against PR descriptions — the canonical source of
+Cross-reference commit bodies against Pull Request (PR) descriptions — the canonical source of
 truth for *why* a change was made. If a commit footer contains `BREAKING CHANGE:`,
 it is a breaking change regardless of how it was labelled in the PR.
 
@@ -79,16 +79,16 @@ it is a breaking change regardless of how it was labelled in the PR.
 
 Section order (fixed — never reorder): 🚀 Added → ⚠️ Breaking Changes → 🌱 Changed → 🗑️ Deprecated → ❌ Removed → 🔧 Fixed
 
-| Category             | Output section         | What goes here                                       |
-| -------------------- | ---------------------- | ---------------------------------------------------- |
-| **New Features**     | 🚀 Added               | User-visible additions                               |
-| **Breaking Changes** | ⚠️ Breaking Changes    | Requires callers to change code, config, or behavior |
-| **Improvements**     | 🚀 Added or 🌱 Changed | Enhancements to existing behavior                    |
-| **Performance**      | 🚀 Added or 🔧 Fixed   | Speed or memory improvements                         |
-| **Deprecations**     | 🗑️ Deprecated          | Still works, scheduled for removal                   |
-| **Removals**         | ❌ Removed             | Previously deprecated API now gone                   |
-| **Bug Fixes**        | 🔧 Fixed               | Correctness fixes                                    |
-| **Internal**         | *(omit)*               | Refactors, CI, deps — omit unless user-impacting     |
+| Category             | Output section         | What goes here                                                            |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------- |
+| **New Features**     | 🚀 Added               | User-visible additions                                                    |
+| **Breaking Changes** | ⚠️ Breaking Changes    | Requires callers to change code, config, or behavior                      |
+| **Improvements**     | 🚀 Added or 🌱 Changed | Enhancements to existing behavior                                         |
+| **Performance**      | 🚀 Added or 🔧 Fixed   | Speed or memory improvements                                              |
+| **Deprecations**     | 🗑️ Deprecated          | Still works, scheduled for removal                                        |
+| **Removals**         | ❌ Removed             | Previously deprecated Application Programming Interface (API) now gone    |
+| **Bug Fixes**        | 🔧 Fixed               | Correctness fixes                                                         |
+| **Internal**         | *(omit)*               | Refactors, Continuous Integration (CI), deps — omit unless user-impacting |
 
 Filter out: merge commits, minor dep bumps, CI config, comment typos.
 Always include: any breaking change, any behavior change, any new API surface.
@@ -326,6 +326,13 @@ LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-pare
 RANGE="$LAST_TAG..HEAD"
 ```
 
+### Pre-flight: gh authentication
+
+```bash
+# Fail fast with a clear message if gh is not authenticated
+gh auth status 2>&1 || { echo "gh not authenticated — run 'gh auth login' first"; exit 1; }
+```
+
 ### Check 1: Repository state
 
 ```bash
@@ -340,7 +347,7 @@ git log $RANGE --oneline --no-merges
 
 ```bash
 gh run list --branch "$(git rev-parse --abbrev-ref HEAD)" --limit 5 \
-  --json status,conclusion,name 2>/dev/null
+  --json status,conclusion,name 2>/dev/null || true
 ```
 
 ### Check 3: Open issues and PRs
@@ -348,11 +355,11 @@ gh run list --branch "$(git rev-parse --abbrev-ref HEAD)" --limit 5 \
 ```bash
 # Issues with blocker or bug labels (high-severity candidates)
 gh issue list --state open --limit 30 \
-  --json number,title,labels 2>/dev/null
+  --json number,title,labels 2>/dev/null || echo "[]"
 
 # Open PRs targeting main — anything that should land before the release?
 gh pr list --state open --base main --limit 20 \
-  --json number,title,draft,reviewDecision 2>/dev/null
+  --json number,title,draft,reviewDecision 2>/dev/null || echo "[]"
 ```
 
 ### Check 4: Documentation alignment

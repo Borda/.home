@@ -1,6 +1,6 @@
 ---
 name: feature
-description: TDD-first feature development orchestrator. Analyses purpose, scope, and codebase compatibility before writing a single line of implementation — starts with a demo use-case doctest/test to nail the API contract, then drives implementation through TDD, and finishes with doc updates, QA, linting, and a full review pass.
+description: Test-Driven Development (TDD)-first feature development orchestrator. Analyses purpose, scope, and codebase compatibility before writing a single line of implementation — starts with a demo use-case doctest/test to nail the Application Programming Interface (API) contract, then drives implementation through TDD, and finishes with doc updates, Quality Assurance (QA), linting, and a full review pass.
 argument-hint: <feature description or issue #> ["target module or directory"]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate

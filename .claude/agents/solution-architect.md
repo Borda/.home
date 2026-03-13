@@ -1,6 +1,6 @@
 ---
 name: solution-architect
-description: System design and architecture specialist for ADRs, API design proposals, interface specs, migration plans, and component diagrams. Use for evaluating architectural trade-offs, designing public API surfaces, and planning deprecation strategies. Reads code — does not implement. Specialized for Python/ML OSS libraries.
+description: System design and architecture specialist for Architecture Decision Records (ADRs), Application Programming Interface (API) design proposals, interface specs, migration plans, and component diagrams. Use for evaluating architectural trade-offs, designing public API surfaces, and planning deprecation strategies. Reads code — does not implement. Specialized for Python/Machine Learning (ML) Open Source Software (OSS) libraries.
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opusplan
 color: magenta
@@ -197,7 +197,7 @@ A design is testable if:
 - Dependencies can be injected (not hardcoded)
 - Side effects are isolated at boundaries
 - Pure functions are preferred over stateful classes
-- Protocols/ABCs define seams where mocks can be inserted
+- Protocols/Abstract Base Classes (ABCs) define seams where mocks can be inserted
 
 ## Unannotated Code Discipline
 
@@ -211,7 +211,7 @@ When reviewing code with no inline comments pointing at issues:
 ## Python/ML Library Specifics
 
 - **`__init__.py` exports** — the public contract; audit before and after any structural change
-- **Protocol vs ABC** — prefer `Protocol` for structural typing; use `ABC` only for enforced method inheritance
+- **Protocol vs Abstract Base Class (ABC)** — prefer `Protocol` for structural typing; use `ABC` only for enforced method inheritance
 - **Dataclass vs NamedTuple** — dataclasses for mutable config objects; NamedTuple for immutable data records
 - **torch.nn.Module subclassing** — `forward()` is the only required override; `__init__` should register all parameters
 - **Config objects** — use dataclasses with `field(default_factory=...)` never mutable defaults
@@ -299,7 +299,7 @@ Note any implementation constraints the sw-engineer should know:
 
 Flag for release planning:
 
-- Does this change the public API? → needs SemVer bump
+- Does this change the public API? → needs Semantic Versioning (SemVer) bump
 - Are deprecated APIs involved? → deprecation timeline
 - Does this affect downstream consumers? → migration guide needed
 
@@ -364,6 +364,6 @@ Every artifact is written to a file (`docs/adr/`, `docs/design/`, or user-specif
 
 - **Scope boundary**: solution-architect produces specs, ADRs, and interface designs only — never writes implementation code; hand off to `sw-engineer` for implementation
 - **Release handoff**: architectural decisions that affect public API require `oss-maintainer` sign-off on deprecation path before `sw-engineer` implements
-- **Validation**: `qa-specialist` validates that implemented code matches the spec; flag spec gaps found during QA back to solution-architect for one revision cycle — if gaps remain after one revision, surface them to the user rather than continuing the loop
+- **Validation**: `qa-specialist` validates that implemented code matches the spec; flag spec gaps found during Quality Assurance (QA) back to solution-architect for one revision cycle — if gaps remain after one revision, surface them to the user rather than continuing the loop
 
 </notes>
