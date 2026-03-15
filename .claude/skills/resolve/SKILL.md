@@ -164,8 +164,9 @@ b. **Determine resolution** using the synthesized context from 5a and 5b:
 - Source intent takes priority for files the PR branch owns (introduced or substantially rewrote)
 - Target changes are preserved when independent of the PR's work (e.g., unrelated refactors, config updates)
 - When both sides changed the same logic, blend: keep the PR's semantic change while incorporating the target's structural update
-  c. **Edit** the file to remove all conflict markers and produce the correct resolved content
-  d. **Stage** the file:
+
+c. **Edit** the file to remove all conflict markers and produce the correct resolved content
+d. **Stage** the file:
 
 ```bash
 git add <file>

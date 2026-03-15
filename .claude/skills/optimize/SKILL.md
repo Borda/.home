@@ -85,19 +85,20 @@ time python "$ARGUMENTS"
 - [next bottleneck to address]
 ```
 
-## Step 5: Delegate documentation follow-up (optional)
+## Step 5: Delegate follow-up (optional)
 
-After confirming improvements, inspect the applied changes (`git diff HEAD --stat`) and identify documentation tasks where Codex can add meaningful content.
+After confirming improvements, inspect the applied changes (`git diff HEAD --stat`) and identify tasks Codex can complete from the categories below.
 
 **Delegate to Codex when:**
 
 - Optimized code uses non-obvious techniques (pre-allocation, vectorized ops, batched I/O) that need inline explanation — read the code first, then describe the technique and why it is faster
 - A function signature changed due to optimization (e.g., added `batch_size` or `device` parameter) and the docstring no longer matches the actual contract
+- Tests for the optimized path where coverage is thin — describe the input ranges and expected output behaviour precisely
+- ruff or mypy errors introduced by the optimization — read each error, delegate `linting-expert` with a precise description of what to fix
 
 **Do not delegate:**
 
 - Generic "add comments" requests — only delegate when you can describe the specific technique and its rationale
-- Any task where you cannot write a precise description without guessing
 
 Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 

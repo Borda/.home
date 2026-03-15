@@ -10,7 +10,7 @@ allowed-tools: Read, Bash, Grep, Glob, TaskCreate, TaskUpdate
 
 Delegate mechanical, well-scoped coding tasks to Codex CLI while Claude retains orchestration, judgment, and validation. Use this skill when a task is repetitive or formulaic enough that Codex can execute it faster and cheaper — but the task still needs Claude to scope it precisely, verify the output, and decide whether to keep or revert the changes.
 
-Good candidates for delegation: adding docstrings to undocumented functions, renaming symbols consistently, extracting constants, adding type annotations to a well-typed module, reformatting code to match a style, or applying a mechanical refactor across many files.
+Good candidates for delegation: adding docstrings to undocumented functions, renaming symbols consistently, extracting constants, adding type annotations to a well-typed module, reformatting code to match a style, applying a mechanical refactor across many files, fixing ruff/mypy errors that require targeted code changes, or writing tests for well-specified functions.
 
 Poor candidates: architectural decisions, novel logic, anything requiring deep codebase understanding, or tasks where the correct answer is ambiguous.
 
@@ -29,7 +29,7 @@ Poor candidates: architectural decisions, novel logic, anything requiring deep c
 
 **Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase. Mark in_progress/completed throughout. On loop retry or scope change, create a new task.
 
-## Step 0: Logging setup
+## Pre-flight: Logging setup
 
 Before any other step, initialise the log path:
 

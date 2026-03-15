@@ -85,8 +85,8 @@ mypy src/ --strict
 
 > **Alternative type checkers**:
 >
-> - [basedpyright](https://github.com/DetachHead/basedpyright) <!-- verify at use time -->: fork of Pyright with stricter rules and better VS Code integration. `pip install basedpyright && basedpyright src/`.
-> - [pyrefly](https://github.com/facebook/pyrefly) <!-- verify at use time -->: Meta's type checker (Rust-based, fast). Evaluate for projects requiring fast incremental type checks.
+> - [basedpyright](https://github.com/DetachHead/basedpyright) # verify at use time: fork of Pyright with stricter rules and better VS Code integration. `pip install basedpyright && basedpyright src/`.
+> - [pyrefly](https://github.com/facebook/pyrefly) # verify at use time: Meta's type checker (Rust-based, fast). Evaluate for projects requiring fast incremental type checks.
 
 ## Rule Selection Rationale
 
@@ -138,7 +138,7 @@ pre-commit run --all-files      # run on all files
 pre-commit autoupdate           # bump all hook revs to latest — run this regularly
 ```
 
-> **Tip**: Enable [pre-commit.ci](https://pre-commit.ci) <!-- verify at use time --> to auto-run and auto-fix hooks on every Pull Request (PR) without any local setup burden.
+> **Tip**: Enable [pre-commit.ci](https://pre-commit.ci) # verify at use time to auto-run and auto-fix hooks on every Pull Request (PR) without any local setup burden.
 
 ## PyTorch Application Programming Interface (API) Migration
 

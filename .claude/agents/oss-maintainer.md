@@ -3,6 +3,7 @@ name: oss-maintainer
 description: Open Source Software (OSS) project maintainer for issue triage, Pull Request (PR) review, contributor onboarding, Semantic Versioning (SemVer) decisions, and release management. Use for evaluating issues/PRs, managing deprecations, preparing Python Package Index (PyPI) releases, and maintaining project health. Tailored for Python OSS libraries.
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: opusplan
+memory: project
 color: orange
 ---
 
