@@ -189,22 +189,18 @@ If the review (or any earlier step) surfaces issues:
 2. For each finding, apply the minimal targeted fix
 3. Re-run the affected step (e.g., if a test was wrong: back to Step 3; if docs are incomplete: back to Step 4)
 4. Re-run the full quality stack from Step 5
-5. Repeat until `/review` returns no `critical` or `high` findings
+5. Repeat until `/review` returns no `critical` or `high` findings — after 3 cycles without a clean review, pause and present the remaining findings to the user; the feature may need architectural rethinking before it can pass
 
 ## Step 7: Delegate implementation follow-up (optional)
 
-Inspect what was built (`git diff HEAD --stat`) and identify real implementation tasks that Codex can complete — not style violations (those are handled by pre-commit hooks), but work that requires understanding the code and writing meaningful content.
+Inspect what was built (`git diff HEAD --stat`) and identify tasks Codex can complete from the categories below.
 
 **Delegate to Codex when you can write an accurate, specific brief:**
 
 - New public functions/classes need full 6-section docstrings — read the implementation first, then describe what each one does, its arguments, return value, and any invariants
 - New functionality needs tests beyond what qa-specialist already wrote — describe the exact behaviour to be tested
 - New module or class needs a usage example that demonstrates the intended API contract
-
-**Do not delegate:**
-
-- Style or lint violations — run pre-commit hooks instead
-- Any task where you cannot write a precise description without guessing
+- ruff or mypy errors in the new code — read each error, delegate `linting-expert` with a precise description of what to fix and why
 
 Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 

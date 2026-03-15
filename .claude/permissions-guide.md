@@ -158,18 +158,19 @@ ______________________________________________________________________
 
 ## WebFetch — allowed domains
 
-| Permission                                   | Description                              | Typical use case                                               |
-| -------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------- |
-| `WebFetch(domain:github.com)`                | GitHub web pages and repo content        | Fetch README, release pages, action marketplace entries        |
-| `WebFetch(domain:docs.github.com)`           | GitHub documentation                     | GitHub Actions syntax, REST API reference                      |
-| `WebFetch(domain:raw.githubusercontent.com)` | Raw file content from GitHub repos       | Read source files, configs, or changelogs directly             |
-| `WebFetch(domain:pypi.org)`                  | PyPI package metadata                    | Release history, classifiers, dependency info                  |
-| `WebFetch(domain:pre-commit.ci)`             | pre-commit.ci run status and badge URLs  | Verify CI badges before adding to README                       |
-| `WebFetch(domain:claude.ai)`                 | Claude product pages                     |                                                                |
-| `WebFetch(domain:claude.com)`                | Claude Code landing and docs             |                                                                |
-| `WebFetch(domain:anthropic.com)`             | Anthropic blog, model cards, policy docs | Research model capabilities, fetch release announcements       |
-| `WebFetch(domain:code.claude.com)`           | Claude Code documentation                | `/audit` fetches hook, agent, and skill schemas for validation |
-| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/survey` and `ai-researcher` fetch papers                     |
-| `WebFetch(domain:developers.openai.com)`     | OpenAI developer documentation           | Codex CLI docs, API reference                                  |
-| `WebFetch(domain:platform.openai.com)`       | OpenAI platform and API reference        | Model capabilities, pricing, endpoint docs                     |
-| `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                       |
+| Permission                                   | Description                              | Typical use case                                                                             |
+| -------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
+| `WebFetch(domain:github.com)`                | GitHub web pages and repo content        | Fetch README, release pages, action marketplace entries                                      |
+| `WebFetch(domain:docs.github.com)`           | GitHub documentation                     | GitHub Actions syntax, REST API reference                                                    |
+| `WebFetch(domain:raw.githubusercontent.com)` | Raw file content from GitHub repos       | Read source files, configs, or changelogs directly                                           |
+| `WebFetch(domain:pypi.org)`                  | PyPI package metadata                    | Release history, classifiers, dependency info                                                |
+| `WebFetch(domain:pre-commit.ci)`             | pre-commit.ci run status and badge URLs  | Verify CI badges before adding to README                                                     |
+| `WebFetch(domain:claude.ai)`                 | Claude product pages                     |                                                                                              |
+| `WebFetch(domain:claude.com)`                | Claude Code landing and docs             |                                                                                              |
+| `WebFetch(domain:anthropic.com)`             | Anthropic blog, model cards, policy docs | Research model capabilities, fetch release announcements                                     |
+| `WebFetch(domain:docs.anthropic.com)`        | Claude Code documentation                | Fetch Claude Code docs; redirects to code.claude.com — both domains needed for full coverage |
+| `WebFetch(domain:code.claude.com)`           | Claude Code documentation                | `/audit` fetches hook, agent, and skill schemas for validation                               |
+| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/survey` and `ai-researcher` fetch papers                                                   |
+| `WebFetch(domain:developers.openai.com)`     | OpenAI developer documentation           | Codex CLI docs, API reference                                                                |
+| `WebFetch(domain:platform.openai.com)`       | OpenAI platform and API reference        | Model capabilities, pricing, endpoint docs                                                   |
+| `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                                                     |

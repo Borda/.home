@@ -106,18 +106,15 @@ Now apply the refactoring changes. For each change:
 
 ## Step 5: Delegate implementation follow-up (optional)
 
-Inspect the refactoring changes (`git diff HEAD --stat`) and identify real implementation tasks that Codex can complete — not style violations (those are handled by pre-commit hooks), but work that requires understanding the restructured code.
+Inspect the refactoring changes (`git diff HEAD --stat`) and identify tasks Codex can complete from the categories below.
 
 **Delegate to Codex when you can write an accurate, specific brief:**
 
 - Renamed or moved functions whose docstrings now describe the wrong context — read the new implementation, then write a precise update brief
 - Extracted helpers that have no documentation — describe what the helper does and what invariants it relies on
 - Restructured public APIs where the old type annotations no longer reflect the actual contract
-
-**Do not delegate:**
-
-- Style or lint violations — run pre-commit hooks instead
-- Any task where you cannot write a precise description without guessing
+- Tests for refactored interfaces where the old tests no longer cover the new contract — describe the new behaviour precisely
+- ruff or mypy errors introduced by the refactoring — read each error, delegate `linting-expert` with a precise description of what to fix
 
 Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 

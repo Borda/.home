@@ -2,6 +2,7 @@
   "ordering": "auto",
   "model": "opusplan",
   "effortLevel": "high",
+  "autoUpdatesChannel": "stable",
   "fastMode": true,
   "autoCompactThreshold": 0.7,
   "teammateMode": "in-process",
@@ -32,12 +33,14 @@
     ],
     "SubagentStart": [
       {
-        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js", "statusMessage": "Tracking agent" }]
       }
     ],
     "SubagentStop": [
       {
-        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+        "hooks": [
+          { "type": "command", "command": "node .claude/hooks/task-log.js", "statusMessage": "Completing agent" }
+        ]
       }
     ],
     "TeammateIdle": [
@@ -51,11 +54,6 @@
       }
     ],
     "PreCompact": [
-      {
-        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
-      }
-    ],
-    "PostCompact": [
       {
         "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
       }
@@ -151,6 +149,9 @@
       "Bash(pip show:*)",
       "Bash(pip list:*)",
       "Bash(pip index:*)",
+      "Bash(pip3 show:*)",
+      "Bash(pip3 list:*)",
+      "Bash(pip3 index:*)",
       "Bash(pip-audit:*)",
       "Bash(uv run pytest:*)",
       "Bash(uv run python -m pytest:*)",
@@ -174,6 +175,7 @@
       "WebFetch(domain:claude.ai)",
       "WebFetch(domain:claude.com)",
       "WebFetch(domain:anthropic.com)",
+      "WebFetch(domain:docs.anthropic.com)",
       "WebFetch(domain:code.claude.com)",
       "WebFetch(domain:arxiv.org)",
       "WebFetch(domain:developers.openai.com)",

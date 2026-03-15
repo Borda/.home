@@ -537,6 +537,8 @@ If any critical or high issues are known from a recent `/audit` run, or the gate
 
 ### Phase 2: Fetch and classify proposals
 
+**Always spawn a fresh web-explorer** — do not use context from previous audit runs, cached docs, or memory. Every upgrade run must fetch live docs.
+
 Run the **Claude Code docs freshness** check from Step 4 of the main audit workflow: spawn web-explorer, validate current config against latest docs, apply genuine-value filter, produce the Upgrade Proposals table. Cap at 5 total (max 3 capability, any number of config).
 
 If no proposals pass the filter: print "✓ No upgrade proposals — current setup is current." and stop.

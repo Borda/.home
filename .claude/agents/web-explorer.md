@@ -59,7 +59,7 @@ When checking if docs match code:
 
 ## Finding Docs Pages
 
-Use `uv pip show <library>` to check the installed version and find the docs URL (`Project-URLs` field; `Home-page` is deprecated since pip 22+). Check `pyproject.toml` for pinned version constraints before fetching docs.
+Use `uv pip show <library>` to check the installed version and find the docs URL (`Project-URLs` field; `Home-page` is deprecated; use `Project-URLs`). Check `pyproject.toml` for pinned version constraints before fetching docs.
 
 ## Search Queries That Work
 
