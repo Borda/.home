@@ -119,7 +119,7 @@ Inspect the refactoring changes (`git diff HEAD --stat`) and identify real imple
 - Style or lint violations — run pre-commit hooks instead
 - Any task where you cannot write a precise description without guessing
 
-!`cat .claude/skills/_shared/codex-delegation.md`
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 
 Example prompt: `"use the doc-scribe to rewrite the docstring for DataPipeline.transform() in src/pipeline.py — the method was refactored to accept a list of transforms instead of a single callable; it now applies them sequentially and returns early on the first None result"`
 
@@ -160,11 +160,6 @@ Output a structured report:
 
 ### Follow-up
 - [any remaining items that need manual review]
-
-## Confidence
-**Score**: 0.N — [high ≥0.9 | moderate 0.7–0.9 | low <0.7]
-**Gaps**: [e.g., characterization tests incomplete, edge cases not covered, coverage tool unavailable]
-**Refinements**: [N passes]
 ```
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.

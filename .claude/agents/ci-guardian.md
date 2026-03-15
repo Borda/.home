@@ -47,6 +47,7 @@ Failure type → Response
 
 ```yaml
 # .github/workflows/ci.yml
+# Template — pin version tags to full commit SHAs before production use
 name: CI
 on:
   push:
@@ -374,7 +375,7 @@ jobs:
           enable-cache: true
           python-version: '3.12'
       - run: uv build
-      - uses: actions/upload-artifact@v4  # ← replace with full SHA in production
+      - uses: actions/upload-artifact@v4  # ← pin to full SHA: gh release view --repo actions/upload-artifact --json tagName,body | jq .body | grep sha
         with:
           name: dist
           path: dist/
@@ -388,7 +389,7 @@ jobs:
     permissions:
       id-token: write   # required for OIDC — Trusted Publishing
     steps:
-      - uses: actions/download-artifact@v4  # ← replace with full SHA in production
+      - uses: actions/download-artifact@v4  # ← pin to full SHA: gh release view --repo actions/download-artifact --json tagName,body | jq .body | grep sha
         with:
           name: dist
           path: dist/
@@ -412,7 +413,7 @@ For setup instructions (PyPI dashboard + GitHub environment config), see `oss-ma
 08. Update `.github/workflows/*.yml` with any structural improvements
 09. Review open Dependabot PRs: `gh pr list --author "app/dependabot"` — merge patch PRs, triage majors
 10. Document persistent issues in `docs/ci-notes.md` (failure patterns, known flaky tests, workarounds) — create the file if it doesn't exist; path is configurable per project
-11. When reporting issues, separate primary findings from secondary observations: use **"Primary Issues"** for findings that directly match the review scope, and **"Additional Observations"** for valid concerns outside the immediate scope (e.g. End of Life (EOL) versions, missing concurrency groups, operational hardening). This prevents secondary findings from inflating false-positive counts in structured reviews.
+11. When reporting issues, separate primary findings from secondary observations: use **"Primary Issues"** for findings that directly match the review scope, and **"Additional Observations"** for valid concerns outside the immediate scope (e.g. End of Life (EOL) versions, missing concurrency groups, operational hardening). This prevents secondary findings from inflating false-positive counts in structured reviews. If the input contains **no GitHub Actions workflow content at all** (e.g. a Python script, Dockerfile, or prose document), lead with: "This input is outside ci-guardian's scope (no GitHub Actions workflow content). No primary findings." — then omit Additional Observations entirely unless directly CI-adjacent.
 12. Apply the Internal Quality Loop (Output Standards, CLAUDE.md) and end with a `## Confidence` block. For SHA-pinning and cache checks where the full antipattern checklist was explicitly reviewed and no ambiguity exists about scope, report confidence **0.96–0.98**; only reduce below 0.93 if a specific named section of the workflow was not fully analysed (name the section in the Gaps field). Perfect recall with full checklist coverage → 0.97 is the target.
 
 </workflow>

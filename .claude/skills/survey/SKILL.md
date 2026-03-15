@@ -32,9 +32,7 @@ Before searching, read the current project to extract constraints:
 
 ## Step 2: Research & codebase check (run in parallel)
 
-Issue both 2a and 2b in the same response — they are independent and must run simultaneously, not sequentially.
-
-### 2a: Spawn ai-researcher agent (parallel subagent via Agent tool)
+### 2a: Spawn ai-researcher agent (issue with 2b simultaneously in one response)
 
 Task the ai-researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
 
@@ -95,6 +93,7 @@ Use the Grep tool to search the codebase for any existing related code:
 - [Paper title] ([year]) — [link]
 
 ### Agent Confidence
+<!-- One row per spawned ai-researcher; team mode spawns 2–3 -->
 | Agent | Score | Gaps |
 |---|---|---|
 | ai-researcher | [score] | [gaps] |

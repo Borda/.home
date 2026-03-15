@@ -152,7 +152,7 @@ Evaluate the Codex exit code and output:
 - **Success, no changes needed**: Codex reports task was already done → report and stop
 - **Partial completion**: Codex stopped partway (token limit, ambiguity) → resume the session with a clarifying follow-up (max 2 additional attempts):
   ```bash
-  codex exec resume --last "<specific clarification or continuation instruction>" --sandbox workspace-write
+  codex exec resume --last "<specific clarification or continuation instruction>" --sandbox workspace-write  # verify 'resume --last' flag: codex exec --help
   ```
 - **Error / timeout**: report the error, do not retry the same prompt; suggest running Codex interactively (`codex "<task>"`) for diagnostics
 - **Rate limit**: report the limit hit, suggest waiting and retrying
@@ -257,6 +257,7 @@ Output a structured summary:
 ## Confidence
 **Score**: [0.N]
 **Gaps**: [e.g., Codex output not verified against tests, one or more checks skipped, partial completion]
+**Refinements**: N passes. [Pass 1: <what improved>. Pass 2: <what improved>.] — omit if 0 passes
 ```
 
 To review delegation history:

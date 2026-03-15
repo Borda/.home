@@ -145,7 +145,7 @@ Branch into one of six modes:
 
 4. Write the agent file with real domain content derived from the description:
 
-Read the agent scaffold template from ${CLAUDE_SKILL_DIR}/templates/agent-scaffold.md and follow the content rules and tool selection guidelines it defines.
+Read the agent scaffold template from .claude/skills/manage/templates/agent-scaffold.md and follow the content rules and tool selection guidelines it defines.
 
 ### Mode: Create Skill
 
@@ -167,7 +167,7 @@ Read the agent scaffold template from ${CLAUDE_SKILL_DIR}/templates/agent-scaffo
 mkdir -p .claude/skills/<name>
 ```
 
-Read the skill scaffold template from ${CLAUDE_SKILL_DIR}/templates/skill-scaffold.md and follow the content rules it defines.
+Read the skill scaffold template from .claude/skills/manage/templates/skill-scaffold.md and follow the content rules it defines.
 
 ### Mode: Update Agent
 
@@ -369,7 +369,7 @@ For **create** and **update** operations, also verify tool efficiency: cross-che
 
 ## Step 9: Audit
 
-Run `/audit` to validate the created/modified file(s) and catch any issues introduced by this operation. **Skip this step if the current `manage` operation is itself being executed as part of an `audit fix` run** — the outer audit will cover it.
+Run `/audit` to validate the created/modified file(s) and catch any issues introduced by this operation. **Skip this step if invoked with `--skip-audit` or if the current `manage` operation is itself being executed as part of an `audit fix` run** — the outer audit will cover it.
 
 ```
 /audit

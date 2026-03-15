@@ -19,8 +19,8 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 
 ### Structure
 
-- Has `<role>` block (first section after frontmatter)
-- Has `<workflow>` block (required in all agents)
+- Has `<role>` block (first section after frontmatter) — **skills** (files under `skills/`) use `<objective>` instead; do not flag missing `<role>` in skill files
+- Has `<workflow>` block (required in all agents) — skills using `## Mode: X` dispatch (e.g., `analyse`, `release`) are exempt from step-numbering requirements
 - All Extensible Markup Language (XML) opening tags have matching closing tags — verify by counting: for every `<tag>` there must be a `</tag>`; do not rely on structural appearance alone
 - No orphaned `</tag>` without a matching opener
 - **Explicit check**: after reading a file, grep for `<workflow>` and `</workflow>` counts — if counts differ, report a missing or extra tag immediately (severity: critical)

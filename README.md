@@ -29,42 +29,42 @@ Agents and skills for [Claude Code](https://claude.ai/code) (Anthropic's AI codi
 
 Specialist roles with deep domain knowledge. You can request a specific agent by name in your prompt (e.g., *"use the qa-specialist to write tests for this module"*). Claude Code also selects agents automatically when spawning subagents via the Task tool.
 
-| Agent                  | Purpose                          | Key Capabilities                                                                |
-| ---------------------- | -------------------------------- | ------------------------------------------------------------------------------- |
-| **sw-engineer**        | Architecture and implementation  | SOLID principles, type safety, clean architecture, doctest-driven dev           |
-| **solution-architect** | System design and API planning   | ADRs, interface specs, migration plans, coupling analysis, API surface audit    |
-| **oss-maintainer**     | Project lifecycle management     | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                |
-| **ai-researcher**      | ML research and implementation   | Paper analysis, experiment design, LLM evaluation, inference optimization       |
-| **qa-specialist**      | Testing and validation           | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns          |
-| **linting-expert**     | Code quality and static analysis | ruff, mypy, pre-commit, rule selection strategy, CI quality gates               |
-| **perf-optimizer**     | Performance engineering          | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision      |
-| **ci-guardian**        | CI/CD reliability                | GitHub Actions, reusable workflows, trusted publishing, flaky test detection    |
-| **data-steward**       | ML data pipeline integrity       | Split validation, leakage detection, data contracts, class imbalance            |
-| **doc-scribe**         | Documentation                    | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, changelog      |
-| **web-explorer**       | Web and docs research            | API version comparison, migration guides, PyPI tracking, ecosystem compat       |
-| **self-mentor**        | Config quality reviewer (Opus)   | Agent/skill auditing, duplication detection, cross-ref validation, line budgets |
+| Agent                  | Purpose                          | Key Capabilities                                                                                                 |
+| ---------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
+| **sw-engineer**        | Architecture and implementation  | SOLID principles, type safety, clean architecture, doctest-driven dev                                            |
+| **solution-architect** | System design and API planning   | ADRs, interface specs, migration plans, coupling analysis, API surface audit                                     |
+| **oss-maintainer**     | Project lifecycle management     | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
+| **ai-researcher**      | ML research and implementation   | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
+| **qa-specialist**      | Testing and validation           | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns                                           |
+| **linting-expert**     | Code quality and static analysis | ruff, mypy, pre-commit, rule selection strategy, CI quality gates; runs autonomously (`permissionMode: dontAsk`) |
+| **perf-optimizer**     | Performance engineering          | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision                                       |
+| **ci-guardian**        | CI/CD reliability                | GitHub Actions, reusable workflows, trusted publishing, flaky test detection                                     |
+| **data-steward**       | ML data pipeline integrity       | Split validation, leakage detection, data contracts, class imbalance                                             |
+| **doc-scribe**         | Documentation                    | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, changelog                                       |
+| **web-explorer**       | Web and docs research            | API version comparison, migration guides, PyPI tracking, ecosystem compat                                        |
+| **self-mentor**        | Config quality reviewer (Opus)   | Agent/skill auditing, duplication detection, cross-ref validation, line budgets                                  |
 
 ### Skills
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/fix`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill         | Command                            | What It Does                                                                                                                      |
-| ------------- | ---------------------------------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| **review**    | `/review [file\|PR#]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)                                    |
-| **optimize**  | `/optimize [target]`               | Measure-change-measure performance loop                                                                                           |
-| **release**   | `/release <mode> [range]`          | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                  |
-| **survey**    | `/survey [topic]`                  | SOTA literature survey with implementation plan                                                                                   |
-| **analyse**   | `/analyse [#\|health]`             | Issue/PR analysis, repo health, duplicate detection, contributor activity                                                         |
-| **observe**   | `/observe`                         | Meta-skill: analyze work patterns and suggest new agents or skills                                                                |
-| **audit**     | `/audit [fix [high\|medium\|all]]` | Full-sweep config audit: broken refs, dead loops, inventory drift, interoperability issues                                        |
-| **sync**      | `/sync [apply]`                    | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                   |
-| **manage**    | `/manage <op> <type>`              | Create, update, or delete agents/skills with cross-ref propagation                                                                |
-| **feature**   | `/feature <desc>`                  | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle                                        |
-| **refactor**  | `/refactor <target>`               | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor                                         |
-| **fix**       | `/fix <bug>`                       | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks                                                |
-| **calibrate** | `/calibrate [target] [fast\|full]` | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                     |
-| **codex**     | `/codex <task> [target]`           | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                               |
-| **resolve**   | `/resolve <PR#\|comment>`          | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex |
+| Skill         | Command                                     | What It Does                                                                                                                                                                                              |
+| ------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **review**    | `/review [file\|PR#]`                       | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)                                                                                                            |
+| **optimize**  | `/optimize [target]`                        | Measure-change-measure performance loop                                                                                                                                                                   |
+| **release**   | `/release <mode> [range]`                   | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                                                                                          |
+| **survey**    | `/survey [topic]`                           | SOTA literature survey with implementation plan                                                                                                                                                           |
+| **analyse**   | `/analyse [#\|health]`                      | Issue/PR analysis, repo health, duplicate detection, contributor activity                                                                                                                                 |
+| **observe**   | `/observe`                                  | Meta-skill: analyze work patterns and suggest new agents or skills                                                                                                                                        |
+| **audit**     | `/audit [fix [high\|medium\|all]\|upgrade]` | Full-sweep config audit: broken refs, dead loops, inventory drift, docs freshness + upgrade proposals; `upgrade` applies docs-sourced improvements (config: correctness check, capability: calibrate A/B) |
+| **sync**      | `/sync [apply]`                             | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                                                                                           |
+| **manage**    | `/manage <op> <type>`                       | Create, update, or delete agents/skills with cross-ref propagation                                                                                                                                        |
+| **feature**   | `/feature <desc>`                           | TDD-first feature dev: codebase analysis, demo doctest, TDD loop, docs + QA + review cycle                                                                                                                |
+| **refactor**  | `/refactor <target>`                        | Test-first refactoring: ensure coverage exists, add characterization tests, then refactor                                                                                                                 |
+| **fix**       | `/fix <bug>`                                | Reproduce-first bug fixing: regression test, targeted fix, lint and quality checks                                                                                                                        |
+| **calibrate** | `/calibrate [target] [fast\|full]`          | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                                                                                             |
+| **codex**     | `/codex <task> [target]`                    | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                                                                                                       |
+| **resolve**   | `/resolve <PR#\|comment>`                   | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex                                                                         |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -140,13 +140,15 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   /manage delete agent web-explorer
   ```
 
-- **`/audit` — Config health sweep**
+- **`/audit` — Config health sweep + upgrade**
 
   ```bash
-  # Full sweep — report only, no changes made (default)
+  # Full sweep — report only, includes upgrade proposals table
   /audit
-  # Full sweep + auto-fix critical and high findings
+  # Auto-fix critical and high findings
   /audit fix
+  # Apply docs-sourced improvements: config changes verified, capability changes A/B tested via calibrate
+  /audit upgrade
   # Agents only, report only
   /audit agents
   # Skills only, with auto-fix
@@ -305,9 +307,22 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Config maintenance — periodic health check</strong></summary>
 
 ```
-/audit                 # inspect findings — report only, no changes made
+/audit                 # inspect findings + docs-sourced upgrade proposals — report only, no changes
+/audit upgrade         # apply upgrade proposals: config changes verified, capability changes A/B tested
 /audit fix             # full sweep + auto-fix critical and high findings
 /sync apply            # propagate verified config to ~/.claude/
+```
+
+</details>
+
+<details>
+<summary><strong>Keep config current after Claude Code releases</strong></summary>
+
+```
+/audit                 # fetches latest Claude Code docs, surfaces applicable improvements as upgrade proposals
+/audit upgrade         # applies config proposals (correctness check) and capability proposals (calibrate A/B)
+/calibrate all fast    # re-benchmark all agents to confirm no regression from applied changes
+/sync apply            # propagate clean, calibrated config to ~/.claude/
 ```
 
 </details>
@@ -380,7 +395,7 @@ Shows the active model name, current project directory, billing indicator, a 10-
 
 </details>
 
-The subagent indicator (`⚡ N agents (type, ...)`) appears while Task agents are running and clears the moment they finish. It is powered by a companion hook (`hooks/task-log.js`) that listens to `SubagentStart` and `SubagentStop` events — agents are added when they spawn and removed when they complete, for both foreground and background tasks. A 10-minute safety-net age-out handles crashed or hung agents.
+The subagent indicator (`⚡ N agents (type, ...)`) appears while Task agents are running and clears the moment they finish. It is powered by a companion hook (`hooks/task-log.js`) that handles 7 events: `SubagentStart`/`SubagentStop` (track active agents in `.claude/state/agents.json`), `PreToolUse` (audit log to `.claude/logs/invocations.jsonl`), `PreCompact`/`PostCompact` (log context compactions to `.claude/logs/compactions.jsonl`), and `Stop`/`SessionEnd` (clear agents state so the status line resets cleanly). A 10-minute safety-net age-out handles crashed or hung agents.
 
 Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
 

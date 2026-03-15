@@ -18,6 +18,7 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
   - If a number is given (e.g. `42`): review the PR diff
   - If a path is given: review those files
   - If omitted: review recently changed files
+  - **Scope**: this skill reviews Python source code only. If the input is a non-Python file (YAML, JSON, shell script, etc.), state that it is out of scope and suggest the appropriate tool — do not produce findings.
 
 </inputs>
 
@@ -42,6 +43,20 @@ git diff --name-only HEAD~1 HEAD
 
 If Continuous Integration (CI) is red, report that without full review.
 
+### Scope pre-check
+
+Before spawning agents, classify the diff:
+
+- Count files changed, lines added/removed, new classes/modules introduced
+- Classify as: **FIX** (\<3 files, \<50 lines), **REFACTOR** (no new public API), **FEATURE** (new public API or module), or **MIXED**
+- **Complexity smell**: if 8+ files changed, note in the report header
+
+Use classification to skip optional agents:
+
+- FIX scope → skip Agent 3 (perf-optimizer) and Agent 6 (solution-architect)
+- REFACTOR scope → skip Agent 6 (solution-architect)
+- FEATURE/MIXED → spawn all agents
+
 ## Step 2: Spawn sub-agents in parallel
 
 Launch agents simultaneously with the Agent tool (security augmentation is folded into Agent 1 — not a separate spawn; Agent 6 is optional). Every agent prompt must end with:
@@ -50,17 +65,18 @@ Launch agents simultaneously with the Agent tool (security augmentation is folde
 
 **Agent 1 — sw-engineer**: Review architecture, SOLID adherence, type safety, error handling, and code structure. Check for Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking issues vs suggestions.
 
-**Severity anchors for common security patterns (Agent 1)**:
+**Error path analysis** (for new/changed code in the diff): For each error-handling path introduced or modified, produce a table:
 
-- `pickle.load` or `torch.load` without `weights_only=True` on any data from outside the process = **CRITICAL** (arbitrary code execution via insecure deserialization)
+| Location | Exception/Error | Caught? | Action if caught | User-visible? |
+| -------- | --------------- | ------- | ---------------- | ------------- |
 
-- Hardcoded secret in source (password, API key, token) = **CRITICAL**
+Flag rules:
 
-- `debug=True` in a web server production entry point = **CRITICAL**
+- Caught=No + User-visible=Silent → **HIGH** (unhandled error path)
+- Caught=Yes + Action=`pass` or bare `except` → **MEDIUM** (swallowed error)
+- Cap at 15 rows. Focus on new/changed paths only, not the entire codebase.
 
-- Missing input validation on external HyperText Transfer Protocol (HTTP) input = **HIGH** (not MEDIUM)
-
-- **Atomicity check for registry/store patterns**: if code updates an in-memory index and then performs a filesystem operation (copy, delete, rename), flag as HIGH if these are not atomic. A crash between the two steps leaves the system in an inconsistent state. Look for: `save_index()` + `shutil.copytree()`, `delete from dict` + `os.remove()`, or any two-phase commit done without a temp-then-rename pattern.
+Read the review checklist: `cat ${CLAUDE_SKILL_DIR}/checklist.md` — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
 
 **Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for Machine Learning (ML)-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are Ground Truth (GT)-level findings, not afterthoughts):
 
@@ -129,9 +145,9 @@ Read and follow the cross-validation protocol from `.claude/skills/_shared/cross
 
 Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low).
 
-**Signal-to-noise filter**: Before writing the report, classify each finding as either (a) a genuine defect or architectural issue or (b) a style/completeness observation (unused import, print-vs-logging, missing class-level docstring on a class that has method-level docstrings). For well-scoped modules with ≤5 public APIs, limit (b) items to at most 1 per section. **Target: report no more than GT+2 findings total per module** — a review with 10 nits obscures the 2 critical fixes. **Pre-flight check**: Before writing any section, count your total findings. If the count exceeds the number of clearly CRITICAL/HIGH issues plus 2, drop the lowest-severity items first until you are at or below that cap. Only then begin writing sections. Prefer depth (why it matters, how to fix) over breadth (finding volume). **Annotation completeness rule**: If ≥1 HIGH or CRITICAL finding is present, omit ALL LOW-severity type annotation and docstring-completeness nits — they will be handled by `linting-expert` or pre-commit hooks. This applies unconditionally; do not list annotation gaps as a fallback when the section would otherwise be empty.
+Apply consolidation rules from `cat ${CLAUDE_SKILL_DIR}/checklist.md` (signal-to-noise filter, annotation completeness, section caps).
 
-Cap each non-critical section at 5 items; if more are found, note "N additional lower-priority findings omitted" at the end of that section. This keeps the report actionable and prevents blocking issues from being buried in volume.
+**Precision gate**: before including a finding, ask: "Is this a concrete, actionable issue in the code under review, or a general best-practice observation that doesn't specifically apply here?" Omit findings that are valid-in-general but not evidenced in the actual code. Each finding must cite a specific location (function, line range, or variable name). Vague findings without a concrete location are noise — drop them.
 
 ```
 ## Code Review: [target]
@@ -177,11 +193,12 @@ Cap each non-critical section at 5 items; if more are found, note "N additional 
 3. [third]
 
 ### Review Confidence
+<!-- Replace placeholder rows with actual agent scores for this review -->
 | Agent | Score | Label | Gaps |
 |-------|-------|-------|------|
-| sw-engineer | 0.88 | high | — |
-| qa-specialist | 0.65 | ⚠ low | no test execution; coverage unverifiable without running suite |
-| perf-optimizer | 0.72 | moderate | no profiling data; estimates from static analysis only |
+<!-- | sw-engineer | 0.88 | high | — | -->
+<!-- | qa-specialist | 0.65 | ⚠ low | no test execution; coverage unverifiable without running suite | -->
+<!-- | perf-optimizer | 0.72 | moderate | no profiling data; estimates from static analysis only | -->
 
 **Aggregate**: min 0.65 / median 0.N
 [⚠ LOW CONFIDENCE: qa-specialist could not verify test execution — treat coverage findings as indicative, not conclusive]
@@ -206,7 +223,7 @@ After consolidating findings, identify tasks from the review that Codex can impl
 - Architectural issues, logic errors, security vulnerabilities, or behavioural changes
 - Any task where you cannot write a precise description without guessing
 
-!`cat .claude/skills/_shared/codex-delegation.md`
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 
 Example prompt: `"use the qa-specialist to add a test for StreamReader.read_chunk() in tests/test_reader.py — the method should raise ValueError when called after close(), currently there is no test for this path"`
 

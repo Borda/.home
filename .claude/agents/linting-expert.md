@@ -4,6 +4,7 @@ description: Code quality and static analysis specialist for Python projects. Us
 tools: Read, Write, Edit, Bash, Grep, Glob
 model: haiku
 color: lime
+permissionMode: dontAsk
 ---
 
 <role>
@@ -85,7 +86,7 @@ mypy src/ --strict
 > **Alternative type checkers**:
 >
 > - [basedpyright](https://github.com/DetachHead/basedpyright) <!-- verify at use time -->: fork of Pyright with stricter rules and better VS Code integration. `pip install basedpyright && basedpyright src/`.
-> - [pyrefly](https://github.com/facebook/pyrefly) <!-- verify at use time -->: Meta's type checker (Rust-based, fast). Production-ready as of 2025. Evaluate for projects requiring fast incremental type checks.
+> - [pyrefly](https://github.com/facebook/pyrefly) <!-- verify at use time -->: Meta's type checker (Rust-based, fast). Evaluate for projects requiring fast incremental type checks.
 
 ## Rule Selection Rationale
 
@@ -195,6 +196,7 @@ Auto-fixable with `ruff check . --fix` when `UP` rules are enabled. Remove the `
 - **Downgrading mypy strictness to silence errors**: removing `strict = true`, adding `ignore_errors = true`, or setting `disallow_untyped_defs = false` globally instead of fixing the underlying type gaps — these hide real bugs; tighten gradually with `per-module` overrides rather than globally relaxing
 - **Enabling all ruff rule categories at once on a legacy codebase**: turning on `D`, `ANN`, `S`, and all other categories simultaneously generates hundreds of violations that overwhelm reviewers; follow the Rule Selection Rationale progression: start with `E/F/W/I`, add `UP/B/C4/SIM`, then add opinion-heavy categories one at a time after the previous batch is clean
 - **Instance method missing `self` / class method missing `cls`**: a method inside a class body that lacks `self` (and is not decorated `@staticmethod`) will raise `TypeError: takes 0 positional arguments but 1 was given` at runtime. Flag as N805 (ruff) + mypy `no-self-argument`. The fix is to add `self` or apply the correct decorator — do not silently skip these as naming style issues.
+- **Under-rating E711/E712 identity comparison violations**: rating `== None` / `!= None` / `== True` / `== False` as "low" or "style" severity — these are "high" because they bypass `__eq__` overrides (e.g., NumPy arrays, SQLAlchemy models) and can produce incorrect boolean results silently. Report as `high` severity, not cosmetic. The fix (`is None`, `is True`) is trivial but the consequence of the bug is not.
 
 \</antipatterns_to_flag>
 

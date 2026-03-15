@@ -49,6 +49,26 @@
       {
         "hooks": [{ "type": "command", "command": "node .claude/hooks/teammate-quality.js" }]
       }
+    ],
+    "PreCompact": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ],
+    "PostCompact": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
+    ],
+    "SessionEnd": [
+      {
+        "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
+      }
     ]
   },
   "permissions": {
@@ -57,7 +77,9 @@
       "Bash(git branch -D:*)",
       "Bash(git branch -d:*)",
       "Bash(git tag -d:*)",
-      "Bash(git remote:*)"
+      "Bash(git remote:*)",
+      "Bash(git clean:*)",
+      "Bash(git restore:*)"
     ],
     "allow": [
       "WebSearch",
@@ -87,7 +109,6 @@
       "Bash(date:*)",
       "Bash(which:*)",
       "Bash(env:*)",
-      "Bash(gh api:*)",
       "Bash(gh auth status:*)",
       "Bash(gh pr view:*)",
       "Bash(gh pr checkout:*)",
@@ -97,7 +118,6 @@
       "Bash(gh repo view:*)",
       "Bash(gh run list:*)",
       "Bash(gh run view:*)",
-      "Bash(gh run rerun:*)",
       "Bash(gh issue view:*)",
       "Bash(gh issue list:*)",
       "Bash(gh release view:*)",
@@ -110,7 +130,6 @@
       "Bash(git rev-list:*)",
       "Bash(git rev-parse:*)",
       "Bash(git ls-files:*)",
-      "Bash(git -C:*)",
       "Bash(git branch:*)",
       "Bash(git tag:*)",
       "Bash(git status:*)",
@@ -120,8 +139,6 @@
       "Bash(git add:*)",
       "Bash(git checkout:*)",
       "Bash(git stash:*)",
-      "Bash(git restore:*)",
-      "Bash(git clean:*)",
       "Bash(git apply:*)",
       "Bash(pytest:*)",
       "Bash(pre-commit run:*)",

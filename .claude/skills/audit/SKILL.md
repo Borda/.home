@@ -1,7 +1,7 @@
 ---
 name: audit
-description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Reports by severity; auto-fixes at the requested level — 'fix high' (critical+high), 'fix medium' (critical+high+medium), 'fix all' (all findings including low).
-argument-hint: '[agents|skills] [fix [high|medium|all]]'
+description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness, and upgrade proposals. Reports by severity; auto-fixes at the requested level — 'fix high' (critical+high), 'fix medium' (critical+high+medium), 'fix all' (all findings including low); 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes.
+argument-hint: '[agents|skills] [fix [high|medium|all]] | upgrade'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
@@ -23,6 +23,7 @@ Run a full-sweep quality audit of the `.claude/` configuration: every agent file
   - `agents` — restrict sweep to agent files only, report only
   - `skills` — restrict sweep to skill files only, report only
   - Scope and fix level can be combined: `agents fix medium`, `skills fix all` — scope always precedes `fix`
+  - `upgrade` — fetch latest Claude Code docs, filter new features by genuine value, then apply: **config** changes (apply + correctness check), **capability** changes (calibrate before → apply → calibrate after → accept if Δrecall ≥ 0 and ΔF1 ≥ 0). Skip to **Mode: upgrade**.
 
 </inputs>
 
@@ -96,7 +97,7 @@ Spawn one **self-mentor** agent per file (or batch into groups of up to 10 for e
 
 > "End your response with a `## Confidence` block per CLAUDE.md output standards."
 
-Read the self-mentor prompt template from ${CLAUDE_SKILL_DIR}/templates/self-mentor-prompt.md and include its content in each self-mentor invocation prompt.
+Read the self-mentor prompt template from .claude/skills/audit/templates/self-mentor-prompt.md and include its content in each self-mentor invocation prompt.
 
 Collect all findings from each self-mentor response into a structured list keyed by file path.
 
@@ -177,6 +178,16 @@ done
 ```
 
 Flag any drift between MEMORY.md, README.md, settings.json, and actual disk state. Flag any hardcoded `/Users/` or `/home/` paths — these should be `.claude/`, `~/`, or `$(git rev-parse --show-toplevel)/` style. Flag any permissions-guide.md entries not in the allow list (orphaned docs) or allow entries without a guide row (undocumented permissions).
+
+**Check 6b — Permission safety audit** — every `allow` entry must be non-destructive, reversible, and local-only
+
+Read `.claude/settings.json` using the Read tool and extract the `permissions.allow` list. For each entry, use model reasoning to evaluate it against three criteria:
+
+- **Non-destructive**: does not permanently delete or overwrite data (no `rm -rf`, `git push --force`, `DROP TABLE`)
+- **Reversible**: effect can be undone without data loss (local file edits, test runs, read-only queries)
+- **Local-only**: does not affect systems outside the working directory or send data to external services
+
+Flag destructive patterns as **critical** (auto-approved destructive commands are always a breaking safety failure). Flag external-state mutations as **high** and raise to user — some (e.g., `gh release create`) may be intentional but must be explicitly acknowledged.
 
 **Check 8 — Model tier appropriateness**
 
@@ -269,6 +280,14 @@ Minor drift (slightly different wording of the same idea, or missing but not con
 
 - **Direct contradiction** includes explicit instructions to skip a required behavior (e.g., "Do not create task tracking entries" contradicts the Task Management directive as directly as saying "never track tasks"). The test is whether a reasonable reader would interpret the instruction as overriding the CLAUDE.md mandate — if yes, it is high; if the file simply does not mention the behavior, it is low (omission).
 
+Also audit CLAUDE.md itself for **scope creep** — content that is too specific to belong in a universal governance file:
+
+- **Domain-specific output formats** (e.g., a structured findings template that only one skill uses) → **medium**: move to the relevant agent/skill file; CLAUDE.md governs all agents, so its Output Standards should be universal (Confidence block, Internal Quality Loop) not skill-specific.
+- **Skill-specific rules or antipatterns** (e.g., review consolidation rules, release checklist items) → **medium**: these belong in the skill's own SKILL.md or checklist file, not in the master governance file.
+- **Project-specific details that don't generalise** (specific tool versions, project-local paths, one-off workflow notes) → **low**: prefer agent instructions or MEMORY.md for project-local context; CLAUDE.md is synced to `~/.claude/` and must work across all projects without modification.
+
+The test: would a reasonable reader expect this content to apply to every single agent in every project? If no → it doesn't belong in CLAUDE.md.
+
 ### Claude Code docs freshness
 
 Spawn a **web-explorer** agent to fetch the current Claude Code documentation. Try the direct paths below; if they don't resolve, navigate from the Claude Code homepage (`code.claude.com`) to find the current schema pages:
@@ -312,7 +331,18 @@ Findings classification:
 
 - Deprecated/invalid hook event name or type in use → **high**
 - Deprecated frontmatter field, deprecated settings key, unrecognized model ID → **medium**
-- New documented feature not yet used → **low** (prefix with 💡)
+- New documented feature not yet used → evaluate with genuine-value filter and add to **Upgrade Proposals** table (not a LOW finding)
+
+**Upgrade Proposals** — for each new feature, apply the genuine-value filter before adding: "Does this solve a demonstrated problem in the current setup, or add measurable capability?" Omit features that add complexity without evidence of need. Classify passing candidates:
+
+- **config**: settings, hooks, frontmatter metadata — low risk, verified by correctness check only
+- **capability**: agent instructions, skill workflow changes — higher risk, requires calibrate A/B
+
+Cap at 5 proposals per run; if more pass the filter, rank by expected impact and take the top 5.
+
+| #                                                                         | Feature | Type | Target | Rationale | A/B plan |
+| ------------------------------------------------------------------------- | ------- | ---- | ------ | --------- | -------- |
+| (filled at runtime — omit table entirely if no proposals pass the filter) |         |      |        |           |          |
 
 **Check 9 — Example value vs. token cost**
 
@@ -348,14 +378,9 @@ Report per-file: `N examples total, K high-value, M low-value (est. ~X tokens wa
 
 ## Step 5: Aggregate and classify findings
 
-**Antipatterns that indicate severity under-classification** (common failure modes from calibration):
+**Antipatterns that indicate severity under-classification**: see antipatterns section in `.claude/skills/audit/severity-table.md`.
 
-- Classifying `context:fork + disable-model-invocation:true` as "possibly contradictory" (low) rather than **critical** — this combination is always breaking; no conditional language
-- Classifying inventory drift (MEMORY.md vs disk) as "out of sync" (medium) rather than **critical** — any cross-reference using the stale roster will fail at runtime
-- Classifying a `deep-reasoning` agent on `sonnet` as "possibly underpowered" (medium) rather than **high** — the tier classification table provides the authority for this judgment; use it
-- Classifying a direct CLAUDE.md contradiction as a "best practice concern" (medium) rather than **high** — any instruction that explicitly overrides a CLAUDE.md directive is high severity per the governance hierarchy
-
-Group all findings from Steps 1–4 into a severity table. Read the severity classification table from ${CLAUDE_SKILL_DIR}/severity-table.md.
+Group all findings from Steps 1–4 into a severity table. Read the severity classification table from `.claude/skills/audit/severity-table.md`.
 
 ## Step 6: Cross-validate critical findings
 
@@ -394,6 +419,13 @@ Output a structured audit report before fixing anything:
 ### Summary
 - Total findings: N (C critical, H high, M medium, L low)
 - Auto-fix eligible: N per fix level — `fix high`: C+H | `fix medium`: C+H+M | `fix all`: C+H+M+L
+
+### Upgrade Proposals (N — run `/audit upgrade` to apply)
+| # | Feature | Type | Rationale |
+|---|---------|------|-----------|
+| 1 | ... | config | ... |
+
+(omit this section entirely if no proposals passed the genuine-value filter)
 ```
 
 If no fix level was passed, stop here and present the report.
@@ -402,7 +434,7 @@ If no fix level was passed, stop here and present the report.
 
 Spawn one **sw-engineer** subagent per affected file, batching all findings for that file into a single subagent prompt. Issue **all spawns in a single response** for parallelism.
 
-Each subagent prompt template: Read the fix prompt template from ${CLAUDE_SKILL_DIR}/templates/fix-prompt.md and use it, filling in `<file path>` and the list of findings.
+Each subagent prompt template: Read the fix prompt template from .claude/skills/audit/templates/fix-prompt.md and use it, filling in `<file path>` and the list of findings.
 
 **Exceptions — handle inline without subagents (note in report):**
 
@@ -480,6 +512,97 @@ Low-confidence files re-audited: N | Still uncertain after retry: N (see gaps ab
 Run `/sync apply` to propagate clean config to ~/.claude/
 ```
 
+## Mode: upgrade
+
+**Trigger**: `/audit upgrade`
+
+**Purpose**: Apply documented Claude Code improvements that passed the genuine-value filter. Config changes are applied and correctness-checked immediately. Capability changes are A/B tested via a mini calibrate pipeline — accepted only if Δrecall ≥ 0 and ΔF1 ≥ 0.
+
+**Task tracking**: TaskCreate "Fetch upgrade proposals", "Apply config proposals", "A/B test capability proposals". Mark in_progress/completed throughout.
+
+### Phase 1: Gate check
+
+Before applying anything, verify the baseline is structurally sound:
+
+```bash
+# Check for the most likely breaking issue — frontmatter conflicts — without running the full audit
+for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do
+  awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'context: fork' && \
+  awk '/^---$/{c++} c<2' "$f" 2>/dev/null | grep -q 'disable-model-invocation: true' && \
+  echo "BREAKING: $f — context:fork + disable-model-invocation:true"
+done
+```
+
+If any critical or high issues are known from a recent `/audit` run, or the gate check above finds a BREAKING issue: stop and print "⚠ Resolve critical/high findings first (`/audit fix high`), then re-run `/audit upgrade`."
+
+### Phase 2: Fetch and classify proposals
+
+Run the **Claude Code docs freshness** check from Step 4 of the main audit workflow: spawn web-explorer, validate current config against latest docs, apply genuine-value filter, produce the Upgrade Proposals table. Cap at 5 total (max 3 capability, any number of config).
+
+If no proposals pass the filter: print "✓ No upgrade proposals — current setup is current." and stop.
+
+### Phase 3: Apply config proposals
+
+Mark "Apply config proposals" in_progress. For each **config** proposal, in sequence:
+
+1. Apply the change (Edit/Write tool)
+2. Correctness check:
+   ```bash
+   # settings.json — JSON validity
+   jq empty .claude/settings.json && echo "✓ valid JSON" || echo "✗ invalid JSON"
+   # JS hook files — syntax check
+   node --check .claude/hooks/*.js 2>&1 | grep -v '^$' || true
+   ```
+3. Accept (✓) if check passes; revert and mark rejected (✗) with reason if it fails
+
+Mark "Apply config proposals" completed.
+
+### Phase 4: A/B test capability proposals
+
+Mark "A/B test capability proposals" in_progress. For each **capability** proposal (max 3), in sequence:
+
+**Step a — Baseline calibration**: Read `.claude/skills/calibrate/templates/pipeline-prompt.md`. Spawn a `general-purpose` subagent using that template with the target agent name, domain, N=3, MODE=fast, AB_MODE=false. Capture `recall_before` and `f1_before` from the returned JSON.
+
+**Step b — Apply change**: Edit the target agent file per the proposal spec.
+
+**Step c — Post calibration**: Spawn the same pipeline subagent again with identical parameters. Capture `recall_after` and `f1_after`.
+
+**Step d — Decision**:
+
+- `Δrecall = recall_after − recall_before`
+- `ΔF1 = f1_after − f1_before`
+- **Accept** (✓) if Δrecall ≥ 0 AND ΔF1 ≥ 0 → keep the change
+- **Revert** (✗) if either delta is negative → restore the file, record the deltas
+
+Mark "A/B test capability proposals" completed.
+
+### Phase 5: Report and sync
+
+```
+## Upgrade Complete — <date>
+
+### Gate
+[clean / issues found and stopped]
+
+### Config Changes
+| # | Feature | Target | Result | Notes |
+|---|---------|--------|--------|-------|
+| 1 | ... | hooks/task-log.js | ✓ accepted | jq valid |
+
+### Capability Changes
+| # | Feature | Target | Δrecall | ΔF1 | Result |
+|---|---------|--------|---------|-----|--------|
+| 1 | ... | agents/self-mentor.md | +0.04 | +0.02 | ✓ accepted |
+| 2 | ... | agents/sw-engineer.md | −0.02 | +0.01 | ✗ reverted |
+
+### Next Steps
+- `/sync apply` — propagate accepted changes to ~/.claude/
+- `/audit` — confirm clean baseline after upgrades
+- Reverted items: run `/calibrate <agent> full` for deeper A/B signal (N=10 vs N=3 used here)
+```
+
+Run `/sync apply` automatically after all proposals are processed.
+
 </workflow>
 
 <notes>
@@ -506,5 +629,7 @@ Run `/sync apply` to propagate clean config to ~/.claude/
   - Audit found structural issues → review flagged files manually before syncing
   - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/refactor` for a targeted cleanup pass
   - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration
+  - Audit surfaced upgrade proposals → `/audit upgrade` to apply with correctness checks and calibrate A/B evidence for capability changes
+  - `/audit upgrade` reverted a capability change → run `/calibrate <agent> full` for deeper signal (N=10 vs N=3 used in upgrade mode)
 
 </notes>

@@ -264,7 +264,6 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
 - Functions with no explicit `raise` that still have implicit shape/type contracts (e.g. arrays must have matching first dim, tuple must be length 2) should document those constraints in `Raises` (if the downstream exception is user-visible) or in a `Notes` paragraph — do not skip the Raises section just because the function body has no `raise` keyword
 - Documenting only the "happy path" in Examples while omitting edge-case behavior that callers need to know about (e.g., what happens on empty input, None, or out-of-range values)
 - Copy-pasting the function signature verbatim as the one-line summary — the summary should explain *why* and *when* to use the function, not restate its name and arguments
-- Reporting out-of-scope supplementary findings when the task prompt explicitly names a documentation category to audit — if the prompt says "missing docstrings", do not include "missing Examples section" or "incomplete Returns" as additional observations; those belong in a separate audit pass. Surface only if a finding directly blocks the in-scope task.
 
 ## False Positive Traps (do NOT flag these)
 

@@ -143,23 +143,7 @@ A good `good first issue` must have:
 
 ## Deprecation Discipline
 
-Use [pyDeprecate](https://pypi.org/project/pyDeprecate/) <!-- verified: pypi.org/project/pyDeprecate/ --> (Borda's own package) — handles warning emission, argument forwarding, and "warn once" behaviour automatically:
-
-```python
-from deprecate import deprecated
-
-
-# Simple function rename — args forwarded automatically, warning emitted once
-@deprecated(target=new_function, deprecated_in="2.1.0", remove_in="3.0.0")
-def old_function(x, legacy_arg=None):
-    """Old function.
-
-    .. deprecated:: 2.1.0
-        Use :func:`new_function` instead. Will be removed in 3.0.0.
-    """
-```
-
-Install: `pip install pyDeprecate` (zero dependencies — check https://pypi.org/project/pyDeprecate/ <!-- verified: pypi.org/project/pyDeprecate/ --> for current version).
+Use [pyDeprecate](https://pypi.org/project/pyDeprecate/) (Borda's own package) — handles warning emission, argument forwarding, and "warn once" behaviour automatically. Read the latest docs at https://pypi.org/project/pyDeprecate/ for current API and examples.
 
 **Deprecation lifecycle**: deprecate in minor release → keep for ≥1 minor cycle → remove in next major.
 **Also**: add `.. deprecated:: X.Y.Z` Sphinx directive in the docstring so docs generators render a deprecation notice automatically.

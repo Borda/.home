@@ -32,7 +32,7 @@ which codex
 which gh
 ```
 
-If codex is missing: stop with `Pre-flight failed: codex not found. Install: npm install -g @openai/codex`
+If codex is missing: stop with `Pre-flight failed: codex not found. Install: npm install -g @openai/codex` <!-- verify at use time -->
 If gh is missing: stop with `Pre-flight failed: gh not found. Install: brew install gh`
 
 Parse $ARGUMENTS:
@@ -245,8 +245,6 @@ Mark the task `completed`, then print:
 **Next**: `git diff HEAD~1 HEAD` for merge changes + `git diff HEAD` for comment changes → commit when satisfied; or `git merge --abort` to undo the merge.
 ```
 
-End your response with a `## Confidence` block per CLAUDE.md output standards.
-
 ______________________________________________________________________
 
 ## Step 8: Comment dispatch mode (fast path)
@@ -295,8 +293,6 @@ Mark the task `completed`, then print:
 
 **Next**: review diff and commit | reply to reviewer: <Codex's reason>
 ```
-
-End your response with a `## Confidence` block per CLAUDE.md output standards.
 
 </workflow>
 

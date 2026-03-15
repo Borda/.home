@@ -113,14 +113,6 @@ def tmp_data_dir(tmp_path):
     (tmp_path / "images").mkdir()
     (tmp_path / "labels").mkdir()
     return tmp_path
-
-
-@pytest.fixture
-def monkeypatch_env(monkeypatch):
-    """Monkeypatch environment variables for config tests."""
-    monkeypatch.setenv("API_KEY", "test-key-123")
-    monkeypatch.setenv("DEBUG", "false")
-    return monkeypatch
 ```
 
 \</pytest_config>

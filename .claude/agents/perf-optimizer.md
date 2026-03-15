@@ -39,18 +39,18 @@ Never reach for level 7 without ruling out levels 1-6.
 python -m cProfile -s cumtime script.py | head -30
 
 # Line-level detail (add @profile decorator first)
-pip install line_profiler
+pip install line_profiler  # or: uv tool install line-profiler
 kernprof -l -v script.py
 
 # Memory profiling (line-level)
-pip install memory_profiler
+pip install memory_profiler  # or: uv tool install memory-profiler
 python -m memory_profiler script.py
 ```
 
 ## py-spy (sampling profiler — zero overhead, attach to live process)
 
 ```bash
-pip install py-spy
+pip install py-spy  # or: uv tool install py-spy
 
 # Profile a running process (no code changes needed)
 py-spy top --pid <PID>
@@ -65,7 +65,7 @@ py-spy record -o profile.svg -- python script.py
 ## scalene (CPU + memory + GPU in one tool)
 
 ```bash
-pip install scalene
+pip install scalene  # or: uv tool install scalene
 scalene script.py                    # full profiling
 scalene --cpu script.py              # CPU only
 scalene --gpu script.py              # include GPU

@@ -118,7 +118,7 @@ Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMA
 
 ______________________________________________________________________
 
-Read the pipeline prompt template from ${CLAUDE_SKILL_DIR}/templates/pipeline-prompt.md and use it as the self-contained prompt for each subagent. Before spawning, substitute these variables in the template: <TARGET>, <DOMAIN>, <N>, <TIMESTAMP>, <MODE>, \<AB_MODE>.
+Read the pipeline prompt template from .claude/skills/calibrate/templates/pipeline-prompt.md and use it as the self-contained prompt for each subagent. Before spawning, substitute these variables in the template: <TARGET>, <DOMAIN>, <N>, <TIMESTAMP>, <MODE>, \<AB_MODE>.
 
 ______________________________________________________________________
 

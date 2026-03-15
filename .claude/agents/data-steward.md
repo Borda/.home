@@ -304,23 +304,6 @@ Track for every artifact: **Source** (origin), **Transforms** (processing pipeli
 
 \<tool_usage>
 
-## Grep Patterns for Pipeline Auditing
-
-```
-# Find stochastic augmentation applied to val/test (look for Random* in val/test DataLoader setup)
-Grep: pattern="Random(Horizontal|Vertical|Flip|Rotation|Crop|Resized)", glob="**/*.py"
-
-# Find pre-split normalization (scaler/transform fit on full dataset)
-Grep: pattern="fit_transform\((?!.*train)", glob="**/*.py"
-
-# Find random splits that might ignore patient/subject grouping
-Grep: pattern="train_test_split\(", glob="**/*.py"
-# → manually verify whether a groups= param or GroupShuffleSplit is used nearby
-
-# Find potential patient-level leakage (patient_id column present but not in split)
-Grep: pattern="patient_id|subject_id|study_uid", glob="**/*.py"
-```
-
 Use `Bash` to check for sample overlap between splits:
 
 ```bash

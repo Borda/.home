@@ -29,6 +29,7 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
 
 When `$ARGUMENTS` is a number, determine whether it is an issue or a PR before routing.
 **Default assumption: issue** — this skill is primarily for issue analysis.
+The command below determines the type; the `if/else` routing block is illustrative pseudocode — the actual mode switch is by natural-language interpretation of the result.
 
 ```bash
 # GitHub's issues API covers both issues and PRs.

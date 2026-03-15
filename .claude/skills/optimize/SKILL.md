@@ -99,7 +99,7 @@ After confirming improvements, inspect the applied changes (`git diff HEAD --sta
 - Generic "add comments" requests — only delegate when you can describe the specific technique and its rationale
 - Any task where you cannot write a precise description without guessing
 
-!`cat .claude/skills/_shared/codex-delegation.md`
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 
 Example prompt: `"use the doc-scribe to add an inline comment to the inner loop in src/batch_processor.py:87 explaining that the result tensor is pre-allocated before the loop to avoid repeated GPU memory allocation — the old version called torch.zeros() inside the loop"`
 

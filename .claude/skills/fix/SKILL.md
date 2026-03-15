@@ -131,6 +131,7 @@ Output a structured report:
 ## Confidence
 **Score**: [0.N]
 **Gaps**: [e.g., could not reproduce locally, partial traceback only, fix not runtime-tested]
+**Refinements**: N passes. [Pass 1: <what improved>. Pass 2: <what improved>.] — omit if 0 passes
 ```
 
 ## Team Mode (--team)

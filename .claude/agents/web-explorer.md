@@ -69,14 +69,6 @@ Use `uv pip show <library>` to check the installed version and find the docs URL
 - `"[library] deprecation [function_name]"` — deprecation notices
 - `site:github.com/[org]/[repo] CHANGELOG` — direct GitHub search
 
-## HuggingFace Hub
-
-```python
-# Model card: https://huggingface.co/<org>/<model>
-# Dataset card: https://huggingface.co/datasets/<org>/<dataset>
-# API docs: search "huggingface_hub python library documentation" — fetch before citing
-```
-
 \</search_strategies>
 
 \<output_templates>
@@ -224,13 +216,13 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 3. Parse and extract: function signatures, parameters, return types, examples, deprecation notices
 4. Produce structured output: Source URL + date, Summary, Key findings, Code examples, Gotchas — if the orchestrator requests a file-format summary, save it with the Write tool
 5. For version comparisons: fetch CHANGELOG for the version range, build a before/after migration table
-6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim. Exception: when a URL path contains a clearly fabricated segment (e.g., a path component that contains words like `DOESNOTEXIST`, `fakepath`, `nonexistent`, or that names a symbol/module that does not exist in the library's known public API), you may flag the URL as broken from path-structure analysis without a live fetch — but state explicitly that you are reasoning from path structure, not from an HTTP response. Reserve live fetches for ambiguous cases where the path looks plausible.
+6. Verify all URLs before including in output — fetch, read, confirm they exist and say what you claim. Exception: when a URL path contains a clearly fabricated segment (e.g., a path component that contains words like `DOESNOTEXIST`, `fakepath`, `nonexistent`, or that names a symbol/module that does not exist in the library's known public API), you may flag the URL as broken from path-structure analysis without a live fetch — but state explicitly that you are reasoning from path structure, not from an HTTP response. Reserve live fetches for ambiguous cases where the path looks plausible. Inverse risk: do not omit a URL finding solely because a live fetch is unavailable — if path-structure evidence and contextual signals (e.g., a domain known to have been deprecated, a version number that is implausible, an `internal.` subdomain) are sufficient, report the issue with explicit reasoning. Absence of a live HTTP response is not grounds for silence on a high-confidence static finding.
 7. Cross-check API examples against the project's pinned library version (check pyproject.toml)
    - Verify the docs version matches the project's actual dependency version
    - Cross-check examples against the library's test suite if available
    - Flag when docs are sparse, outdated, or contradict the source code
    - Note if a feature is experimental, beta, or subject to change
-8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., docs page not fetched — used cached summary, CHANGELOG not found for version range, API examples not executed), and **Refinements** (N passes; omit if 0). For incomplete-extraction findings: if the missing field is a canonical member of a well-known schema (e.g., `client_secret` for OAuth2, `precision` for mixed-precision trainer), report at medium confidence with clear reasoning rather than heavy hedging. Target 0.93–0.96 when all sections are reviewed and no section-level gap exists. For version staleness findings: if a version mismatch is well-reasoned from known release timelines (e.g., a package pinned at a pre-1.0 version when the 1.x series is established, a PyTorch version requirement that predates a known minimum bump), report it at high confidence (≥0.90) with a clear reasoning note in Gaps — do not suppress the overall score below 0.85 solely because the finding was not verified with a live PyPI fetch. Reserve low confidence (below 0.80) for cases where the version timeline itself is ambiguous or the package has had unusual release patterns.
+8. Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., docs page not fetched — used cached summary, CHANGELOG not found for version range, API examples not executed), and **Refinements** (N passes; omit if 0). For incomplete-extraction findings: if the missing field is a canonical member of a well-known schema (e.g., `client_secret` for OAuth2, `precision` for mixed-precision trainer), report at medium confidence with clear reasoning rather than heavy hedging. Target 0.93–0.96 when all sections are reviewed and no section-level gap exists.
 
 </workflow>
 
@@ -243,6 +235,7 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 - **Treating the latest docs as the project's version**: the project's `pyproject.toml` or `uv.lock` pins a specific version; always check that before assuming the latest API applies
 - **Conflating code bugs with prose accuracy errors**: when a documentation page has both a wrong code example AND incorrect surrounding text (e.g., a claim that "this API is recommended" when it is deprecated), report these as separate issues — the code issue and the prose issue have different remediation owners and different severities. Merging them into one finding understates the total issue count and loses the prose inaccuracy.
 - **Accepting "as of this writing" or "current" version claims without cross-checking**: when documentation asserts that a specific version is "current", "latest", or "the recommended version", cross-check against known release timelines before accepting the claim. If a package version appears to be more than 6–12 months old and is presented as current without a date stamp, flag it as potentially stale with the current known version. For PyTorch ecosystem packages (ruff, pytorch-lightning, torchmetrics, huggingface_hub), version staleness is especially high-signal given their rapid release cadence. Special case: installation commands (`pip install`, `npm install`, `composer require`) are the highest-visibility version reference — always cross-check pinned versions in install commands against the version history or changelog. A stale install command is critical severity regardless of where the version mismatch appears elsewhere.
+- **Under-scoring version staleness findings due to unverified live fetch**: if a version mismatch is well-reasoned from known release timelines (e.g., a package pinned at a pre-1.0 version when the 1.x series is established, a PyTorch version requirement that predates a known minimum bump), report it at high confidence (≥0.90) with a clear reasoning note in Gaps — do not suppress the overall score below 0.85 solely because the finding was not verified with a live PyPI fetch. Reserve low confidence (below 0.80) for cases where the version timeline itself is ambiguous or the package has had unusual release patterns.
 
 \</antipatterns_to_flag>
 

@@ -99,7 +99,7 @@ Before writing, fetch the last 2–3 releases from the repo to check for project
 
 ```bash
 gh release list --limit 3
-gh release view <latest-tag>   # read the body to match style, tone, and structure
+gh release view <latest-tag>   # replace <latest-tag> with an actual tag from the list above; read the body to match style, tone, and structure
 ```
 
 If the existing releases deviate significantly from the templates below (e.g., no emoji sections, different heading levels, prose-style entries), match their style. The templates below are the default — project conventions take precedence.
@@ -108,23 +108,23 @@ If the existing releases deviate significantly from the templates below (e.g., n
 
 Omit any section that has no content.
 
-Read the PUBLIC-NOTES template from ${CLAUDE_SKILL_DIR}/templates/PUBLIC-NOTES.tmpl.md and use it as the format for the notes output.
+Read the PUBLIC-NOTES template from .claude/skills/release/templates/PUBLIC-NOTES.tmpl.md and use it as the format for the notes output.
 
 ### CHANGELOG Entry (`changelog`)
 
-Read the CHANGELOG entry template from ${CLAUDE_SKILL_DIR}/templates/CHANGELOG.tmpl.md and use it as the format.
+Read the CHANGELOG entry template from .claude/skills/release/templates/CHANGELOG.tmpl.md and use it as the format.
 
 ### Internal Release Summary (`summary`)
 
-Read the internal release summary template from ${CLAUDE_SKILL_DIR}/templates/SUMMARY.tmpl.md and use it as the format.
+Read the internal release summary template from .claude/skills/release/templates/SUMMARY.tmpl.md and use it as the format.
 
 ### Migration Guide (`migration`)
 
-Read the migration guide template from ${CLAUDE_SKILL_DIR}/templates/MIGRATION.tmpl.md and use it as the format.
+Read the migration guide template from .claude/skills/release/templates/MIGRATION.tmpl.md and use it as the format.
 
 ## Step 4: Writing guidelines
 
-Read the writing guidelines from ${CLAUDE_SKILL_DIR}/guidelines/writing-rules.md and follow them.
+Read the writing guidelines from .claude/skills/release/guidelines/writing-rules.md and follow them.
 
 After applying the guidelines above to polish the output, write to disk per mode:
 
@@ -135,15 +135,7 @@ After applying the guidelines above to polish the output, write to disk per mode
 
 ## Step 5: Publish (after writing notes)
 
-Use project-level tooling to build, publish, and create the GitHub release. Refer to the project's CLAUDE.md or `oss-maintainer` agent for the specific commands.
-
-```bash
-# example only — check project CLAUDE.md or oss-maintainer agent for actual release process
-gh release create v<version> --title "v<version>" \
-  --notes "$(cat releases/v<version>/PUBLIC-NOTES.md)"
-```
-
-End your response with a `## Confidence` block per CLAUDE.md output standards.
+Use project-level tooling to create the GitHub release. Refer to the project's CLAUDE.md or `oss-maintainer` agent for the specific commands.
 
 ## Mode: prepare
 
@@ -220,7 +212,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 
 **Purpose**: Pre-release readiness check — surfaces outstanding work, alignment gaps, and blocking issues before cutting a release.
 
-Read and execute all checks from `.claude/skills/release/templates/audit-checks.md`.
+Read and execute all checks from `.claude/skills/release/templates/audit-checks.md`. Checks cover: version consistency across manifests, docs/CHANGELOG alignment, open blocking issues, dependency CVE scan, and unreleased commits since last tag.
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 

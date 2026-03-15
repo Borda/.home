@@ -53,7 +53,7 @@ Each bash block must be self-contained (redeclare variables at the top). Do not 
 PROJECT="$(git rev-parse --show-toplevel)"
 HOME_EXPANDED="$(eval echo ~)"
 HOME_CLAUDE="$HOME_EXPANDED/.claude"
-git -C "$PROJECT" ls-files .claude/ \
+cd "$PROJECT" && git ls-files .claude/ \
   | grep -vE 'settings\.json$|settings\.local\.json$' \
   | sed 's|^\.claude/||' \
   | rsync -av --dry-run --files-from=- "$PROJECT/.claude/" "$HOME_CLAUDE/"
@@ -101,7 +101,7 @@ rm -f "$SETTINGS_TMP"
 PROJECT="$(git rev-parse --show-toplevel)"
 HOME_EXPANDED="$(eval echo ~)"
 HOME_CODEX="$HOME_EXPANDED/.codex"
-git -C "$PROJECT" ls-files .codex/ \
+cd "$PROJECT" && git ls-files .codex/ \
   | sed 's|^\.codex/||' \
   | rsync -av --dry-run --files-from=- "$PROJECT/.codex/" "$HOME_CODEX/"
 ```
@@ -120,7 +120,7 @@ Each bash block must be self-contained (redeclare variables at the top).
 PROJECT="$(git rev-parse --show-toplevel)"
 HOME_EXPANDED="$(eval echo ~)"
 HOME_CLAUDE="$HOME_EXPANDED/.claude"
-git -C "$PROJECT" ls-files .claude/ \
+cd "$PROJECT" && git ls-files .claude/ \
   | grep -vE 'settings\.json$|settings\.local\.json$' \
   | sed 's|^\.claude/||' \
   | rsync -av --files-from=- "$PROJECT/.claude/" "$HOME_CLAUDE/"
@@ -153,7 +153,7 @@ fi
 PROJECT="$(git rev-parse --show-toplevel)"
 HOME_EXPANDED="$(eval echo ~)"
 HOME_CODEX="$HOME_EXPANDED/.codex"
-git -C "$PROJECT" ls-files .codex/ \
+cd "$PROJECT" && git ls-files .codex/ \
   | sed 's|^\.codex/||' \
   | rsync -av --files-from=- "$PROJECT/.codex/" "$HOME_CODEX/"
 ```
@@ -167,8 +167,8 @@ HOME_EXPANDED="$(eval echo ~)"
 jq empty "$HOME_EXPANDED/.claude/settings.json" && echo "settings.json: valid"
 
 # Counts
-echo ".claude files: $(git -C "$PROJECT" ls-files .claude/ | wc -l | tr -d ' ')"
-echo ".codex files:  $(git -C "$PROJECT" ls-files .codex/  | wc -l | tr -d ' ')"
+echo ".claude files: $(cd "$PROJECT" && git ls-files .claude/ | wc -l | tr -d ' ')"
+echo ".codex files:  $(cd "$PROJECT" && git ls-files .codex/  | wc -l | tr -d ' ')"
 ```
 
 ```

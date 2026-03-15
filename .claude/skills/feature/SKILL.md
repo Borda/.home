@@ -43,6 +43,10 @@ Spawn a **sw-engineer** agent to analyse the codebase and produce:
 - **Compatibility**: does the feature touch public API? Will it require deprecation? Does it need backward-compat shims?
 - **Reuse opportunities**: existing utilities, base classes, patterns, or abstractions that the new code can extend rather than duplicate
 - **Risks**: edge cases, performance implications, or integration points that need careful handling
+- **Scope challenge**: Is this the right problem? Are there simpler alternatives? What already exists that could be extended instead of built from scratch?
+- **Complexity smell**: If the proposed change touches 8+ files or introduces 2+ new classes/modules, flag it explicitly — the scope may need narrowing before proceeding
+
+**Gate**: If complexity smell was flagged, present the scope concern to the user before proceeding to Step 2. The sw-engineer's analysis may recommend a narrower approach.
 
 Present the analysis summary before proceeding.
 
@@ -202,7 +206,7 @@ Inspect what was built (`git diff HEAD --stat`) and identify real implementation
 - Style or lint violations — run pre-commit hooks instead
 - Any task where you cannot write a precise description without guessing
 
-!`cat .claude/skills/_shared/codex-delegation.md`
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
 
 Example prompt: `"use the doc-scribe to add a 6-section NumPy-style docstring to BatchTransform.apply() in src/transforms.py — the method applies per-sample normalization using a precomputed mean/std tensor and returns a tensor of the same shape as input"`
 
@@ -244,6 +248,7 @@ Output a structured summary:
 ## Confidence
 **Score**: [0.N]
 **Gaps**: [e.g., review cycle incomplete, edge cases not fully explored, integration tests not run]
+**Refinements**: N passes. [Pass 1: <what improved>.] — omit if 0 passes
 ```
 
 ## Team Mode (--team)

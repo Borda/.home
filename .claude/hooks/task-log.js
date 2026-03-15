@@ -2,9 +2,14 @@
 // PreToolUse hook  — logs Task/Skill invocations to the audit log.
 // SubagentStart hook — adds the subagent to the active-agents state.
 // SubagentStop hook  — removes the subagent from state and logs completion.
+// PreCompact hook  — logs context compaction start to compactions.jsonl.
+// PostCompact hook — logs context compaction end to compactions.jsonl.
+// Stop hook        — clears active-agents state when the main agent finishes.
+// SessionEnd hook  — clears active-agents state when the session terminates.
 //
 // Writes to:
 //   .claude/logs/invocations.jsonl  — append-only audit log
+//   .claude/logs/compactions.jsonl  — compaction events log
 //   .claude/state/agents.json       — currently active subagents (mutable)
 //
 // Exit 0 always — logging must never block Claude.
@@ -25,6 +30,7 @@ process.stdin.on("end", () => {
     const logsDir = path.join(root, ".claude", "logs");
     const stateDir = path.join(root, ".claude", "state");
     const logFile = path.join(logsDir, "invocations.jsonl");
+    const compactFile = path.join(logsDir, "compactions.jsonl");
     const stateFile = path.join(stateDir, "agents.json");
 
     const ts = new Date().toISOString();
@@ -49,8 +55,24 @@ process.stdin.on("end", () => {
     } else if (hook_event_name === "SubagentStop") {
       // Subagent finished — remove from active state and log completion
       mutateAgents(stateFile, stateDir, (agents) => (agent_id ? agents.filter((a) => a.id !== agent_id) : agents));
-      // tool name not available at stop time; "Task" used as placeholder (matches start event convention)
-      appendLog(logFile, logsDir, { ts, event: "completed", tool: "Task", agent: agent_type || "unknown" });
+      // Capture last assistant message (up to 500 chars) for post-mortem debugging
+      const lastMsg = (data.last_assistant_message || "").slice(0, 500) || undefined;
+      appendLog(logFile, logsDir, {
+        ts,
+        event: "completed",
+        tool: "Task",
+        agent: agent_type || "unknown",
+        ...(lastMsg && { last_msg: lastMsg }),
+      });
+    } else if (hook_event_name === "PreCompact") {
+      appendLog(compactFile, logsDir, { ts, event: "pre_compact" });
+    } else if (hook_event_name === "PostCompact") {
+      // compact_summary is provided by Claude Code — log it for session history
+      const summary = data.compact_summary || undefined;
+      appendLog(compactFile, logsDir, { ts, event: "post_compact", ...(summary && { summary }) });
+    } else if (hook_event_name === "Stop" || hook_event_name === "SessionEnd") {
+      // Session finished — clear active-agents state so the status line resets cleanly
+      mutateAgents(stateFile, stateDir, () => []);
     }
   } catch (_) {
     // Silently swallow all errors — hook must never crash or block Claude
