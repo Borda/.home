@@ -1,16 +1,18 @@
 Write for the reader, not the commit author.
 
-| Element          | Rule                                                              |
-| ---------------- | ----------------------------------------------------------------- |
-| Feature heading  | Bold title, period, then plain-English description — no jargon    |
-| PR numbers       | Always at line end: `(#N)` or `(#N, #M)` — never omit             |
-| Code examples    | Real usage showing the new surface; not pseudocode                |
-| Tables           | Use for option/preset comparisons; skip for single-item features  |
-| Breaking changes | State exactly what breaks and the migration path                  |
-| Fix items        | Say what was broken and under what condition — not just "fixed X" |
-| Changed items    | Behaviour changes only — old behaviour → new behaviour            |
-| Deprecated items | Name old API and its replacement; omit removal version if unknown |
-| Removed items    | State deprecated-since version and migration target               |
+| Element          | Rule                                                                       |
+| ---------------- | -------------------------------------------------------------------------- |
+| Feature heading  | Bold title, period, then plain-English description — no jargon             |
+| PR numbers       | Always at line end: `(#N)` or `(#N, #M)` — never omit                      |
+| Code examples    | Real usage showing the new surface; not pseudocode                         |
+| Tables           | Use for option/preset comparisons; skip for single-item features           |
+| Breaking changes | Rare — use sparingly; false alarms scare users more than the change itself |
+| Fix items        | Say what was broken and under what condition — not just "fixed X"          |
+| Changed items    | Behaviour changes only — old behaviour → new behaviour                     |
+| Deprecated items | Name old API and its replacement; omit removal version if unknown          |
+| Removed items    | State deprecated-since version and migration target                        |
+
+> **Breaking vs Deprecated**: Normal flow is deprecate → announce removal version → Removed. Breaking Changes is for the rare case where **public API or user-facing behaviour** breaks **immediately** on upgrade with no prior warning and no fallback — including dependency version incompatibilities that affect users directly. Private API and test changes are never Breaking Changes. If the old behaviour still works — even with a deprecation warning — it belongs in Deprecated, not here. When in doubt, it is not Breaking Changes.
 
 Bad/good examples:
 

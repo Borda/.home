@@ -360,27 +360,36 @@ Claude Code's experimental Agent Teams feature is enabled. Teams are always **us
 
 ### Status Line
 
-A lightweight hook (`hooks/statusline.js`) adds a persistent status bar to every Claude Code session:
+A lightweight hook (`hooks/statusline.js`) adds a persistent multi-row status bar to every Claude Code session:
 
 ```
-claude-sonnet-4-6 │ Borda.local │ Pro ~$1.20 │ ████░░░░░░ 38%
-claude-sonnet-4-6 │ Borda.local │ API $0.42  │ ████░░░░░░ 38%
-claude-sonnet-4-6 │ Borda.local │ Max ~$0.80 │ ██░░░░░░░░ 20% │ ⚡ 2 agents (Explore, sw-engineer)
+Row 1 (always):    claude-sonnet-4-6 │ Borda.local │ Pro ~$1.20 │ ████░░░░░░ 38%
+Row 2 (agents):    ⚡ 5 agents (self-mentor ×3, opus, sw-engineer)
+Row 3 (tools):     🔧 (Bash ×3 | Edit | Read ×12)
 ```
 
-Shows the active model name, current project directory, billing indicator, a 10-segment context usage bar (green → yellow → red), and an active subagent indicator when background agents are running.
+Row 1 shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red). Rows 2 and 3 appear only when there is something to show.
+
+**Agent row** — groups running agents by display name:
+
+- *Specialized agents* (have a `.claude/agents/` file) → shown by type name in their declared `color:` from frontmatter (e.g. `sw-engineer` in blue, `self-mentor` in pink)
+- *General-purpose agents* or agents without a pinned model → shown by model name in gray (e.g. `opus`, `sonnet`)
+- Agents of the same type are grouped with a `×N` count
+
+**Tool row** — shows tools called in the last 30 seconds, each in a unique fixed color:
+`Read` (blue) · `Write` (bright green) · `Edit` (green) · `Bash` (yellow) · `Grep` (cyan) · `Glob` (bright cyan) · `WebFetch` (magenta) · `WebSearch` (bright magenta) · `Task`/`Agent` (bright blue) · `Skill` (bright yellow)
 
 <details>
 <summary><strong>Billing indicator explained</strong></summary>
 
-- **Subscription (Pro/Max)**: `Max/Pro/Sub ~$X.XX` in cyan — plan name is inferred from context window size (≥1M tokens → Max, ≥200k → Pro, else Sub); `~$X.XX` is the session's theoretical API-rate cost (tokens × list price), not an actual charge. Use `/status` for real monthly quota.
+- **Subscription (Pro/Max)**: `Max/Pro/Sub ~$X.XX` in cyan — plan name read from `~/.claude/state/subscription.json` (written at session start); `~$X.XX` is the session's theoretical API-rate cost (tokens × list price), not an actual charge. Use `/status` for real monthly quota.
 - **API key**: `API $X.XX` in yellow — actual spend at pay-per-token rates.
 
 `cost.total_cost_usd` (the source of `$X.XX`) is tokens × published API rates. For subscription users this is an estimate only — Anthropic's subscription quota uses internal accounting that doesn't map 1:1 to API list prices.
 
 </details>
 
-The subagent indicator (`⚡ N agents (type, ...)`) appears while Task agents are running and clears the moment they finish. It is powered by a companion hook (`hooks/task-log.js`) that handles 7 events: `SubagentStart`/`SubagentStop` (track active agents in `.claude/state/agents.json`), `PreToolUse` (audit log to `.claude/logs/invocations.jsonl`), `PreCompact`/`PostCompact` (log context compactions to `.claude/logs/compactions.jsonl`), and `Stop`/`SessionEnd` (clear agents state so the status line resets cleanly). A 10-minute safety-net age-out handles crashed or hung agents.
+The agent row is powered by `hooks/task-log.js`, which handles: `SubagentStart`/`SubagentStop` (one file per active agent in `.claude/state/agents/<id>.json`), `PreToolUse` (audit log + tool activity state in `.claude/state/tools/<tool>.json`), `PreCompact` (context snapshot in `.claude/state/session-context.md`), and `Stop`/`SessionEnd` (clear all state so the status line resets cleanly). A 10-minute safety-net age-out handles crashed or hung agents.
 
 Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
 

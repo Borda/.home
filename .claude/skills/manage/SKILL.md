@@ -3,7 +3,7 @@ name: manage
 description: Create, update, or delete agents and skills with full cross-reference propagation. Also manages settings.json permissions atomically with permissions-guide.md via add/remove perm operations.
 argument-hint: <create|update|delete> <agent|skill> <name> | add perm <rule> "desc" "use-case" | remove perm <rule>
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, WebFetch, WebSearch
 ---
 
 <objective>
@@ -91,7 +91,7 @@ If validation fails, report the error and stop.
 
 Before creating anything, check if existing agents/skills already cover the requested functionality:
 
-1. Read descriptions of all existing agents (`head -3` of each `.md` in agents/) and skills (`head -3` of each `SKILL.md`)
+1. Read descriptions of all existing agents (`head -n 3` of each `.md` in agents/) and skills (`head -n 3` of each `SKILL.md`)
 2. Compare the new description against each existing one — look for domain overlap, similar workflows, or redundant scope
 3. Present findings to the user:
    - **No overlap**: proceed to Step 3
@@ -410,7 +410,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
 - Follow-up chains:
   - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
-  - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official `skill-creator` tool from the github.com/anthropics/skills repository <!-- verify at use time -->
+  - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), check the Anthropic skills repository for a `skill-creator` tool
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
   - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`

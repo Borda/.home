@@ -2,7 +2,7 @@
 // PreToolUse hook  — logs Task/Skill invocations to the audit log.
 // SubagentStart hook — adds the subagent to the active-agents state.
 // SubagentStop hook  — removes the subagent from state and logs completion.
-// PreCompact hook  — logs context compaction start to compactions.jsonl (PostCompact not a valid CC hook).
+// PreCompact hook  — logs context compaction start to compactions.jsonl.
 // Stop hook        — clears active-agents state when the main agent finishes.
 // SessionEnd hook  — clears active-agents state when the session terminates.
 //
@@ -10,6 +10,7 @@
 //   .claude/logs/invocations.jsonl      — append-only audit log
 //   .claude/logs/compactions.jsonl      — compaction events log
 //   .claude/state/agents/<id>.json      — one file per active subagent (replaces agents.json)
+//   .claude/state/tools/<tool>.json     — one file per tool type, updated on each PreToolUse
 //   .claude/state/session-context.md    — files modified + compact summary (written on compaction)
 //
 // Exit 0 always — logging must never block Claude.
@@ -30,6 +31,7 @@ process.stdin.on("end", () => {
     const logsDir = path.join(root, ".claude", "logs");
     const stateDir = path.join(root, ".claude", "state");
     const agentsDir = path.join(stateDir, "agents");
+    const toolsDir = path.join(stateDir, "tools");
     const logFile = path.join(logsDir, "invocations.jsonl");
     const compactFile = path.join(logsDir, "compactions.jsonl");
 
@@ -46,14 +48,31 @@ process.stdin.on("end", () => {
         const args = tool_input?.args || "";
         appendLog(logFile, logsDir, { ts, event: "invoked", tool: "Skill", skill, args });
       }
+      // Track all tool calls for statusline tool-activity line (count per type within window)
+      if (tool_name) {
+        try {
+          fs.mkdirSync(toolsDir, { recursive: true });
+          const toolFile = path.join(toolsDir, `${tool_name}.json`);
+          let count = 1;
+          try {
+            const existing = JSON.parse(fs.readFileSync(toolFile, "utf8"));
+            count = (existing.count || 0) + 1;
+          } catch (_) {}
+          fs.writeFileSync(toolFile, JSON.stringify({ tool: tool_name, since: ts, count }));
+        } catch (_) {}
+      }
     } else if (hook_event_name === "SubagentStart") {
       // Each agent gets its own file — no read-modify-write race with concurrent agents
       try {
         fs.mkdirSync(agentsDir, { recursive: true });
         const id = agent_id || ts;
+        // Try hook data first; fall back to reading model+color from agent frontmatter
+        const info = readAgentInfo(root, agent_type);
+        const model = data.model || info.model;
+        const color = info.color;
         fs.writeFileSync(
           path.join(agentsDir, `${id}.json`),
-          JSON.stringify({ id, type: agent_type || "unknown", since: ts }),
+          JSON.stringify({ id, type: agent_type || "unknown", model, color, since: ts }),
         );
       } catch (_) {}
     } else if (hook_event_name === "SubagentStop") {
@@ -112,21 +131,41 @@ process.stdin.on("end", () => {
         } catch (_) {}
       }
     } else if (hook_event_name === "Stop" || hook_event_name === "SessionEnd") {
-      // Session finished — clear all per-agent files so the status line resets cleanly
-      try {
-        const files = fs.readdirSync(agentsDir);
-        for (const f of files) {
-          try {
-            fs.unlinkSync(path.join(agentsDir, f));
-          } catch (_) {}
-        }
-      } catch (_) {}
+      // Session finished — clear all per-agent and per-tool files so the status line resets cleanly
+      for (const dir of [agentsDir, toolsDir]) {
+        try {
+          const files = fs.readdirSync(dir);
+          for (const f of files) {
+            try {
+              fs.unlinkSync(path.join(dir, f));
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
     }
   } catch (_) {
     // Silently swallow all errors — hook must never crash or block Claude
   }
   process.exit(0);
 });
+
+function readAgentInfo(root, agentType) {
+  if (!agentType || agentType === "unknown") return { model: "inherit", color: null };
+  try {
+    const content = fs.readFileSync(path.join(root, ".claude", "agents", `${agentType}.md`), "utf8");
+    // Extract frontmatter block (between first and second ---)
+    const fm = content.match(/^---\n([\s\S]*?)\n---/);
+    const block = fm ? fm[1] : "";
+    const modelMatch = block.match(/^model:\s*(\S+)/m);
+    const colorMatch = block.match(/^color:\s*(\S+)/m);
+    return {
+      model: modelMatch ? modelMatch[1] : "inherit",
+      color: colorMatch ? colorMatch[1] : null,
+    };
+  } catch (_) {
+    return { model: "inherit", color: null }; // built-in types (general-purpose) or missing file
+  }
+}
 
 function appendLog(logFile, dir, entry) {
   try {

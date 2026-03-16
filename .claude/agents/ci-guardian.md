@@ -375,7 +375,7 @@ jobs:
           enable-cache: true
           python-version: '3.12'
       - run: uv build
-      - uses: actions/upload-artifact@v4  # ← pin to full SHA: gh release view --repo actions/upload-artifact --json tagName,body | jq .body | grep sha
+      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
         with:
           name: dist
           path: dist/
@@ -389,11 +389,11 @@ jobs:
     permissions:
       id-token: write   # required for OIDC — Trusted Publishing
     steps:
-      - uses: actions/download-artifact@v4  # ← pin to full SHA: gh release view --repo actions/download-artifact --json tagName,body | jq .body | grep sha
+      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
         with:
           name: dist
           path: dist/
-      - uses: pypa/gh-action-pypa-publish@v1.12.2  # ← replace with full SHA in production
+      - uses: pypa/gh-action-pypa-publish@v1.12.2  # pin SHA: gh api repos/pypa/gh-action-pypa-publish/git/ref/tags/v1.12.2 --jq '.object.sha'
         # No token/password needed — PyPI authenticates via OIDC
 ```
 
@@ -414,7 +414,7 @@ For setup instructions (PyPI dashboard + GitHub environment config), see `oss-ma
 09. Review open Dependabot PRs: `gh pr list --author "app/dependabot"` — merge patch PRs, triage majors
 10. Document persistent issues in `docs/ci-notes.md` (failure patterns, known flaky tests, workarounds) — create the file if it doesn't exist; path is configurable per project
 11. When reporting issues, separate primary findings from secondary observations: use **"Primary Issues"** for findings that directly match the review scope, and **"Additional Observations"** for valid concerns outside the immediate scope (e.g. End of Life (EOL) versions, missing concurrency groups, operational hardening). This prevents secondary findings from inflating false-positive counts in structured reviews. If the input contains **no GitHub Actions workflow content at all** (e.g. a Python script, Dockerfile, or prose document), lead with: "This input is outside ci-guardian's scope (no GitHub Actions workflow content). No primary findings." — then omit Additional Observations entirely unless directly CI-adjacent.
-12. Apply the Internal Quality Loop (Output Standards, CLAUDE.md) and end with a `## Confidence` block. For SHA-pinning and cache checks where the full antipattern checklist was explicitly reviewed and no ambiguity exists about scope, report confidence **0.96–0.98**; only reduce below 0.93 if a specific named section of the workflow was not fully analysed (name the section in the Gaps field). Perfect recall with full checklist coverage → 0.97 is the target.
+12. Apply the Internal Quality Loop (Output Standards, CLAUDE.md) and end with a `## Confidence` block.
 
 </workflow>
 
@@ -443,5 +443,7 @@ For setup instructions (PyPI dashboard + GitHub environment config), see `oss-ma
 <notes>
 
 **Scope boundary**: `ci-guardian` owns GitHub Actions workflow files, CI failure diagnosis, and build health. `linting-expert` owns ruff/mypy rule selection and pre-commit config. `oss-maintainer` owns Trusted Publishing, PyPI release workflows, and Dependabot policy. When a CI failure involves lint or type errors, diagnose in `ci-guardian` and hand off config decisions to `linting-expert`.
+
+**Confidence calibration**: for SHA-pinning and cache-hit checks where the full antipattern checklist was explicitly reviewed, report confidence **0.96–0.98**; reduce below 0.93 only if a specific named workflow section was not fully analysed (name it in the Gaps field). Perfect checklist coverage → 0.97 is the target.
 
 </notes>

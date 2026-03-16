@@ -1,6 +1,6 @@
 ---
 name: develop
-description: Unified development orchestrator with three modes — feature (TDD-first new capability), fix (reproduce-first bug resolution), refactor (test-first code quality). Parses the first argument as the mode, then runs mode-specific steps followed by a shared quality stack and progressive review loop.
+description: Unified development orchestrator with three modes — feature (TDD-first new capability), fix (reproduce-first bug resolution), refactor (test-first code quality). Each mode includes a built-in self-review gate before the shared quality stack and progressive review loop.
 argument-hint: feature|fix|refactor <description or issue #> ["target"]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
@@ -10,9 +10,16 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdat
 
 Implement software changes with disciplined, test-driven workflows. The mode determines the entry contract:
 
-- **feature**: TDD-first — crystallise the API as a demo test, drive implementation to pass it, then doc + review
-- **fix**: reproduce-first — capture the bug in a failing regression test, apply minimal fix, then verify
-- **refactor**: test-first — audit test coverage, add characterization tests if missing, then apply changes with a safety net
+- **feature**: TDD-first — validate demo → implement → review+fix loop (max 3 cycles) → doc → quality stack + review
+- **fix**: reproduce-first — validate reproduction → apply minimal fix → review+fix loop (max 3 cycles) → quality stack + review
+- **refactor**: test-first — validate coverage audit → characterization tests → refactor → review+fix loop (max 3 cycles) → quality stack + review
+
+Each mode includes two layers of built-in review before the shared quality stack:
+
+1. **Step 2 review** — validate the artifact (demo, regression test, or coverage audit) before writing any implementation
+2. **Step 4/5 review+fix loop** — review the implementation, fix all gaps, loop (max 3 cycles) until only nits remain
+
+Both layers are in-context (no agent spawn). They catch design mismatches, scope creep, and missing edge cases early so `/review` validates rather than discovers.
 
 All modes share a quality stack and a progressive review loop that narrows scope across cycles.
 
@@ -177,6 +184,6 @@ Detect `--team` flag in `$ARGUMENTS`. Each mode file defines its team assignment
   - Feature/fix is performance-sensitive → `/optimize` for baseline + bottleneck analysis
   - Any mode touches `.claude/` config files → spawn `self-mentor` on changed files, then `/sync` to propagate
   - Mechanical follow-up beyond Codex step → `/codex` to delegate additional tasks
-  - Quality validation after refactor → `/review` for full multi-agent code review
+  - External validation → `/review` if an independent multi-agent review is desired beyond the built-in self-review gates
 
 </notes>

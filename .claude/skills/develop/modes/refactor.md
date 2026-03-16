@@ -39,6 +39,17 @@ Classify each public function/method as:
 - **Partially covered**: has a test but missing edge cases or failure paths
 - **Uncovered**: no test at all
 
+### Review: Validate the coverage audit
+
+Before writing characterization tests, critically evaluate the audit output itself:
+
+1. **Completeness**: were all public functions, methods, and classes identified — including those with complex call paths?
+2. **Classification accuracy**: is each item correctly classified? Partially-covered functions are frequently misclassified as covered.
+3. **Refactor relevance**: are the uncovered/partial items in the code paths the refactoring will actually touch?
+4. **Hidden dependencies**: are there integration points or cross-module calls the audit may have missed?
+
+If the audit seems incomplete: re-examine before proceeding to Step 3. Gaps in the safety net discovered mid-refactoring (Step 4) are costly.
+
 ## Step 3: Add characterization tests (if needed)
 
 For every **uncovered** or **partially covered** public API, spawn a **qa-specialist** agent to generate characterization tests:
@@ -75,6 +86,34 @@ For each change:
 - **Structural**: extract classes/modules, reduce coupling, apply design patterns
 - **Performance**: replace loops with vectorized ops, reduce allocations, batch I/O
 - **Dead code removal**: remove unused imports, unreachable branches, commented-out code; scan `_`-prefixed functions with no call sites; flag public methods absent from `__init__.py` exports
+
+## Step 5: Review and close gaps
+
+Full review of the refactored code. This is a **loop** — review → targeted refactoring (return to Step 4) → re-review until only nits remain. Maximum 3 outer cycles. (Step 4's "max 5 change-test cycles" bound applies within each individual pass through Step 4, independently of this outer loop.)
+
+**Each cycle:**
+
+1. Evaluate against all criteria:
+
+   - **Behavior preservation**: all characterization tests and pre-existing tests pass with identical outputs
+   - **Goal achieved**: the stated refactoring goal was actually accomplished (not just partially)
+   - **No new smells**: no new coupling, complexity, or duplication introduced
+   - **API surface**: no unintended public API changes (signature, return type, raised exceptions)
+   - **Dead code**: any code that became unreachable after the refactor was removed
+
+2. For every gap found: return to Step 4 and apply a targeted fix — one focused change per gap.
+
+3. Re-run the full test suite:
+
+   ```bash
+   python -m pytest <test_files> -v --tb=short 2>&1 | tail -20
+   ```
+
+4. **If only nits remain** (variable naming, comment clarity, minor formatting): document in Follow-up and exit the loop.
+
+5. **If substantive gaps remain**: start the next cycle (max 3 total).
+
+**After 3 cycles**: if substantive issues remain, stop — surface them to the user before proceeding.
 
 ## Final Report
 

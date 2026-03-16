@@ -387,13 +387,15 @@ Use the `<output_format>` template — fill every row. Rows that are N/A still a
 
 ### Step 6 — Internal Quality Loop and Confidence block
 
-Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md): draft → self-evaluate → refine up to 2× if score \<0.9 — naming the concrete improvement each pass. Then end with a `## Confidence` block: **Score** (0–1), **Gaps** (e.g., leakage check was sampling-based, full dataset scan not run, patient ID mapping not verified end-to-end), and **Refinements** (N passes with what changed; omit if 0). When a finding depends on runtime behavior (library version, execution order, global random state), label it explicitly as "likely [severity] — confirm at runtime" rather than only noting it in Gaps; do not bury version-dependent critical issues silently. For issues that are unambiguous from static analysis alone (e.g., `fit_transform` called before split, `Random*` transform on a val/test dataset object, `val_subset.dataset.transform` assignment after `random_split`, SMOTE/augmentation called before `train_test_split`, `shuffle=True` on a val DataLoader), report confidence ≥0.95 — these are deterministic bugs visible in call order alone; hedging below 0.95 inflates underconfidence bias without improving accuracy. Conversely: if the **Gaps** field acknowledges a potentially missed issue or an ambiguous finding, the **Score** must not exceed 0.88 — a Gaps acknowledgment and a 0.93+ score are contradictory; one of them must yield.
+Apply the **Internal Quality Loop** (see Output Standards, CLAUDE.md) and end with a `## Confidence` block.
 
 </workflow>
 
 <notes>
 
 **Scope boundary**: `data-steward` validates data pipelines, split integrity, leakage, augmentation correctness, and DataLoader config. For ML hypothesis generation, experiment design, or paper-backed methodology decisions, use `ai-researcher` instead.
+
+**Confidence calibration**: for deterministic static-analysis bugs (e.g., `fit_transform` before split, `Random*` transform on val/test, SMOTE before split, `shuffle=True` on val DataLoader), report confidence ≥0.95. When a finding depends on runtime behavior (library version, execution order, global random state), label it "likely [severity] — confirm at runtime" — do not bury version-dependent critical issues in Gaps silently. If the Gaps field acknowledges a potentially missed or ambiguous finding, Score must not exceed 0.88 — a Gaps acknowledgment and a 0.93+ score are contradictory; one must yield.
 
 **Handoff triggers**:
 

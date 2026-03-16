@@ -226,6 +226,11 @@ Canonical: #[oldest open issue] — suggest closing others as duplicates
 
 ### Unique (not duplicates)
 - #[N]: [title] — [why it's distinct]
+
+### Recommendations
+1. Close #[N] as duplicate of #[canonical] — add comment: "Closing as duplicate of #[canonical]"
+2. [Next highest-impact triage action]
+3. [Any label additions or reassignments]
 ```
 
 After printing the output above, write the full content to `tasks/output-analyse-dupes-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-dupes-$(date +%Y-%m-%d).md`
@@ -256,6 +261,11 @@ Produce:
 - Average: [N days] between releases
 - Last release: [date] ([tag])
 - Overdue? [yes/no based on cadence]
+
+### Recommendations
+1. [Most urgent action — e.g., "cut overdue release", "review stale PRs", "thank top contributor"]
+2. [Bus factor concern if ≥60% commits from one author — suggest onboarding new contributors]
+3. [Cadence suggestion if overdue]
 ```
 
 After printing the output above, write the full content to `tasks/output-analyse-contributors-$(date +%Y-%m-%d).md` using the Write tool and notify: `→ saved to tasks/output-analyse-contributors-$(date +%Y-%m-%d).md`

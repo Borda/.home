@@ -72,7 +72,7 @@ printf '{"ts":"%s","status":"not_started","reason":"codex not found on PATH"}\n'
   "$(date -u +%Y-%m-%dT%H:%M:%SZ)" >> "$CODEX_LOG"
 ```
 
-`Pre-flight failed: codex not found on PATH. Install and retry. npm install -g @openai/codex` <!-- verify at use time -->
+`Pre-flight failed: codex not found on PATH. Install and retry. npm install -g @openai/codex`
 
 ## Step 2: Scope and formulate the prompt
 
@@ -286,6 +286,7 @@ jq -r '[.ts, .status, .agent, .prompt[:60]] | @tsv' .codex/logs/delegations.json
 - **Patch files are parallel-safe**: each subagent writes a uniquely named file — no shared git state, no stash index races
 - **Parent applies patches**: when running as a subagent, stop after saving the patch; never apply it yourself — the parent serialises application
 - **`disable-model-invocation: true`**: Claude will not auto-invoke this skill; you must type `/codex <task>` explicitly. Once invoked, the parent model executes all workflow steps — this flag only prevents automatic background triggering.
+- **Codex install command**: the `npm install -g @openai/codex` suggestion in the pre-flight error message should be verified at use time — the package name or install method may change across Codex releases
 - Related agents: `sw-engineer` (fallback for direct implementation), `linting-expert` (validation), `qa-specialist` (test validation)
 - Follow-up chains:
   - Codex changes pass but need architectural review → `/review` for full multi-agent quality validation

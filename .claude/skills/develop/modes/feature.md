@@ -71,6 +71,17 @@ python examples/demo_<feature>.py 2>&1 | tail -5
 
 **Gate**: demo must fail or error. If it passes, the feature may already exist — revisit Step 1.
 
+### Review: Validate the demo
+
+Before proceeding to implementation, critically evaluate the demo itself:
+
+1. **Goal alignment**: does this demo address the user's stated goal, or does it solve a related but slightly different problem?
+2. **API design**: is the proposed API minimal? Does it follow existing conventions in the codebase (naming, parameter order, return types)?
+3. **Missing scenarios**: are there obvious happy-path variants or important failure modes the demo doesn't cover?
+4. **Testability**: can this demo be automatically verified — not just `print`-and-inspect?
+
+If any issue is found: revise the demo and re-run the gate. Do not proceed to Step 3 with a flawed API contract — the entire TDD loop is anchored to this.
+
 ## Step 3: TDD implementation loop
 
 Drive the implementation by making tests pass, one cycle at a time:
@@ -112,7 +123,35 @@ Repeat until all feature tests pass and the Step 2 demo passes.
 
 If Step 2 produced an example script: promote it into a formal pytest test now that the API is stable. Delete the script once the test is in place.
 
-## Step 4: Documentation
+## Step 4: Review and close gaps
+
+Full review of the implementation. This is a **loop** — review → fix → re-review until only nits remain. Maximum 3 cycles.
+
+**Each cycle:**
+
+1. Evaluate against all criteria:
+
+   - **API match**: implementation matches the exact API from Step 2 (name, signature, return type)
+   - **Scope discipline**: only Step-1-identified files changed; no drive-by fixes or unrelated edits
+   - **Edge cases**: error paths, boundary inputs, None/empty handling are exercised by tests
+   - **Test quality**: tests verify behavior (not implementation internals); parametrized where inputs vary
+   - **Simplicity**: no dead code, no unnecessary abstractions, no over-engineering
+
+2. For every gap found: implement the fix immediately — add missing tests, remove dead code, revert out-of-scope edits. Return to Step 3 for any substantive implementation gap that needs a new TDD cycle.
+
+3. Re-run the full suite to confirm nothing regressed:
+
+   ```bash
+   python -m pytest <target_test_dir> -v --tb=short -q 2>&1 | tail -20
+   ```
+
+4. **If only nits remain** (style, cosmetic naming, minor formatting): document in Follow-up and exit the loop.
+
+5. **If substantive gaps remain**: start the next cycle (max 3 total).
+
+**After 3 cycles**: if substantive issues remain, stop — surface them to the user before proceeding to Step 5.
+
+## Step 5: Documentation
 
 Spawn a **doc-scribe** agent to update all affected documentation:
 
@@ -170,14 +209,14 @@ python -m pytest --doctest-modules <target_module> -v 2>&1 | tail -20
 
 - **Teammate 1 (sw-engineer, model=opus)**: implements the feature (Steps 2–3)
 - **Teammate 2 (qa-specialist, model=opus)**: writes TDD tests in parallel + security checks for auth/payment/data scope
-- **Teammate 3 (doc-scribe, model=sonnet)**: prepares documentation structure in parallel (Step 4)
+- **Teammate 3 (doc-scribe, model=sonnet)**: prepares documentation structure in parallel (Step 5)
 
 **Coordination:**
 
 1. Lead broadcasts Step 1 analysis: `{feature: <desc>, scope: <modules>, API: <proposed signature>}`
 2. QA challenges SW's API design first — lead routes challenge back to SW before implementation starts
 3. SW shares implementation details with QA so tests stay accurate
-4. Lead synthesizes outputs in Steps 4 onward as normal
+4. Lead synthesizes outputs in Steps 5 onward as normal
 
 **Spawn prompt template:**
 

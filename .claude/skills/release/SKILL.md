@@ -2,7 +2,7 @@
 name: release
 description: 'Prepare release communication and check release readiness. Modes — notes (writes PUBLIC-NOTES.md), changelog (prepends CHANGELOG.md), summary (internal brief), migration (breaking-changes guide), prepare (full pipeline: audit → notes + changelog + summary + migration if breaking changes), audit (pre-release readiness check: blockers, docs alignment, version consistency, Common Vulnerabilities and Exposures (CVEs)). Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prepare v2.0", "write release notes", "am I ready to release", "check release readiness", or wants to announce a version to users.'
 argument-hint: <mode> [range] | migration <from> <to> | prepare <version> | audit [version]
-allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Bash, Grep, Glob, TaskCreate, TaskUpdate
 ---
 
 <objective>
@@ -79,16 +79,18 @@ it is a breaking change regardless of how it was labelled in the PR.
 
 Section order (fixed — never reorder): 🚀 Added → ⚠️ Breaking Changes → 🌱 Changed → 🗑️ Deprecated → ❌ Removed → 🔧 Fixed
 
-| Category             | Output section         | What goes here                                                            |
-| -------------------- | ---------------------- | ------------------------------------------------------------------------- |
-| **New Features**     | 🚀 Added               | User-visible additions                                                    |
-| **Breaking Changes** | ⚠️ Breaking Changes    | Requires callers to change code, config, or behavior                      |
-| **Improvements**     | 🚀 Added or 🌱 Changed | Enhancements to existing behavior                                         |
-| **Performance**      | 🚀 Added or 🔧 Fixed   | Speed or memory improvements                                              |
-| **Deprecations**     | 🗑️ Deprecated          | Still works, scheduled for removal                                        |
-| **Removals**         | ❌ Removed             | Previously deprecated Application Programming Interface (API) now gone    |
-| **Bug Fixes**        | 🔧 Fixed               | Correctness fixes                                                         |
-| **Internal**         | *(omit)*               | Refactors, Continuous Integration (CI), deps — omit unless user-impacting |
+| Category             | Output section         | What goes here                                                                                                                                                                       |
+| -------------------- | ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **New Features**     | 🚀 Added               | User-visible additions                                                                                                                                                               |
+| **Breaking Changes** | ⚠️ Breaking Changes    | Existing code **stops working immediately** after upgrade — API removed, signature changed incompatibly, behavior changed with no fallback. Must be 100% certain it no longer works. |
+| **Improvements**     | 🚀 Added or 🌱 Changed | Enhancements to existing behavior                                                                                                                                                    |
+| **Performance**      | 🚀 Added or 🔧 Fixed   | Speed or memory improvements                                                                                                                                                         |
+| **Deprecations**     | 🗑️ Deprecated          | Old API **still works** this release but is scheduled for removal — emits a warning, replacement exists                                                                              |
+| **Removals**         | ❌ Removed             | Previously deprecated API now gone (this is what becomes a Breaking Change in the next cycle)                                                                                        |
+| **Bug Fixes**        | 🔧 Fixed               | Correctness fixes                                                                                                                                                                    |
+| **Internal**         | *(omit)*               | Refactors, Continuous Integration (CI), deps — omit unless user-impacting                                                                                                            |
+
+**Breaking vs Deprecated**: if the old call still works (even with a warning), it is **Deprecated** — never Breaking Changes. Breaking Changes are strictly for changes where upgrading causes immediate failures with no compatibility period.
 
 Filter out: merge commits, minor dep bumps, CI config, comment typos.
 Always include: any breaking change, any behavior change, any new API surface.

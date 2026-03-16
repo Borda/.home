@@ -76,7 +76,7 @@ Flag rules:
 - Caught=Yes + Action=`pass` or bare `except` → **MEDIUM** (swallowed error)
 - Cap at 15 rows. Focus on new/changed paths only, not the entire codebase.
 
-Read the review checklist: `cat ${CLAUDE_SKILL_DIR}/checklist.md` — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
+Read the review checklist: `cat .claude/skills/review/checklist.md` — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
 
 **Agent 2 — qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for Machine Learning (ML)-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are Ground Truth (GT)-level findings, not afterthoughts):
 
@@ -145,7 +145,7 @@ Read and follow the cross-validation protocol from `.claude/skills/_shared/cross
 
 Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low).
 
-Apply consolidation rules from `cat ${CLAUDE_SKILL_DIR}/checklist.md` (signal-to-noise filter, annotation completeness, section caps).
+Apply consolidation rules from `cat .claude/skills/review/checklist.md` (signal-to-noise filter, annotation completeness, section caps).
 
 **Precision gate**: before including a finding, ask: "Is this a concrete, actionable issue in the code under review, or a general best-practice observation that doesn't specifically apply here?" Omit findings that are valid-in-general but not evidenced in the actual code. Each finding must cite a specific location (function, line range, or variable name). Vague findings without a concrete location are noise — drop them.
 

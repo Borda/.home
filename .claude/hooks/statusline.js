@@ -40,7 +40,43 @@ process.stdin.on("end", () => {
       } catch (_) {}
     }
 
+    // Agent color names (from color: frontmatter) → ANSI escape codes
+    const COLOR_MAP = {
+      blue: "\x1b[34m",
+      cyan: "\x1b[36m",
+      green: "\x1b[32m",
+      indigo: "\x1b[34m", // closest ANSI to indigo
+      lime: "\x1b[92m", // bright green
+      magenta: "\x1b[35m",
+      orange: "\x1b[33m", // closest ANSI to orange
+      pink: "\x1b[95m", // bright magenta
+      purple: "\x1b[94m", // bright blue
+      red: "\x1b[31m",
+      teal: "\x1b[96m", // bright cyan
+      violet: "\x1b[35m", // magenta (closest ANSI)
+      yellow: "\x1b[93m", // bright yellow
+    };
+
+    // Unique color per tool type — fixed palette so colors are stable
+    const TOOL_COLORS = {
+      Read: "\x1b[34m", // blue
+      Write: "\x1b[92m", // bright green
+      Edit: "\x1b[32m", // green
+      Bash: "\x1b[33m", // yellow
+      Grep: "\x1b[36m", // cyan
+      Glob: "\x1b[96m", // bright cyan
+      WebFetch: "\x1b[35m", // magenta
+      WebSearch: "\x1b[95m", // bright magenta
+      Agent: "\x1b[94m", // bright blue
+      Task: "\x1b[94m", // bright blue
+      Skill: "\x1b[93m", // bright yellow
+      NotebookEdit: "\x1b[91m", // bright red
+    };
+    const TOOL_DEFAULT_COLOR = "\x1b[37m"; // white for unknowns
+
     const parts = [];
+    let agentLine = "";
+    let toolLine = "";
 
     if (modelName) parts.push(`\x1b[2m${modelName}\x1b[0m`);
     if (dir) parts.push(`\x1b[2m${dir}\x1b[0m`);
@@ -62,13 +98,14 @@ process.stdin.on("end", () => {
       parts.push(`\x1b[${color}m${bar} ${Math.round(pct)}%\x1b[0m`);
     }
 
+    const now = Date.now(); // shared by agents and tools sections
+
     // Active subagents indicator — one file per agent in .claude/state/agents/ (task-log.js)
     try {
       const agentsDir = path.join(workspace?.current_dir || process.cwd(), ".claude/state/agents");
       const files = fs.readdirSync(agentsDir).filter((f) => f.endsWith(".json"));
       // Safety-net: drop agents stuck > 10 min (SubagentStop didn't fire — crash or hang)
       const MAX_AGE_MS = 10 * 60 * 1000;
-      const now = Date.now();
       const allAgents = files.flatMap((f) => {
         try {
           return [JSON.parse(fs.readFileSync(path.join(agentsDir, f), "utf8"))];
@@ -78,19 +115,63 @@ process.stdin.on("end", () => {
       });
       const agents = allAgents.filter((a) => !a.since || now - new Date(a.since).getTime() < MAX_AGE_MS);
       if (agents.length > 0) {
-        const counts = agents.reduce((acc, a) => {
-          acc[a.type] = (acc[a.type] || 0) + 1;
-          return acc;
-        }, {});
-        const typeEntries = Object.entries(counts).sort((a, b) => b[1] - a[1]);
-        const shown = typeEntries.slice(0, 3).map(([t, n]) => (n > 1 ? `${t} ×${n}` : t));
-        const hiddenCount = typeEntries.slice(3).reduce((s, [, n]) => s + n, 0);
-        if (hiddenCount > 0) shown.push(`+${hiddenCount} more`);
-        parts.push(`\x1b[35m⚡ ${agents.length} agent${agents.length > 1 ? "s" : ""} (${shown.join(", ")})\x1b[0m`);
+        // Specialized + pinned model → type name, normal color
+        // Specialized + inherit model → type name, gray (no special model assigned)
+        // General-purpose → model name, gray
+        const groups = new Map();
+        for (const a of agents) {
+          const isGeneral = !a.type || a.type === "general-purpose" || a.type === "unknown";
+          const model = a.model || "inherit";
+          const key = isGeneral ? `model:${model}` : `type:${a.type}`;
+          const isGray = isGeneral || model === "inherit";
+          const label = isGeneral ? model : a.type;
+          // Use agent's declared color (from frontmatter) if available and not gray
+          const ansiColor = !isGray && a.color ? COLOR_MAP[a.color] || "" : "";
+          if (!groups.has(key)) groups.set(key, { label, isGray, ansiColor, count: 0 });
+          groups.get(key).count++;
+        }
+        const items = [...groups.values()]
+          .sort((a, b) => b.count - a.count)
+          .map(({ label, isGray, ansiColor, count }) => {
+            const colored = isGray ? `\x1b[2m${label}\x1b[0m` : `${ansiColor}${label}\x1b[0m`;
+            return count > 1 ? `${colored} ×${count}` : colored;
+          });
+        agentLine = `\x1b[35m⚡ ${agents.length} agent${agents.length > 1 ? "s" : ""}\x1b[0m (${items.join(", ")})`;
       }
     } catch (_) {} // directory missing = no active agents
 
-    process.stdout.write(parts.join(" \x1b[2m│\x1b[0m "));
+    // Tool activity line — tools called in last 30s (approximates in-flight activity)
+    try {
+      const toolsDir = path.join(workspace?.current_dir || process.cwd(), ".claude/state/tools");
+      const toolFiles = fs.readdirSync(toolsDir).filter((f) => f.endsWith(".json"));
+      const TOOL_MAX_AGE_MS = 30 * 1000;
+      const activeTools = toolFiles
+        .flatMap((f) => {
+          try {
+            const t = JSON.parse(fs.readFileSync(path.join(toolsDir, f), "utf8"));
+            if (!t.since || now - new Date(t.since).getTime() > TOOL_MAX_AGE_MS) return [];
+            return [{ tool: t.tool, count: t.count || 1 }];
+          } catch (_) {
+            return [];
+          }
+        })
+        .sort((a, b) => a.tool.localeCompare(b.tool));
+      if (activeTools.length > 0) {
+        const colored = activeTools.map(({ tool: t, count: n }) => {
+          const label = n > 1 ? `${t} ×${n}` : t;
+          return `${TOOL_COLORS[t] || TOOL_DEFAULT_COLOR}${label}\x1b[0m`;
+        });
+        toolLine = `\x1b[2m🔧\x1b[0m (${colored.join(" \x1b[2m|\x1b[0m ")})`;
+      }
+    } catch (_) {} // directory missing = no tool activity
+
+    const line1 = parts.join(" \x1b[2m│\x1b[0m ");
+    const lines = [line1];
+    if (agentLine) lines.push(agentLine);
+    if (toolLine) lines.push(toolLine);
+    // Append \x1b[K (clear to end of line) after each row so stale characters
+    // from a previous longer render don't bleed through (e.g. "⚡56 agents").
+    process.stdout.write(lines.map((l) => l + "\x1b[K").join("\n") + "\x1b[K");
   } catch (_) {
     process.stdout.write("\x1b[2m?\x1b[0m");
   }

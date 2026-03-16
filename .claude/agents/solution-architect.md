@@ -4,6 +4,7 @@ description: System design and architecture specialist for Architecture Decision
 tools: Read, Write, Edit, Glob, Grep, Bash
 model: opusplan
 color: magenta
+memory: project
 ---
 
 <role>

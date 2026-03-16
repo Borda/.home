@@ -44,6 +44,17 @@ Spawn a **qa-specialist** agent to write the regression test if one doesn't exis
 
 **Gate**: the regression test must fail before proceeding. If it passes, the bug isn't properly captured — revisit Step 1.
 
+### Review: Validate the reproduction
+
+Before applying any fix, critically evaluate the regression test itself:
+
+1. **Correct failure mode**: does the test fail for the right reason (the actual bug), not because of a setup issue?
+2. **Isolation**: does the test exercise exactly the broken behavior, or does it inadvertently test too broadly?
+3. **Minimal reproduction**: is this the smallest test that demonstrates the failure?
+4. **Parametrization**: if the bug manifests across multiple input patterns, are the key variants covered?
+
+If any issue is found: revise the regression test before applying the fix. A flawed reproduction means the fix will be validated against the wrong criteria.
+
 ## Step 3: Apply the fix
 
 Make the minimal change to fix the root cause:
@@ -58,6 +69,35 @@ Make the minimal change to fix the root cause:
    python -m pytest <test_dir> -v --tb=short
    ```
 4. If any existing tests break: the fix has side effects — reconsider the approach
+
+## Step 4: Review and close gaps
+
+Full review of the fix. This is a **loop** — review → fix → re-review until only nits remain. Maximum 3 cycles.
+
+**Each cycle:**
+
+1. Evaluate against all criteria:
+
+   - **Root cause**: fix addresses the actual root cause, not just the symptom
+   - **Minimality**: smallest change that resolves the bug; no collateral edits
+   - **Regression test quality**: test precisely isolates the bug (fails before fix, passes after)
+   - **Side effects**: full suite passes without new failures or unexpected warnings
+
+2. For every gap found: implement the fix immediately — tighten the patch, remove collateral edits, adjust the test. Return to Step 3 for any gap that requires re-examining the fix approach.
+
+3. Re-run the test suite:
+
+   ```bash
+   python -m pytest <test_dir> -v --tb=short -q 2>&1 | tail -20
+   ```
+
+4. **Adjacent bugs** (observation only): scan for similar patterns in the codebase; document in Follow-up — do not fix here to avoid scope creep.
+
+5. **If only nits remain**: document in Follow-up and exit the loop.
+
+6. **If substantive gaps remain**: start the next cycle (max 3 total).
+
+**After 3 cycles**: if substantive issues remain, stop — surface them to the user before proceeding.
 
 ## Final Report
 
@@ -102,7 +142,7 @@ Make the minimal change to fix the root cause:
 1. Lead broadcasts current evidence: `{bug: <description>, traceback: <key lines>}`
 2. Each teammate investigates independently — claims a hypothesis
 3. Lead facilitates cross-challenge between competing analyses
-4. Lead synthesizes consensus root cause, then proceeds with Steps 2–3 (regression test, fix) alone
+4. Lead synthesizes consensus root cause, then proceeds with Steps 2–4 (regression test, fix, review loop) alone
 
 **Spawn prompt template:**
 

@@ -36,7 +36,6 @@
     ],
     "PreToolUse": [
       {
-        "matcher": "Agent|Skill",
         "hooks": [{ "type": "command", "command": "node .claude/hooks/task-log.js" }]
       }
     ],
@@ -174,6 +173,13 @@
       "Bash(uv pip list:*)",
       "Bash(uv pip check:*)",
       "Bash(uv tree:*)",
+      "Bash(comm:*)",
+      "Bash(mktemp:*)",
+      "Bash(touch:*)",
+      "Bash(printf:*)",
+      "Bash(basename:*)",
+      "Bash(dirname:*)",
+      "Bash(node --check:*)",
       "Bash(brew info:*)",
       "Bash(codex:*)",
       "WebFetch(domain:github.com)",
@@ -199,6 +205,8 @@
       "WebFetch(domain:support.claude.com)",
       "WebFetch(domain:www.anthropic.com)",
       "WebFetch(domain:github.blog)",
+      "WebFetch(domain:api.codecov.io)",
+      "WebFetch(domain:app.codecov.io)",
       "Skill(sync)",
       "Skill(calibrate)"
     ]

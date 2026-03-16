@@ -3,7 +3,7 @@ name: audit
 description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness, and upgrade proposals. Reports by severity; auto-fixes at the requested level — 'fix high' (critical+high), 'fix medium' (critical+high+medium), 'fix all' (all findings including low); 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes.
 argument-hint: '[agents|skills] [fix [high|medium|all]] | upgrade'
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, WebFetch, WebSearch
 ---
 
 <objective>
@@ -372,6 +372,26 @@ Classify each example block:
 
 Report per-file: `N examples total, K high-value, M low-value (est. ~X tokens wasted)`.
 
+**Check 10 — Agent color drift (statusline COLOR_MAP vs frontmatter)**
+
+Each agent declares a `color:` in its frontmatter. `hooks/statusline.js` maps those color names to ANSI codes via a `COLOR_MAP` object. If a color name is added to an agent but not to `COLOR_MAP`, the statusline silently falls back to no color. Verify alignment:
+
+```bash
+# Extract color: values declared in agent frontmatter
+for f in .claude/agents/*.md; do
+  name=$(basename "$f" .md)
+  color=$(awk '/^---$/{c++; if(c==2)exit} c==1 && /^color:/{sub(/^color: */,""); print}' "$f")
+  [ -n "$color" ] && printf "%s: %s\n" "$name" "$color"
+done
+```
+
+Using model reasoning, cross-reference each extracted color name against the `COLOR_MAP` keys in `.claude/hooks/statusline.js`. Flag any mismatch:
+
+- Color declared in agent frontmatter but **not a key in `COLOR_MAP`** → **medium** (agent will appear uncolored in statusline)
+- Color in `COLOR_MAP` that is **not declared by any agent** → **low** (dead mapping, no functional impact)
+
+Note: `COLOR_MAP` may intentionally include extra entries (future-proofing); flag only the agent-declared-but-missing case as actionable.
+
 ## Step 5: Aggregate and classify findings
 
 **Antipatterns that indicate severity under-classification**: see antipatterns section in `.claude/skills/audit/severity-table.md`.
@@ -394,7 +414,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift
 
 ### Findings by Severity
 
@@ -616,6 +636,7 @@ Run `/sync apply` automatically after all proposals are processed.
 - **Dead loops need human judgment**: a cycle in follow-up chains might be intentional (e.g., refactor → review → fix → refactor) — flag and explain, don't auto-remove
 - **Max 2 re-audit cycles**: if fixes don't converge after 2 loops, surface the remaining issues to the user rather than spinning
 - **Relationship to self-mentor**: `self-mentor` is a single-file reactive audit; `/audit` is the system-wide sweep that runs self-mentor at scale and adds cross-file checks
+- `general-purpose` is a Claude Code built-in agent type (no `.claude/agents/general-purpose.md` file needed) — it provides a baseline Claude instance with access to all tools but no custom system prompt.
 - **Paths must be portable**: `.claude/` for project-relative paths, `~/` or `$HOME/` for home paths — never `/Users/<name>/` or `/home/<name>/`; this rule applies to ALL config files including `settings.json`
 - Pre-flight for `/sync` — run clean before `/sync apply`.
 - **Bash error logging**: if a bash block in Pre-flight checks or Step 4 fails unexpectedly, append a JSONL line to `.claude/logs/audit-errors.jsonl` (`{"ts":"<ISO>","check":"<N>","error":"<message>"}`) for post-mortem — do not swallow errors silently.

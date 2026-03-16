@@ -165,6 +165,10 @@ Cap: maximum 2 refinement passes (3 drafts total). Scope: analysis tasks only (c
 
 Many common operations (tests, linting, git reads, gh CLI, file inspection) are pre-approved in `settings.json`. Execute them directly — never pause to ask permission. Check `settings.json` when unsure; if an operation is listed in `allow`, just run it.
 
+**Prefer dedicated tools over Bash**: Read, Grep, Glob before any shell command — Bash only when no dedicated tool can do the job or when you need to transform and write back atomically.
+
+**Proactive permission batching**: after scoping a multi-step task (2+ steps), scan all planned tool calls and identify any that are not yet in `settings.json`. List every missing permission in a single message to the user and request batch approval *before* starting — one ask upfront prevents mid-execution interruptions.
+
 ## Compact Instructions
 
 When context is compacted (auto or manual), preserve in the summary:
