@@ -432,7 +432,7 @@ Run `/sync` after editing any agent, skill, hook, or `settings.json` in this rep
 
 ## 🤖 Codex CLI
 
-Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex) (Rust implementation, v0.105+). Where Claude Code excels at long-horizon planning and research, Codex CLI is optimized for focused, in-repo agentic coding — running shell commands, editing files, and spawning parallel sub-agents directly in your terminal.
+Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex) (Rust implementation). Where Claude Code excels at long-horizon planning and research, Codex CLI is optimized for focused, in-repo agentic coding — running shell commands, editing files, and spawning parallel sub-agents directly in your terminal.
 
 ### Agents
 
@@ -452,7 +452,7 @@ Nine specialist roles wired into the multi-agent system. Codex can spawn them au
 
 ### Model Strategy
 
-All agents use `gpt-5.3-codex` — the current Codex CLI default and the upgrade target for every prior model in the catalog. Differentiation is via reasoning effort:
+All agents in this repo are configured to use `gpt-5.3-codex`. Differentiation is via reasoning effort:
 
 - **xhigh** — adversarial roles (qa-specialist, security-auditor): exhaustive search for what could go wrong
 - **high** — analytical roles (sw-engineer, squeezer, data-steward, oss-maintainer): depth without unbounded budget
@@ -480,7 +480,7 @@ This repo is the authoring location. To activate globally, copy the entire `.cod
 cp -r .codex/ ~/.codex/
 ```
 
-Paths in `config.toml` are **relative** — no substitution needed. The `AGENTS.md` at `~/.codex/AGENTS.md` is read by Codex for every project; a project-local `AGENTS.md` at the repo root extends it.
+`config_file` paths in `config.toml` are **relative to that file** — no substitution needed. The `AGENTS.md` at `~/.codex/AGENTS.md` is read by Codex for every project; a project-local `AGENTS.md` at the repo root extends it.
 
 ### Files
 

@@ -4,7 +4,7 @@
 
 model                              = "gpt-5.3-codex"
 review_model                       = "gpt-5.4"
-model_reasoning_effort             = "high"
+model_reasoning_effort             = "medium"
 model_reasoning_summary            = "auto"
 approval_policy                    = "on-request"
 sandbox_mode                       = "workspace-write"
@@ -20,6 +20,14 @@ job_max_runtime_seconds = 3600
 multi_agent     = true
 child_agents_md = true  # propagate AGENTS.md scope to sub-agents
 personality     = true
+
+[tui]
+status_line = [
+  "model-with-reasoning",
+  "context-used",
+  "context-window-size",
+  "used-tokens",
+]
 
 [mcp_servers.openaiDeveloperDocs]
 url = "https://developers.openai.com/mcp"
