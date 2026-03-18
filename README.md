@@ -48,21 +48,21 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/develop fix`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill         | Command                                     | What It Does                                                                                                                                                                                              |
-| ------------- | ------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**    | `/review [file\|PR#]`                       | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design)                                                                                                            |
-| **optimize**  | `/optimize [target]`                        | Measure-change-measure performance loop                                                                                                                                                                   |
-| **release**   | `/release <mode> [range]`                   | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                                                                                          |
-| **survey**    | `/survey [topic]`                           | SOTA literature survey with implementation plan                                                                                                                                                           |
-| **analyse**   | `/analyse [#\|health\|discussion #]`        | Issue/PR/Discussion analysis, repo health, duplicate detection, contributor activity                                                                                                                      |
-| **observe**   | `/observe`                                  | Meta-skill: analyze work patterns and suggest new agents or skills                                                                                                                                        |
-| **audit**     | `/audit [fix [high\|medium\|all]\|upgrade]` | Full-sweep config audit: broken refs, dead loops, inventory drift, docs freshness + upgrade proposals; `upgrade` applies docs-sourced improvements (config: correctness check, capability: calibrate A/B) |
-| **sync**      | `/sync [apply]`                             | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                                                                                           |
-| **manage**    | `/manage <op> <type>`                       | Create, update, or delete agents/skills with cross-ref propagation                                                                                                                                        |
-| **develop**   | `/develop feature\|fix\|refactor`           | Unified development orchestrator: TDD-first feature dev, reproduce-first bug fixing, or test-first refactoring                                                                                            |
-| **calibrate** | `/calibrate [target] [fast\|full]`          | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                                                                                             |
-| **codex**     | `/codex <task> [target]`                    | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                                                                                                       |
-| **resolve**   | `/resolve <PR#\|comment>`                   | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex                                                                         |
+| Skill         | Command                                      | What It Does                                                                                                                                                                                              |
+| ------------- | -------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **review**    | `/review [file\|PR#] [--reply]`              | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design); `--reply` drafts a contributor-facing comment via oss-maintainer                                          |
+| **optimize**  | `/optimize [target]`                         | Measure-change-measure performance loop                                                                                                                                                                   |
+| **release**   | `/release <mode> [range]`                    | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                                                                                          |
+| **survey**    | `/survey [topic]`                            | SOTA literature survey with implementation plan                                                                                                                                                           |
+| **analyse**   | `/analyse [#\|health\|dupes\|...] [--reply]` | Issue/PR/Discussion analysis by number (unified index, auto-detected), repo health, duplicate detection; `--reply` drafts a contributor-facing reply, reusing today's report if the item hasn't drifted   |
+| **observe**   | `/observe`                                   | Meta-skill: analyze work patterns and suggest new agents or skills                                                                                                                                        |
+| **audit**     | `/audit [fix [high\|medium\|all]\|upgrade]`  | Full-sweep config audit: broken refs, dead loops, inventory drift, docs freshness + upgrade proposals; `upgrade` applies docs-sourced improvements (config: correctness check, capability: calibrate A/B) |
+| **sync**      | `/sync [apply]`                              | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                                                                                           |
+| **manage**    | `/manage <op> <type>`                        | Create, update, or delete agents/skills with cross-ref propagation                                                                                                                                        |
+| **develop**   | `/develop feature\|fix\|refactor`            | Unified development orchestrator: TDD-first feature dev, reproduce-first bug fixing, or test-first refactoring                                                                                            |
+| **calibrate** | `/calibrate [target] [fast\|full]`           | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                                                                                             |
+| **codex**     | `/codex <task> [target]`                     | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                                                                                                       |
+| **resolve**   | `/resolve <PR#\|comment>`                    | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex                                                                         |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -87,19 +87,21 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
   /review src/mypackage/transforms.py
   # Review latest commit (no argument)
   /review
+  # Review + draft contributor-facing comment (overall + inline table)
+  /review 42 --reply
   ```
 
-- **`/analyse` — Issue and repo health**
+- **`/analyse` — Issue, PR, Discussion and repo health**
 
   ```bash
-  # Analyze an issue or PR by number
+  # Analyze by number — type auto-detected (issue / PR / discussion share a unified index)
   /analyse 123
   # Repo health overview
   /analyse health
   # Find duplicate issues
   /analyse dupes memory leak
-  # Analyze a GitHub Discussion
-  /analyse discussion 15
+  # Analyze + draft contributor reply (reuses today's report if no new activity since it was written)
+  /analyse 123 --reply
   ```
 
 - **`/survey` — SOTA literature search**
@@ -177,7 +179,7 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 
   ```bash
   # Add docstrings to all undocumented public functions in a module
-  /codex "add NumPy-style docstrings to all undocumented public functions" "src/mypackage/transforms.py"
+  /codex "add Google-style docstrings to all undocumented public functions" "src/mypackage/transforms.py"
   # Rename a symbol consistently across a directory
   /codex "rename BatchLoader to DataBatcher throughout the package" "src/mypackage/"
   # Add type annotations to a well-typed module
@@ -273,7 +275,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Delegate mechanical work to Codex</strong></summary>
 
 ```
-/codex "add NumPy docstrings to all undocumented public functions" "src/mypackage/"
+/codex "add Google-style docstrings to all undocumented public functions" "src/mypackage/"
 # Codex executes; Claude validates with lint + tests
 /review                                   # full quality pass on Codex output
 ```
@@ -287,6 +289,27 @@ Skills chain naturally — the output of one becomes the input for the next.
 /resolve 42   # auto-detect conflicts → resolve semantically → apply review comments via Codex
 /review       # full quality pass on all applied changes
 ```
+
+</details>
+
+<details>
+<summary><strong>OSS contributor PR triage → review → reply</strong></summary>
+
+Preferred flow for maintainers responding to external contributions:
+
+```
+/analyse 42 --reply      # assess PR readiness + draft contributor reply in one step
+                          # reuses today's analysis if no new activity since last run
+
+# or if you need the full deep review first:
+/review 42 --reply        # 7-dimension review + draft overall comment + inline comments table
+                          # output: tasks/output-reply-pr-42-<date>.md
+
+# post when ready:
+gh pr comment 42 --body "$(cat tasks/output-reply-pr-42-<date>.md)"
+```
+
+Both `--reply` flags produce the same two-part oss-maintainer output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs. Issue/discussion numbers are auto-detected from the unified GitHub index — no type prefix needed.
 
 </details>
 
@@ -378,17 +401,18 @@ A lightweight hook (`hooks/statusline.js`) adds a persistent multi-row status ba
 
 ```
 Row 1 (always):    claude-sonnet-4-6 │ Borda.local │ Pro ~$1.20 │ ████░░░░░░ 38%
-Row 2 (agents):    ⚡ 5 agents (self-mentor ×3, opus, sw-engineer)
+Row 2 (agents):    ⚡ 5 agents (self-mentor ×3, opus, sw-engineer) │ codex ×2
 Row 3 (tools):     🔧 (Bash ×3 | Edit | Read ×12)
 ```
 
 Row 1 shows the active model name, current project directory, billing indicator, and a 10-segment context usage bar (green → yellow → red). Rows 2 and 3 appear only when there is something to show.
 
-**Agent row** — groups running agents by display name:
+**Agent row** — groups running agents by display name, then appends active Codex sessions:
 
 - *Specialized agents* (have a `.claude/agents/` file) → shown by type name in their declared `color:` from frontmatter (e.g. `sw-engineer` in blue, `self-mentor` in pink)
 - *General-purpose agents* or agents without a pinned model → shown by model name in gray (e.g. `opus`, `sonnet`)
 - Agents of the same type are grouped with a `×N` count
+- *Codex sessions* — appended after agents as `codex ×N` in yellow when `/codex` is running (tracked via `PreToolUse`/`PostToolUse` Skill hooks; `/resolve` runs `codex exec` via Bash directly and is not counted)
 
 **Tool row** — shows tools called in the last 30 seconds, each in a unique fixed color:
 `Read` (blue) · `Write` (bright green) · `Edit` (green) · `Bash` (yellow) · `Grep` (cyan) · `Glob` (bright cyan) · `WebFetch` (magenta) · `WebSearch` (bright magenta) · `Task`/`Agent` (bright blue) · `Skill` (bright yellow)
@@ -403,7 +427,7 @@ Row 1 shows the active model name, current project directory, billing indicator,
 
 </details>
 
-The agent row is powered by `hooks/task-log.js`, which handles: `SubagentStart`/`SubagentStop` (one file per active agent in `.claude/state/agents/<id>.json`), `PreToolUse` (audit log + tool activity state in `.claude/state/tools/<tool>.json`), `PreCompact` (context snapshot in `.claude/state/session-context.md`), and `Stop`/`SessionEnd` (clear all state so the status line resets cleanly). A 10-minute safety-net age-out handles crashed or hung agents.
+The agent row is powered by `hooks/task-log.js`, which handles: `SubagentStart`/`SubagentStop` (one file per active agent in `.claude/state/agents/<id>.json`), `PreToolUse`/`PostToolUse` (audit log + tool activity state in `.claude/state/tools/<tool>.json`; Codex session lifecycle in `.claude/state/codex/<id>.json`), `PreCompact` (context snapshot in `.claude/state/session-context.md`), and `Stop`/`SessionEnd` (clear all state so the status line resets cleanly). A 10-minute safety-net age-out handles crashed or hung agents; a 30-minute cutoff handles stalled Codex sessions.
 
 Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
 
@@ -429,6 +453,78 @@ One file is intentionally **not synced**: `settings.local.json` (machine-local o
 ```
 
 Run `/sync` after editing any agent, skill, hook, or `settings.json` in this repo to propagate the change to the home config.
+
+## 🤝 Claude + Codex Integration
+
+Claude and Codex complement each other — Claude handles long-horizon reasoning, orchestration, and judgment calls; Codex handles focused, mechanical in-repo coding tasks with direct shell access.
+
+#### Tiered Review Architecture
+
+Every skill that reviews or validates code uses a three-tier pipeline, where cheaper tiers gate the expensive ones:
+
+| Tier                    | What                                                                   | Cost | When                               |
+| ----------------------- | ---------------------------------------------------------------------- | ---- | ---------------------------------- |
+| **0 — Mechanical gate** | `git diff --stat` — skip trivial diffs                                 | Zero | Always (built into codex-prepass)  |
+| **1 — Codex pre-pass**  | Diff-focused review (~60s) — flags bugs, edge cases, logic errors      | Low  | Before expensive agent spawns      |
+| **2 — Claude agents**   | Specialized parallel agents (opus for reasoning, sonnet for execution) | High | Full review, audit, implementation |
+
+| Skill                             | Tier 0 (gate) | Tier 1 (Codex pre-pass) | Tier 2 (Claude agents) |
+| --------------------------------- | :-----------: | :---------------------: | :--------------------: |
+| `/develop` (feature/fix/refactor) |       ✓       |            ✓            |           ✓            |
+| `/review`                         |       ✓       |            ✓            |           ✓            |
+| `/optimize`                       |       ✓       |            ✓            |           ✓            |
+| `/audit fix`                      |       ✓       |            ✓            |           ✓            |
+| `/resolve`                        |       —       |            —            |           ✓            |
+| `/codex`                          |       —       |            ✓            |           —            |
+
+**Why unbiased review matters / Real example**: Claude makes targeted changes with intentionality — it has a mental model of which files are "in scope" for a task. Codex has no such context: it reads the diff and the codebase independently. During one session, Claude applied a docstring-style mandate across 6 files, reported the work done, and scored its own confidence at 0.88. The Codex pre-pass then found `skills/develop/modes/feature.md` still referencing the old style — a direct miss from the batch fix. That file simply wasn't on Claude's mental scope list, so it was never checked. The union of both passes is more complete than either alone.
+
+### Two integration patterns make this pairing practical
+
+1. **Offloading mechanical tasks from Claude to Codex**
+
+   Claude identifies what needs to change (rename a symbol, fill in docstrings, add type annotations across a module) and delegates execution to Codex. Claude keeps its context clean and validates the output.
+
+   ```bash
+   # Claude orchestrates, Codex executes
+   /codex "add Google-style docstrings to all undocumented public functions" "src/mypackage/"
+   /codex "rename BatchLoader to DataBatcher throughout the package" "src/mypackage/"
+   /codex "add return type annotations to all functions missing them" "src/mypackage/utils.py"
+   # Claude then reviews with lint + tests
+   /review
+   ```
+
+2. **Codex reviewing staged work**
+
+   After Claude (or you) stages changes, Codex can serve as a second pass — examining the diff, applying review comments, or resolving PR conflicts. The `/resolve` skill automates this: it resolves conflicts semantically (Claude) then applies review comments (Codex).
+
+   ```bash
+   # Stage changes, then let Codex process review feedback
+   /resolve 42   # Claude resolves conflicts → Codex applies review comments
+   /resolve "rename the `fit` method to `train` throughout the module"  # single-comment fast path
+   ```
+
+<details>
+<summary><strong>Pre-flight requirements</strong></summary>
+
+The `/codex` and `/resolve` skills require both tools to be installed:
+
+```bash
+# Install Claude Code (if not already)
+npm install -g @anthropic-ai/claude-code
+
+# Install Codex CLI
+npm install -g @openai/codex    # npm show @openai/codex version for latest
+
+# Verify
+which claude && which codex
+```
+
+If `codex` is not found, `/codex` will fail at the pre-flight check and `/resolve`'s review-comment step will be skipped with a clear error. Conflict resolution in `/resolve` (Step 4–5) runs through Claude only and does not require Codex.
+
+The active Codex session count appears in the statusline Row 2 next to the agent count (`⚡ 3 agents │ codex ×2`), driven by `PreToolUse`/`PostToolUse` hooks in `task-log.js`.
+
+</details>
 
 ## 🤖 Codex CLI
 

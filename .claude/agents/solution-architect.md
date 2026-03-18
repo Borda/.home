@@ -1,7 +1,7 @@
 ---
 name: solution-architect
 description: System design and architecture specialist for Architecture Decision Records (ADRs), Application Programming Interface (API) design proposals, interface specs, migration plans, and component diagrams. Use for evaluating architectural trade-offs, designing public API surfaces, and planning deprecation strategies. Reads code — does not implement. Specialized for Python/Machine Learning (ML) Open Source Software (OSS) libraries.
-tools: Read, Write, Edit, Glob, Grep, Bash
+tools: Read, Write, Edit, Glob, Grep, Bash, TaskCreate, TaskUpdate
 model: opusplan
 color: magenta
 memory: project

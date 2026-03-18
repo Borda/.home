@@ -125,6 +125,8 @@ If Step 2 produced an example script: promote it into a formal pytest test now t
 
 ## Step 4: Review and close gaps
 
+Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass before cycle 1.
+
 Full review of the implementation. This is a **loop** — review → fix → re-review until only nits remain. Maximum 3 cycles.
 
 **Each cycle:**
@@ -155,7 +157,7 @@ Full review of the implementation. This is a **loop** — review → fix → re-
 
 Spawn a **doc-scribe** agent to update all affected documentation:
 
-- Add or update **docstrings** on new/modified functions and classes (NumPy style)
+- Add or update **docstrings** on new/modified functions and classes (Google style — Napoleon)
 - Update the module-level docstring if the feature adds a significant capability
 - Add the demo from Step 2 as a doctest if not already embedded
 - Update `CHANGELOG.md` with a one-line entry under `Unreleased`
@@ -226,4 +228,5 @@ Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your task: [specific responsibility].
 [If QA]: include security checks for any auth/payment/data-handling code.
 Compact Instructions: preserve file paths, test results, API signatures. Discard verbose tool output.
+Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```

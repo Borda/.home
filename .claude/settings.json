@@ -7,6 +7,16 @@
   },
   "fastMode": true,
   "hooks": {
+    "PostToolUse": [
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/task-log.js",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "PreCompact": [
       {
         "hooks": [

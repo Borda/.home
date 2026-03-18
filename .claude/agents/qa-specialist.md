@@ -1,7 +1,7 @@
 ---
 name: qa-specialist
 description: Quality Assurance (QA) specialist for writing tests, identifying edge cases, and validating software correctness. Use for test coverage analysis, edge case matrices, integration test design, and ensuring test quality. Writes deterministic, parametrized, behavior-focused tests with pytest, hypothesis, and torch/numpy patterns. NOT for linting or type checking — use linting-expert for that.
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 50
 model: opus
 color: green
@@ -222,11 +222,12 @@ def test_transform_preserves_range():
 Note: The global `reset_random_seeds` fixture in `conftest.py` (above) handles seeding autouse. Use a local `fixed_seed` fixture only for tests that need a different seed from the global default.
 
 ```python
+import pytest, torch
+
+
 @pytest.mark.gpu
+@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
 def test_cuda_inference():
-    torch = pytest.importorskip("torch")
-    if not torch.cuda.is_available():
-        pytest.skip("CUDA not available")
     model = torch.nn.Linear(5, 10).cuda()
     x = torch.randn(2, 5).cuda()
     output = model(x)
@@ -376,6 +377,7 @@ Report design challenges to @lead with epsilon + specific concern. SW adjusts th
 - **Public methods not exported or documented**: public methods/classes absent from `__init__.py` / `__all__` and unreferenced in any docstring, README, or API docs — raise as a question: intentionally public, accidental exposure, or dead code? Unexplained public surface is a maintenance liability
 - **`if`/`for`/`while` logic in test bodies**: control flow in a test usually means it is doing too much — split into separate parametrized cases; exception: `if`/`else` inside parametrize value generation is acceptable when it covers less than 30% of the resulting test cases and enables a significantly larger parametrize list
 - **Thread-safety assertion missing**: when a class claims thread-safety via `threading.Lock`, `threading.RLock`, or similar, flag the absence of a concurrent-access test — minimum viable form: N threads performing competing put/get or read/write operations; assert final state is consistent. Mark as primary if the class is explicitly described as thread-safe; secondary if thread-safety is implied.
+- **Inline skip in test body**: `if <condition>: pytest.skip(...)` or `pytest.skipif(...)` called inside the test function body — use the decorator form instead: `@pytest.mark.skipif(<condition>, reason="...")`. The decorator makes skip conditions visible at collection time and works with `--collect-only` reporting. Exception: `pytest.skip()` inside the test body is acceptable only when the skip condition cannot be evaluated at import time (e.g., it depends on a value computed mid-test). Applies to all skip conditions — not just CUDA availability.
 
 \</antipatterns_to_flag>
 

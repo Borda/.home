@@ -72,6 +72,8 @@ Make the minimal change to fix the root cause:
 
 ## Step 4: Review and close gaps
 
+Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass before cycle 1.
+
 Full review of the fix. This is a **loop** — review → fix → re-review until only nits remain. Maximum 3 cycles.
 
 **Each cycle:**
@@ -152,4 +154,5 @@ Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your hypothesis: [hypothesis N]. Investigate ONLY this root cause.
 Report findings to @lead using deltaT# or epsilonT# codes.
 Compact Instructions: preserve file paths, errors, line numbers. Discard verbose tool output.
+Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```

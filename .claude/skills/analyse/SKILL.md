@@ -1,8 +1,8 @@
 ---
 name: analyse
 description: Analyze GitHub issues, Pull Requests (PRs), Discussions, and repo health for an Open Source Software (OSS) project. Summarizes long threads, assesses PR readiness, detects duplicates, extracts reproduction steps, and generates repo health stats. Uses gh Command Line Interface (CLI) for GitHub Application Programming Interface (API) access. Complements oss-maintainer agent.
-argument-hint: <number|discussion <number>|health|dupes [keyword]|contributors|ecosystem>
-allowed-tools: Read, Bash, Write
+argument-hint: <number|health|dupes [keyword]|contributors|ecosystem> [--reply]
+allowed-tools: Read, Bash, Write, Agent
 context: fork
 ---
 
@@ -15,36 +15,46 @@ Analyze GitHub issues and PRs to help maintainers triage, respond, and decide qu
 <inputs>
 
 - **$ARGUMENTS**: one of:
-  - Number (e.g. `42`) — auto-detects issue vs PR
-  - `discussion <number>` (e.g. `discussion 15`) — analyze a GitHub Discussion thread
+  - Number (e.g. `42`) — issues, PRs, and discussions share a unified index; auto-detects the type
   - `health` — generate repo issue/PR health overview
   - `dupes [keyword]` — find potential duplicate issues
   - `contributors` — top contributor activity and release cadence
   - `ecosystem` — downstream consumer impact analysis for library maintainers
+  - `--reply`: after analysis, spawn oss-maintainer to draft a contributor-facing reply from the report. Valid for issue, PR, and discussion modes only — silently ignored for health/dupes/contributors/ecosystem.
 
 </inputs>
 
 <workflow>
 
+## Flag parsing
+
+If `$ARGUMENTS` contains `--reply`, strip it and set `REPLY_MODE=true`. Pass the remaining arguments into the mode-dispatch below. If the resolved mode is health/dupes/contributors/ecosystem, `REPLY_MODE` is silently ignored.
+
 ## Auto-Detection (for numeric arguments)
 
-When `$ARGUMENTS` starts with `discussion`, skip auto-detection and route directly to **Discussion Analysis** mode.
-
-When `$ARGUMENTS` is a number, determine whether it is an issue or a PR before routing.
-**Default assumption: issue** — this skill is primarily for issue analysis.
-The command below determines the type; the `if/else` routing block is illustrative pseudocode — the actual mode switch is by natural-language interpretation of the result.
+Issues, PRs, and discussions share a unified running index — a given number can only be one type. Detect in two steps:
 
 ```bash
-# GitHub's issues API covers both issues and PRs.
-# A PR has a "pull_request" key; a plain issue does not.
-TYPE=$(gh api "repos/{owner}/{repo}/issues/$ARGUMENTS" \
-  --jq 'if .pull_request then "pr" else "issue" end' 2>/dev/null || echo "issue")
+# Step 1: try the issues API (covers both issues and PRs)
+ITEM=$(gh api "repos/{owner}/{repo}/issues/$ARGUMENTS" 2>/dev/null)
 
-if [ "$TYPE" = "pr" ]; then
-  # → Route to PR Analysis mode
+if [ -n "$ITEM" ]; then
+  # Found — distinguish issue from PR by presence of pull_request key
+  TYPE=$(echo "$ITEM" | jq -r 'if .pull_request then "pr" else "issue" end')
 else
-  # → Route to Issue Analysis mode
+  # Step 2: not an issue/PR — try discussions via GraphQL
+  DISC=$(gh api graphql -f query='
+    query($owner:String!,$repo:String!,$number:Int!){
+      repository(owner:$owner,name:$repo){
+        discussion(number:$number){ title }
+      }
+    }' -f owner='{owner}' -f repo='{repo}' -F number=$ARGUMENTS \
+    --jq '.data.repository.discussion.title' 2>/dev/null)
+  [ -n "$DISC" ] && TYPE="discussion" || TYPE="unknown"
 fi
+
+# Route: pr → PR Analysis | issue → Issue Analysis | discussion → Discussion Analysis
+# unknown → print "Item #N not found" and stop
 ```
 
 ## Mode: Issue Analysis
@@ -142,7 +152,7 @@ _Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 - [✅/⚠️/❌/🔵] Clear description of what changed and why
 - [✅/⚠️/❌/🔵] Linked to a related issue (`Fixes #NNN` or `Relates to #NNN`)
 - [✅/⚠️/❌/🔵] Tests added/updated (happy path, failure path, edge cases)
-- [✅/⚠️/❌/🔵] Docstrings (NumPy or Google style, consistent with project) for all new/changed public APIs
+- [✅/⚠️/❌/🔵] Docstrings (Google style — Napoleon) for all new/changed public APIs
 - [✅/⚠️/❌/🔵] No secrets or credentials introduced
 - [✅/⚠️/❌/🔵] Linting and CI checks pass
 
@@ -394,6 +404,54 @@ Write the full report to `tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md` u
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **Ecosystem Impact Summary** template. Replace `[skill-specific path]` with `tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md`.
 
+## Draft contributor reply (--reply only)
+
+If `REPLY_MODE` is not set, skip this step.
+
+**Reuse vs recreate**: reuse an existing report only if it exists *and* the item hasn't had new activity since it was written.
+
+```bash
+TODAY=$(date +%Y-%m-%d)
+# Expected report paths by mode:
+# PR:         tasks/output-analyse-pr-$NUMBER-$TODAY.md
+# Issue:      tasks/output-analyse-issue-$NUMBER-$TODAY.md
+# Discussion: tasks/output-analyse-discussion-$DISC_NUM-$TODAY.md
+REPORT_FILE="tasks/output-analyse-<type>-$NUMBER-$TODAY.md"
+
+DRIFT=false
+if [ -f "$REPORT_FILE" ]; then
+  # Compare report mtime against item's last-activity timestamp from GitHub
+  REPORT_MTIME=$(stat -f %m "$REPORT_FILE" 2>/dev/null || stat -c %Y "$REPORT_FILE")
+  UPDATED_AT=$(gh api "repos/{owner}/{repo}/issues/$NUMBER" --jq '.updated_at' 2>/dev/null)
+  UPDATED_TS=$(date -d "$UPDATED_AT" +%s 2>/dev/null || date -j -f "%Y-%m-%dT%H:%M:%SZ" "$UPDATED_AT" +%s 2>/dev/null)
+  [ "$UPDATED_TS" -gt "$REPORT_MTIME" ] && DRIFT=true
+fi
+```
+
+Decision:
+
+- Report exists **and** `DRIFT=false` → reuse it; go straight to the oss-maintainer spawn.
+- Report missing **or** `DRIFT=true` → run the full analysis first (mode steps above), then continue. When drift triggered, note it in the terminal summary: `[analysis refreshed — new activity since last report]`.
+
+**Spawn oss-maintainer** with:
+
+- The report file path
+- The item number and contributor handle (from the analysis data)
+- **For PR mode** — prompt: "Read the report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — `@handle` open, scope line, one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items as a single 'Minor:' line only; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose."
+- **For issue/discussion mode** — prompt: "Read the report at `<path>`. Draft a contributor-facing reply: open with what's confirmed or asked, state clearly what you need from them or what the next step is, and close decisively. Warm and direct — one short comment, no inline table needed."
+
+Write oss-maintainer's output to `tasks/output-reply-<type>-<number>-$(date +%Y-%m-%d).md` — **do not print the full content to terminal**.
+
+Print compact terminal summary:
+
+```
+  [PR]    Overall comment — N issues  |  Inline comments — N rows
+  [Issue] Reply — N sentences
+          [analysis refreshed — new activity since last report]  ← only if drift detected
+
+  Reply:  tasks/output-reply-<type>-<number>-<date>.md
+```
+
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 
 </workflow>
@@ -411,6 +469,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - Issue is a feature request → `/develop feature` for TDD-first implementation
   - Issue with code smell or structural problem → `/develop refactor` for test-first improvements
   - PR with quality concerns → `/review` for comprehensive multi-agent code review
-  - Draft responses or comments to be posted publicly → `oss-maintainer` for final wording and voice
+  - Draft responses or comments to be posted publicly → use `--reply` to auto-draft via oss-maintainer; or invoke oss-maintainer manually for custom framing
 
 </notes>

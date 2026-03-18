@@ -1,5 +1,6 @@
 #!/usr/bin/env node
-// PreToolUse hook  — logs Task/Skill invocations to the audit log.
+// PreToolUse hook  — logs Task/Skill invocations; writes codex session file on Skill(codex) start.
+// PostToolUse hook — removes codex session file when Skill(codex) completes.
 // SubagentStart hook — adds the subagent to the active-agents state.
 // SubagentStop hook  — removes the subagent from state and logs completion.
 // PreCompact hook  — logs context compaction start to compactions.jsonl.
@@ -10,6 +11,7 @@
 //   .claude/logs/invocations.jsonl      — append-only audit log
 //   .claude/logs/compactions.jsonl      — compaction events log
 //   .claude/state/agents/<id>.json      — one file per active subagent (replaces agents.json)
+//   .claude/state/codex/<id>.json       — one file per active /codex skill session
 //   .claude/state/tools/<tool>.json     — one file per tool type, updated on each PreToolUse
 //   .claude/state/session-context.md    — files modified + compact summary (written on compaction)
 //
@@ -32,6 +34,7 @@ process.stdin.on("end", () => {
     const stateDir = path.join(root, ".claude", "state");
     const agentsDir = path.join(stateDir, "agents");
     const toolsDir = path.join(stateDir, "tools");
+    const codexDir = path.join(stateDir, "codex");
     const logFile = path.join(logsDir, "invocations.jsonl");
     const compactFile = path.join(logsDir, "compactions.jsonl");
 
@@ -47,6 +50,16 @@ process.stdin.on("end", () => {
         const skill = tool_input?.skill || "unknown";
         const args = tool_input?.args || "";
         appendLog(logFile, logsDir, { ts, event: "invoked", tool: "Skill", skill, args });
+        // Track codex sessions for statusline display (tool_use_id is the stable key)
+        if (skill === "codex" && data.tool_use_id) {
+          try {
+            fs.mkdirSync(codexDir, { recursive: true });
+            fs.writeFileSync(
+              path.join(codexDir, `${data.tool_use_id}.json`),
+              JSON.stringify({ id: data.tool_use_id, since: ts }),
+            );
+          } catch (_) {}
+        }
       }
       // Track all tool calls for statusline tool-activity line (count per type within window)
       if (tool_name) {
@@ -59,6 +72,13 @@ process.stdin.on("end", () => {
             count = (existing.count || 0) + 1;
           } catch (_) {}
           fs.writeFileSync(toolFile, JSON.stringify({ tool: tool_name, since: ts, count }));
+        } catch (_) {}
+      }
+    } else if (hook_event_name === "PostToolUse") {
+      // Remove codex session tracking when the Skill call completes
+      if (tool_name === "Skill" && tool_input?.skill === "codex" && data.tool_use_id) {
+        try {
+          fs.unlinkSync(path.join(codexDir, `${data.tool_use_id}.json`));
         } catch (_) {}
       }
     } else if (hook_event_name === "SubagentStart") {
@@ -144,8 +164,8 @@ process.stdin.on("end", () => {
         }
       } catch (_) {}
     } else if (hook_event_name === "SessionEnd") {
-      // Full session teardown — clear both agents and tools
-      for (const dir of [agentsDir, toolsDir]) {
+      // Full session teardown — clear agents, tools, and codex sessions
+      for (const dir of [agentsDir, toolsDir, codexDir]) {
         try {
           const files = fs.readdirSync(dir);
           for (const f of files) {
@@ -155,6 +175,24 @@ process.stdin.on("end", () => {
           }
         } catch (_) {}
       }
+      const { execSync } = require("child_process");
+      // Prune stale worktrees (orphaned by crashed agents or interrupted sessions)
+      try {
+        execSync("git worktree prune", { cwd: root, timeout: 5000 });
+      } catch (_) {}
+      // Clean stale worktrees from .claude/worktrees/ (older than 2h)
+      const worktreesDir = path.join(root, ".claude", "worktrees");
+      try {
+        const entries = fs.readdirSync(worktreesDir);
+        const cutoff = Date.now() - 2 * 60 * 60 * 1000;
+        for (const entry of entries) {
+          const p = path.join(worktreesDir, entry);
+          const stat = fs.statSync(p);
+          if (stat.isDirectory() && stat.mtimeMs < cutoff) {
+            execSync(`git worktree remove --force "${p}"`, { cwd: root, timeout: 10000 });
+          }
+        }
+      } catch (_) {}
     }
   } catch (_) {
     // Silently swallow all errors — hook must never crash or block Claude

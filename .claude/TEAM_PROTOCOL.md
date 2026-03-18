@@ -118,6 +118,15 @@ deltaT3 +feature HOOK:verify    # triggers TaskCompleted hook
 omega @lead idle ?nextT         # triggers TeammateIdle hook
 ```
 
+## Task List Updates
+
+Teammates assigned a task via TaskUpdate(owner) **must** update the shared task list:
+
+1. `TaskUpdate(status: "in_progress")` — when starting the assigned task
+2. `TaskUpdate(status: "completed")` — when work is done, **before** sending the delta message to @lead
+
+This keeps the task list as a live progress feed for the user. AgentSpeak delta messages alone do not update task status.
+
 ## Error Recovery
 
 ```

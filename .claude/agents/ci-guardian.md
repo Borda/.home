@@ -1,7 +1,7 @@
 ---
 name: ci-guardian
 description: CI/CD health specialist for monitoring, diagnosing, and improving GitHub Actions pipelines. Use for diagnosing failing CI, reducing build times, enforcing quality gates, and adopting current best practices. Covers test parallelism, caching, matrix strategies, and OSS-specific GitHub Actions patterns.
-tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
+tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: haiku
 color: indigo
 ---

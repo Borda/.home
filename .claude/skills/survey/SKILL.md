@@ -2,7 +2,7 @@
 name: survey
 description: Survey State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, and recommends the best implementation strategy for the current codebase. Delegates deep analysis to the ai-researcher agent.
 argument-hint: <topic, method, or problem>
-allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch
+allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch, TaskCreate, TaskUpdate
 context: fork
 ---
 
@@ -132,6 +132,8 @@ When to trigger: 3+ distinct method families exist for the topic AND the field h
 5. Lead routes key findings from one researcher to others for cross-challenge: `@AR2: AR1 found [finding] — does it hold under [condition]?`
 6. Lead synthesizes into the Step 3 report, noting where researchers agreed or diverged
 
+**Note on CLAUDE.md §8 (background agent monitoring)**: Team mode spawns in-process teammates via TeamCreate — not background agents writing to a run directory. In-process teammates send TeammateIdle notifications on completion, which serve as synchronous completion signals. The file-activity polling protocol (§8) does not apply here; TeammateIdle is the equivalent liveness signal.
+
 **Spawn prompt template:**
 
 ```
@@ -141,6 +143,7 @@ Your cluster: [method family N] (e.g., "attention-free architectures" vs "linear
 Survey the top 3 methods in your cluster: comparison table + recommendation given constraints.
 Include ## Confidence block. Report completion with deltaT# HOOK:verify.
 Compact Instructions: preserve paper titles, benchmarks, code links. Discard protocol handshakes.
+Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```
 
 </workflow>

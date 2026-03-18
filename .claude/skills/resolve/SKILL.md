@@ -28,15 +28,15 @@ When given bare comment text, skip straight to Codex dispatch.
 ## Step 1: Pre-flight
 
 ```bash
-which codex
+which codex && echo "codex: ok" || echo "codex: missing — review-comment step will be skipped"
 which gh
 ```
 
-If codex is missing: stop with `Pre-flight failed: codex not found. Install: npm install -g @openai/codex`
-
-<!-- verify at use time — check npm for current @openai/codex package name -->
+<!-- codex package: npm show @openai/codex version to check latest before pinning -->
 
 If gh is missing: stop with `Pre-flight failed: gh not found. Install: brew install gh`
+
+If codex is missing: set `CODEX_AVAILABLE=false` and continue — conflict resolution (Steps 4–6) works without Codex; Steps 7–8 (review comments) will be skipped with a notice: `⚠ codex not found — skipping review-comment step. Install: npm install -g @openai/codex`
 
 Parse $ARGUMENTS:
 
@@ -226,6 +226,8 @@ Classify each comment thread:
 
 > **Guard**: If actionable (unresolved) comments > 10: process the first 10, report the remaining count, and ask the user whether to continue. This prevents runaway execution on large PRs.
 
+If `CODEX_AVAILABLE=false`: mark all actionable comments as `⚠ skipped — codex not installed` and proceed directly to the report.
+
 For each actionable comment:
 
 ```bash
@@ -273,6 +275,8 @@ TaskCreate(
   activeForm="Resolving comment"
 )
 ```
+
+If `CODEX_AVAILABLE=false`: stop with `⚠ codex not found — install: npm install -g @openai/codex` and mark the task completed.
 
 Snapshot pre-Codex state:
 
@@ -322,6 +326,7 @@ Mark the task `completed`, then print:
 - **Verdict from git state** — `git diff HEAD~1 HEAD --stat` (merge) and `git diff HEAD --stat` (comment changes) are the authoritative signals, not prose output
 - **Codex does comment resolution; Claude does conflict resolution** — the two are complementary; Claude has the distilled branch context for conflict decisions that Codex lacks
 - **`codex exec` timeout**: each call is a synchronous foreground process — allow up to 2 minutes per comment before considering it stalled. Background health monitoring (CLAUDE.md §8) does not apply here because Codex runs sequentially, not as a spawned background agent
+- **Worktree cleanup safety net**: `SessionEnd` hook runs `git worktree prune` and removes stale `.claude/worktrees/` entries older than 2h — catches worktrees orphaned by crashes or interrupted sessions
 - Follow-up chains:
   - After PR resolve → review `git diff HEAD~1 HEAD` (merge) + `git diff HEAD` (comments), then commit; optionally `/review` for a quality pass
   - Comment no-change → reply to reviewer with Codex's explanation; once clarified, run `/resolve <comment>` again

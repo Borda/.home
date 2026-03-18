@@ -82,7 +82,6 @@ Before recommending anything, run through both the overlap check and the anti-pa
 For each candidate agent/skill:
 - Does any existing agent cover >50% of its scope? → enhance existing instead
 - Is the name/description confusingly similar to an existing one? → rename existing
-- Does it overlap with a GitHub Copilot agent? → acceptable if serving different tool
 ```
 
 Anti-pattern checklist — reject the candidate if any apply:

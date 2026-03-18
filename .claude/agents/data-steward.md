@@ -1,7 +1,7 @@
 ---
 name: data-steward
 description: Data pipeline specialist for dataset management, split integrity, leakage detection, class imbalance, and data quality. Use for auditing train/val/test splits, verifying augmentation pipelines preserve labels, detecting data contamination, and DataLoader configuration.
-tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch
+tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
 color: cyan
 ---

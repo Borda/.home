@@ -488,6 +488,14 @@ After all subagents complete, collect their results and proceed to Step 9.
 
 **Low findings** (nits): fix only when `fix all` was passed — otherwise collect in the final report for optional manual cleanup.
 
+## Step 8b: Codex cross-file check
+
+After all Step 8 fix agents complete and before self-mentor re-audit:
+
+Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the combined diff of all fixes.
+
+Treat any findings as additional issues entering Step 9's re-audit scope. Skip if Step 8 touched only 1 file.
+
 ## Step 9: Re-audit modified files + confidence check
 
 For every file changed in Step 8, spawn **self-mentor** again to confirm:

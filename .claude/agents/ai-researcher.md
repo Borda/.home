@@ -1,7 +1,7 @@
 ---
 name: ai-researcher
 description: AI/ML researcher for deep paper analysis, hypothesis generation, experiment design, and implementation from research. Use when you need to understand a method deeply, implement it correctly from a paper, generate testable hypotheses, design ablations, and validate conclusions through experiments. For broad SOTA surveys use the /survey skill instead.
-tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch
+tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 maxTurns: 60
 model: opus
 memory: project

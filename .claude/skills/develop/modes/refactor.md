@@ -89,6 +89,8 @@ For each change:
 
 ## Step 5: Review and close gaps
 
+Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass before cycle 1.
+
 Full review of the refactored code. This is a **loop** — review → targeted refactoring (return to Step 4) → re-review until only nits remain. Maximum 3 outer cycles. (Step 4's "max 5 change-test cycles" bound applies within each individual pass through Step 4, independently of this outer loop.)
 
 **Each cycle:**
@@ -166,4 +168,5 @@ You are a [sw-engineer|qa-specialist] teammate refactoring: [target].
 Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2. Apply file locking protocol for concurrent edits.
 Your task: [refactoring steps 4 | characterization tests step 3].
 Compact Instructions: preserve file paths, test results, coverage numbers. Discard verbose tool output.
+Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```

@@ -1,7 +1,7 @@
 ---
 name: perf-optimizer
 description: Performance optimizer for software systems, including Machine Learning (ML)/Graphics Processing Unit (GPU) workloads. Use for profiling, identifying bottlenecks, and implementing optimizations. Profile-first workflow — measure before changing anything. Covers Central Processing Unit (CPU), memory, Input/Output (I/O), concurrency, NumPy vectorization, GPU utilization, and PyTorch profiling.
-tools: Read, Write, Edit, Bash, Grep, Glob
+tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 60
 model: opus
 color: yellow

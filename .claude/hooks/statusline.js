@@ -139,6 +139,25 @@ process.stdin.on("end", () => {
       }
     } catch (_) {} // directory missing = no active agents
 
+    // Active codex sessions — written by PreToolUse Skill(codex), deleted by PostToolUse
+    try {
+      const codexDir = path.join(workspace?.current_dir || process.cwd(), ".claude/state/codex");
+      const codexFiles = fs.readdirSync(codexDir).filter((f) => f.endsWith(".json"));
+      const MAX_CODEX_AGE_MS = 30 * 60 * 1000; // 30-min safety net
+      const activeCodex = codexFiles.filter((f) => {
+        try {
+          const c = JSON.parse(fs.readFileSync(path.join(codexDir, f), "utf8"));
+          return !c.since || now - new Date(c.since).getTime() < MAX_CODEX_AGE_MS;
+        } catch (_) {
+          return false;
+        }
+      });
+      if (activeCodex.length > 0) {
+        const codexPart = `\x1b[33mcodex ×${activeCodex.length}\x1b[0m`; // yellow
+        agentLine = agentLine ? `${agentLine} \x1b[2m│\x1b[0m ${codexPart}` : codexPart;
+      }
+    } catch (_) {} // directory missing = no active codex
+
     // Tool activity line — tools called in last 30s (approximates in-flight activity)
     try {
       const toolsDir = path.join(workspace?.current_dir || process.cwd(), ".claude/state/tools");

@@ -124,7 +124,7 @@ Branch into one of six modes:
 
 1. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/sub-agents`
+   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/sub-agents`
    - Confirm valid frontmatter fields: `name`, `description`, `tools`, `disallowedTools`,
      `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`,
      `background`, `isolation`
@@ -151,7 +151,7 @@ Read the agent scaffold template from .claude/skills/manage/templates/agent-scaf
 
 1. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `code.claude.com/docs/en/skills`
+   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/skills`
    - Confirm valid frontmatter fields: `name`, `description`, `argument-hint`,
      `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
      `context`, `agent`, `hooks`

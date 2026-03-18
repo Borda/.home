@@ -55,7 +55,7 @@ Problem domain by agent:
 - `qa-specialist` → coverage gaps: uncovered edge cases, missing exception tests, Machine Learning (ML) non-determinism
 - `linting-expert` → violations: ruff rules, mypy errors, annotation gaps
 - `self-mentor` → config issues: broken cross-refs, missing workflow blocks, wrong model, step gaps
-- `doc-scribe` → docs gaps: missing docstrings, incomplete NumPy sections, broken examples
+- `doc-scribe` → docs gaps: missing docstrings, missing Google style sections, broken examples
 - `perf-optimizer` → perf issues: unnecessary loops, repeated computation, wrong dtype, missing vectorisation
 - `ci-guardian` → Continuous Integration (CI) issues: non-pinned action Secure Hash Algorithms (SHAs), missing cache, inefficient matrix
 - `data-steward` → data issues: label leakage, split contamination, augmentation order bugs
@@ -135,7 +135,19 @@ for TARGET in <target-list>; do touch /tmp/calibrate-check-$TARGET; done
 NEW=$(find .claude/calibrate/runs/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')
 touch /tmp/calibrate-check-$TARGET
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
-[ "$NEW" -gt 0 ] && echo "✓ $TARGET active" || { [ "$ELAPSED" -ge 10 ] && echo "⏱ $TARGET TIMED OUT"; }
+if [ "$NEW" -gt 0 ]; then
+  echo "✓ $TARGET active"
+elif [ "$ELAPSED" -ge 15 ]; then
+  echo "⏱ $TARGET TIMED OUT (hard limit)"
+elif [ "$ELAPSED" -ge 10 ]; then
+  # One-time extension per CLAUDE.md §8: check output file for delay explanation
+  OUTPUT_FILE=".claude/calibrate/runs/<TIMESTAMP>/$TARGET/pipeline.jsonl"
+  if tail -20 "$OUTPUT_FILE" 2>/dev/null | grep -qi 'delay\|wait\|slow'; then
+    echo "⏸ $TARGET: extension granted (+5 min)"
+  else
+    echo "⏱ $TARGET TIMED OUT"
+  fi
+fi
 ```
 
 **On timeout**: read `tail -100 <output_file>` for partial JSON; if none use: `{"target":"<TARGET>","verdict":"timed_out","mean_recall":null,"gaps":["pipeline timed out at 10 min — re-run individually with /calibrate <target> fast"]}`. Timed-out targets appear in the report with ⏱ prefix and null metrics.

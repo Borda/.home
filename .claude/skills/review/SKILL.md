@@ -1,7 +1,7 @@
 ---
 name: review
 description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and Application Programming Interface (API) design.
-argument-hint: '[file, directory, or PR number to review]'
+argument-hint: '[file, directory, or PR number] [--reply]'
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 context: fork
 ---
@@ -18,6 +18,7 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
   - If a number is given (e.g. `42`): review the PR diff
   - If a path is given: review those files
   - If omitted: review recently changed files
+  - `--reply`: after review, spawn oss-maintainer to draft a contributor-facing PR comment from the findings
   - **Scope**: this skill reviews Python source code only. If the input is a non-Python file (YAML, JSON, shell script, etc.), state that it is out of scope and suggest the appropriate tool — do not produce findings.
 
 </inputs>
@@ -27,6 +28,8 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
 **Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase. Mark in_progress/completed throughout. On loop retry or scope change, create a new task.
 
 ## Step 1: Identify scope and context (run in parallel for PR mode)
+
+If `$ARGUMENTS` contains `--reply`, strip it from the arguments and set `REPLY_MODE=true`. Pass the remaining arguments to the rest of the workflow.
 
 ```bash
 # If $ARGUMENTS is a PR number — run all four in parallel:
@@ -57,7 +60,13 @@ Use classification to skip optional agents:
 - REFACTOR scope → skip Agent 6 (solution-architect)
 - FEATURE/MIXED → spawn all agents
 
-## Step 2: Spawn sub-agents in parallel
+## Step 2: Codex pre-scan
+
+Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the diff identified in Step 1.
+
+If Codex returns findings, include them in every agent spawn prompt in Step 3 as pre-flagged issues to verify or dismiss. If Codex was skipped or found nothing, proceed without seed findings.
+
+## Step 3: Spawn sub-agents in parallel
 
 Launch agents simultaneously with the Agent tool (security augmentation is folded into Agent 1 — not a separate spawn; Agent 6 is optional). Every agent prompt must end with:
 
@@ -90,7 +99,7 @@ Read the review checklist: `cat .claude/skills/review/checklist.md` — apply CR
 
 **Agent 3 — perf-optimizer**: Analyze code for performance issues. Look for algorithmic complexity issues, Python loops that should be NumPy/torch ops, repeated computation, unnecessary Input/Output (I/O). For ML code: check DataLoader config, mixed precision usage. Prioritize by impact.
 
-**Agent 4 — doc-scribe**: Check documentation completeness. Find public APIs without docstrings, missing NumPy/Google style sections, outdated README sections, and CHANGELOG gaps. Verify examples actually run.
+**Agent 4 — doc-scribe**: Check documentation completeness. Find public APIs without docstrings, missing Google style sections, outdated README sections, and CHANGELOG gaps. Verify examples actually run.
 
 - **Algorithmic accuracy check**: For functions that compute mathematical results (moving averages, statistics, transforms, distances), verify that the docstring's behavioral claims match what the implementation actually computes. Specifically: does the described output shape/length match the actual algorithm? Does the standard name (e.g. "moving average") correspond to the actual implementation behavior (expanding-window vs. sliding-window)? If the implementation deviates from the conventional definition, flag as MEDIUM — the docstring must document the deviation, not just state the standard definition. **Deprecation check**: Always check whether datetime, os.path, or other stdlib functions used in the code have been deprecated in Python 3.10+ (e.g., `datetime.utcnow()` deprecated in 3.12, `os.path` vs `pathlib`). Flag deprecated stdlib usage as MEDIUM with the replacement. This is a frequent omission in general review but reliably caught by doc-scribe with this explicit trigger.
 
@@ -100,11 +109,11 @@ Read the review checklist: `cat .claude/skills/review/checklist.md` — apply CR
 
 **Agent 6 — solution-architect (optional, for PRs touching public API boundaries)**: If the diff touches `__init__.py` exports, adds/modifies Protocols or Abstract Base Classes (ABCs), changes module structure, or introduces new public classes — evaluate API design quality, coupling impact, and backward compatibility. Skip if changes are internal implementation only.
 
-## Step 3: Post-agent checks (run in parallel)
+## Step 4: Post-agent checks (run in parallel)
 
-While agents from Step 2 are completing, run these two independent checks simultaneously:
+While agents from Step 3 are completing, run these two independent checks simultaneously:
 
-### 3a: Ecosystem impact check (for libraries with downstream users)
+### 4a: Ecosystem impact check (for libraries with downstream users)
 
 ```bash
 # Check if changed APIs are used by downstream projects
@@ -119,7 +128,7 @@ done
 git diff HEAD~1 HEAD | grep -A2 "deprecated"
 ```
 
-### 3b: Open Source Software (OSS) checks
+### 4b: Open Source Software (OSS) checks
 
 ```bash
 # Check for new dependencies — license compatibility
@@ -135,13 +144,13 @@ git diff HEAD~1 HEAD -- "src/**/__init__.py"
 git diff HEAD~1 HEAD -- CHANGELOG.md CHANGES.md
 ```
 
-## Step 4: Cross-validate critical/blocking findings
+## Step 5: Cross-validate critical/blocking findings
 
 Read and follow the cross-validation protocol from `.claude/skills/_shared/cross-validation-protocol.md`.
 
 **Skill-specific**: use the **same agent type** that raised the finding as the verifier (e.g., sw-engineer verifies sw-engineer's critical finding).
 
-## Step 5: Consolidate findings
+## Step 6: Consolidate findings
 
 Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low).
 
@@ -212,7 +221,7 @@ Write the full consolidated report to `tasks/output-review-$(date +%Y-%m-%d).md`
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **PR Summary** template with the **Extended Fields (review only)** addendum. Replace `[entity-line]` with `Review — [target]` and replace `[skill-specific path]` with `tasks/output-review-$(date +%Y-%m-%d).md`.
 
-## Step 6: Delegate implementation follow-up (optional)
+## Step 7: Delegate implementation follow-up (optional)
 
 After consolidating findings, identify tasks from the review that Codex can implement directly — not style violations (those are handled by pre-commit hooks), but work that requires writing meaningful code or documentation grounded in the actual implementation.
 
@@ -235,6 +244,27 @@ Only print a `### Codex Delegation` section to the terminal when tasks were actu
 
 End your response with a `## Confidence` block per CLAUDE.md output standards. For static analysis of complete, self-contained code (no missing imports needed to reason about the findings), a baseline confidence of 0.88+ is appropriate; reserve scores below 0.80 for cases where runtime behaviour, external dependencies, or execution traces are genuinely needed to validate a finding.
 
+## Step 8: Draft contributor reply (only when --reply)
+
+If `REPLY_MODE` is not set, skip this step.
+
+Spawn the **oss-maintainer** agent with:
+
+- The review output file path from Step 6
+- The PR number and contributor handle (if known from Step 1)
+- Prompt: "Read the review report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items bundled as a single 'Minor:' line; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose."
+
+Write oss-maintainer's output to `tasks/output-reply-<PR#>-$(date +%Y-%m-%d).md` — **do not print the full content to terminal**.
+
+Print compact terminal summary:
+
+```
+  Overall comment  — N issues (M blocking, K minor)
+  Inline comments  — N rows
+
+  Reply:  tasks/output-reply-<PR#>-<date>.md
+```
+
 </workflow>
 
 <notes>
@@ -249,6 +279,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards. F
   - Security findings in auth/input/deps → run `pip-audit` for dependency Common Vulnerabilities and Exposures (CVEs); address Open Web Application Security Project (OWASP) issues inline via `/develop fix`
   - Mechanical issues beyond what Step 6 auto-fixed → `/codex` to delegate additional tasks
   - Docstrings, type annotations, renames, and other mechanical findings → `/codex "<task description>"` per finding to delegate to Codex
-  - PR feedback to be shared directly with a contributor → `oss-maintainer` for final wording and voice
+  - PR feedback to be shared directly with a contributor → use `--reply` to auto-draft via oss-maintainer; or invoke oss-maintainer manually for custom framing
 
 </notes>

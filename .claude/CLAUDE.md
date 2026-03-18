@@ -91,7 +91,7 @@ Teams are always user-invoked. When executing in team mode:
 - Any multi-step main-session work (fix, investigation, debug — 3+ tool calls, or a message with 2+ distinct instructions) → TaskCreate at the start, before the first tool call; don't wait to understand the root cause
 - **Plan-mode exit → task-list entry**: when exiting plan mode after user approval, the first action is always TaskCreate for each major phase — never start implementation without the task list in place
 - On pivot (unplanned work discovered mid-skill) → create a new task for the new work; rename existing tasks with TaskUpdate if scope changed
-- Skip for: single-task actions, simple skills (sync, observe), subagent work
+- Skip for: single-task actions, simple skills (sync, observe), transient subagents (not team teammates with assigned tasks)
 - Mark tasks complete before producing final output — TaskUpdate(completed) must come before the closing report/summary
 - **The task list is a live feed for the user** — keep statuses current throughout execution, not just at start and end; the user watches it to know what is happening without asking
 
