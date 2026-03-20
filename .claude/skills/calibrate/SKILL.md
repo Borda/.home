@@ -1,7 +1,7 @@
 ---
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
-argument-hint: '{all|agents|skills|<name>} [fast|full] [ab] [apply]'
+argument-hint: '{all|agents|skills|routing|<name>} [fast|full] [ab] [apply]'
 allowed-tools: Read, Write, Edit, Bash, Agent, TaskCreate, TaskUpdate
 ---
 
@@ -21,6 +21,7 @@ Calibration data drives the improvement loop: systematic gaps become instruction
     - `all` — all agents + all calibratable skills (`/audit`, `/review`)
     - `agents` — all agents only
     - `skills` — calibratable skills only (`/audit`, `/review`)
+    - `routing` — routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts (not a per-agent quality benchmark; not included in `all`, `agents`, or `skills` — invoke explicitly)
     - `<agent-name>` — single agent (e.g., `sw-engineer`)
     - `/audit` or `/review` — single skill
   - **Pace** (optional, default `fast`):
@@ -48,6 +49,8 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 - PIPELINE_TIMEOUT_MIN: 10 (hard cutoff — pipeline not notified within 10 min of launch is timed out; extendable if the agent explains the delay)
 - HEALTH_CHECK_INTERVAL_MIN: 5 (orchestrator polls each running pipeline every 5 min for liveness)
 - EXTENSION_MIN: 5
+- ROUTING_ACCURACY_THRESHOLD: 0.90 (below → agent descriptions need improvement)
+- ROUTING_HARD_THRESHOLD: 0.80 (below → high-overlap pair descriptions need disambiguation)
 
 Problem domain by agent:
 
@@ -77,6 +80,7 @@ Skill domains:
 
 - "Calibrate agents" — Step 2 (benchmark mode, when target includes agents)
 - "Calibrate skills" — Step 2 Skills sub-section (benchmark mode, when target includes skills)
+- "Calibrate routing" — Step 2 Routing sub-section (benchmark mode, when target is `routing`)
 - "Analyse and report" — Steps 3–5 (benchmark mode)
 - "Apply findings" — Step 6 (apply mode only)
   Mark each in_progress when starting, completed when done. On loop retry or scope change, create a new task.
@@ -89,6 +93,7 @@ From `$ARGUMENTS`, determine:
   - `all` or omitted → all agents + `/audit` + `/review`
   - `agents` → all agents only (the full agent list in the constants block)
   - `skills` → `/audit` and `/review` only
+  - `routing` → routing accuracy test (NOT included in `all`, `agents`, or `skills` — invoke explicitly)
   - Any other token → single agent or skill name
 - **Mode**: look for `fast` or `full` in remaining tokens — default `fast`
 - **A/B flag**: `ab` present → also spawn a `general-purpose` baseline per problem
@@ -100,8 +105,8 @@ If benchmark will run (i.e., `fast` or `full` is present, with or without `apply
 
 Create tasks before proceeding:
 
-- Benchmark only (no `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Analyse and report"
-- Benchmark + auto-apply (`fast`/`full` + `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Analyse and report", TaskCreate "Apply findings"
+- Benchmark only (no `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target is `routing`), TaskCreate "Analyse and report"
+- Benchmark + auto-apply (`fast`/`full` + `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target is `routing`), TaskCreate "Analyse and report", TaskCreate "Apply findings"
 - Pure apply mode (only `apply`, no `fast`/`full`): TaskCreate "Apply findings" only
 
 ## Step 2: Spawn pipeline subagents
@@ -111,6 +116,10 @@ Mark "Calibrate agents" in_progress. Issue all agent pipeline subagent spawns.
 ### Skills
 
 Mark "Calibrate skills" in_progress. Issue all skill pipeline subagent spawns.
+
+### Routing
+
+When target is `routing` (skip agent/skill spawns above and the section below for this target): Mark "Calibrate routing" in_progress. Read `.claude/skills/calibrate/templates/routing-pipeline-prompt.md`. Substitute `<N>` (5 for fast, 10 for full), `<TIMESTAMP>`, `<MODE>`. Spawn a **single** `general-purpose` pipeline subagent with the substituted template as its prompt — it handles all phases internally. Proceed to Step 3 after spawning.
 
 Issue all subagents from both agents and skills in a **single response** — agents and skills are independent and run concurrently. One `general-purpose` subagent per target; do not wait for one to finish before spawning the next.
 
@@ -137,9 +146,9 @@ touch /tmp/calibrate-check-$TARGET
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -gt 0 ]; then
   echo "✓ $TARGET active"
-elif [ "$ELAPSED" -ge 15 ]; then
-  echo "⏱ $TARGET TIMED OUT (hard limit)"
 elif [ "$ELAPSED" -ge 10 ]; then
+  echo "⏱ $TARGET TIMED OUT (hard limit)"
+elif [ "$ELAPSED" -ge 5 ]; then
   # One-time extension per CLAUDE.md §8: check output file for delay explanation
   OUTPUT_FILE=".claude/calibrate/runs/<TIMESTAMP>/$TARGET/pipeline.jsonl"
   if tail -20 "$OUTPUT_FILE" 2>/dev/null | grep -qi 'delay\|wait\|slow'; then
@@ -176,6 +185,20 @@ Print the combined benchmark report:
 
 *ΔRecall/ΔSevAcc/ΔFmt: specialist − general (positive = specialist better). ΔTokens: token_ratio − 1.0 (negative = more focused). AB Verdict covers ΔRecall and ΔF1 only; use ΔSevAcc and ΔFmt as supplementary evidence for agents where ΔRecall ≈ 0.*
 ```
+
+**If target is `routing`**, replace the table above with the routing-specific format:
+
+```
+## Routing Calibration — <date> — <MODE>
+
+| Metric           | Value      | Status |
+|------------------|------------|--------|
+| Routing accuracy | N/M (XX%)  | ≥90% ✓ / 80–90% ~ / <80% ⚠ |
+| Hard accuracy    | N/M (XX%)  | ≥80% ✓ / <80% ⚠ |
+| Confusion errors | N          | 0 ✓ / >0 list pairs |
+```
+
+Flag routing accuracy < ROUTING_ACCURACY_THRESHOLD (0.90) or hard accuracy < ROUTING_HARD_THRESHOLD (0.80) with ⚠. Print confused pair details from the routing report's Confused Pairs section. Mark "Calibrate routing" completed.
 
 Flag any target where recall < 0.70 or |bias| > 0.15 with ⚠.
 
@@ -290,10 +313,14 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **Report always**: every invocation surfaces a report — benchmark runs print the new results table; bare `apply` (no `fast`/`full`) prints the saved report from the last run before applying, so the user always sees the basis for any changes before files are touched.
 - **`apply` semantics**: `fast apply` / `full apply` = run fresh benchmark then auto-apply the new proposals in one go. `apply` alone (no `fast`/`full`) = apply proposals from the most recent past run without re-running the benchmark.
 - **Stale proposals**: `apply` uses verbatim text matching (`old_string` = **Current** from proposal). If the agent file was edited between the benchmark run and `apply`, any change whose **Current** text no longer matches is skipped with a warning — no silent clobbering of intermediate edits.
+- **`routing` target vs `/audit` Check 12**: `/audit` Check 12 performs static analysis of description overlap (finds potential confusion zones); `/calibrate routing` tests behavioral impact — it generates real routing decisions and measures whether descriptions actually disambiguate. Run in sequence: `/audit` first (fast, structural), then `/calibrate routing` (behavioral, slower). They are complementary, not redundant.
+- **`routing` not in `all`**: routing tests orchestrator dispatch logic, not agent quality — excluded from batch calibration. Run `/calibrate routing` explicitly after any agent description change.
+- **Routing proposals**: the routing pipeline's Phase 5 writes description improvement proposals to `.claude/calibrate/runs/<TIMESTAMP>/routing/report.md` — look in the Proposals section for targeted wording suggestions per confused pair.
 - Follow-up chains:
   - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement — stop and escalate to user if recall is still < 0.70 after this cycle (max 1 apply cycle per run)
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
-  - Recommended cadence: run before and after any significant agent instruction change
+  - Routing accuracy < 0.90 or hard accuracy < 0.80 → update descriptions for confused pairs → `/calibrate routing` to verify improvement
+  - Recommended cadence: run before and after any significant agent instruction change; run `/calibrate routing` after any agent description change
 - **Internal Quality Loop suppressed during benchmarking**: the Phase 2 prompt explicitly tells target agents not to self-review before answering. This ensures calibration measures raw instruction quality — not the `(agent + loop)` composite. If the loop were enabled, it would inflate both recall and confidence by an unknown ratio, masking real instruction gaps and making it impossible to attribute improvement to instruction changes vs. the loop self-correcting at inference time.
 - **Skill-creator complement**: `/calibrate` benchmarks agents and skills via synthetic ground-truth problems; the official `skill-creator` from the anthropics/skills repository <!-- verify at use time --> handles skill-level eval — trigger accuracy, A/B description testing, and description optimization. The two are complementary: run `/calibrate` for quality and recall, `skill-creator` for trigger reliability.
 - **A/B mode rationale**: every specialized agent adds system-prompt tokens — if a `general-purpose` subagent matches its recall and F1, the specialization adds no value. `ab` mode quantifies this gap per-target so you can decide whether to keep, retrain, or retire an agent. `significant` (Δ>0.10) confirms the agent's domain depth earns its cost; `marginal` (0.05–0.10) suggests instruction improvements may help; `none` (\<0.05) signals the agent's current instructions add no measurable lift over a vanilla agent — consider strengthening domain-specific antipatterns and re-running. Token cost is informational (logged in scores.json) but not part of the verdict — prioritize recall/F1 delta as the primary signal.

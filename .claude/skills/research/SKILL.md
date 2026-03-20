@@ -199,8 +199,10 @@ Scope files (read and modify only these): <scope_files>
 
 Read the scope files. Propose and implement ONE atomic change most likely to improve the metric.
 The change must not break <guard_cmd>.
-Return JSON on the final line: {"description":"...","files_modified":[...],"confidence":0.N}
-Include a ## Confidence block at the end of your response per CLAUDE.md output standards.
+Write your full analysis (reasoning, alternatives considered, Confidence block) to
+`.claude/state/research/<run-id>/ideation-<i>.md` using the Write tool.
+Return ONLY the JSON result line — nothing else after it:
+{"description":"...","files_modified":[...],"confidence":0.N}
 ```
 
 For `--colab` runs: the ideation agent (especially `ai-researcher`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.

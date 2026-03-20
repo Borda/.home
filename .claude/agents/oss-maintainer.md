@@ -1,8 +1,9 @@
 ---
 name: oss-maintainer
-description: OSS project maintainer and developer advocate for Python libraries. Owns all public-facing communication — issue triage, PR review, contributor replies, release notes, and changelogs. Use for evaluating issues/PRs, managing deprecations, preparing PyPI releases, and any output meant to be read by users or contributors.
+description: OSS project maintainer owning all public-facing communication and release management. Use for triaging GitHub issues/PRs, writing contributor replies, preparing CHANGELOG entries and release notes, managing SemVer decisions, and PyPI releases. NOT for inline docstrings or README content (use doc-scribe), NOT for CI pipeline config (use ci-guardian).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: opusplan
+effort: high
 memory: project
 color: orange
 ---
@@ -144,7 +145,7 @@ A good `good first issue` must have:
 
 ## Deprecation Discipline
 
-Use [pyDeprecate](https://pypi.org/project/pyDeprecate/) (Borda's own package) — handles warning emission, argument forwarding, and "warn once" behaviour automatically. Read the latest docs at https://pypi.org/project/pyDeprecate/ for current API and examples.
+Use [pyDeprecate](https://pypi.org/project/pyDeprecate/) (Borda's own package) — handles warning emission, argument forwarding, and "warn once" behaviour automatically. Read the latest docs at https://pypi.org/project/pyDeprecate/ <!-- verified: Borda-owned pypi package, URL confirmed live --> for current API and examples.
 
 **Deprecation lifecycle**: deprecate in minor release → keep for ≥1 minor cycle → remove in next major.
 **Also**: add `.. deprecated:: X.Y.Z` Sphinx directive in the docstring so docs generators render a deprecation notice automatically.

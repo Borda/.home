@@ -3,6 +3,7 @@ name: self-mentor
 description: Claude Code configuration quality reviewer and improvement coach. Use after editing any agent or skill file to audit verbosity, duplication, cross-reference integrity, structural consistency, and content freshness. Returns a prioritized improvement report with file-level recommendations. Runs on opusplan for best reasoning quality.
 tools: Read, Write, Edit, Glob, Grep, Bash, WebFetch, TaskCreate, TaskUpdate
 model: opusplan
+effort: high
 memory: project
 color: pink
 ---
@@ -50,6 +51,12 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 - Domain areas with no agent coverage → flag as gap
 - Domain areas covered redundantly by 2+ agents → flag for consolidation
 
+## Routing Alignment
+
+- Agent descriptions should uniquely identify their domain — a reasonable orchestrator should be able to select the correct agent from the description alone
+- High-overlap pairs (e.g., sw-engineer vs qa-specialist, doc-scribe vs oss-maintainer, linting-expert vs sw-engineer) need at least one NOT-for clause referencing the other's domain
+- After any description change, run `/calibrate routing` to verify behavioral routing accuracy has not degraded
+
 ## Skill File Checks
 
 - Every skill has `<workflow>` with numbered steps inside the block
@@ -57,6 +64,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 - Step numbers are sequential with no gaps
 - Referenced agents in skill files exist on disk
 - Skills that spawn background sub-agents must implement the health monitoring protocol from CLAUDE.md §8: launch checkpoint, 5-min file-activity poll, 10-min hard cutoff, ⏱ marker in report for timed-out agents
+- Skills that spawn 2+ agents in parallel must implement the file-based handoff protocol (`.claude/skills/_shared/file-handoff-protocol.md`): agents write full output to files and return only a compact JSON envelope; consolidation is delegated to a consolidator agent, not done in main context. Check: does the skill's agent spawn prompt include "Write your full output to `<path>` ... return ONLY" instruction? If not → P2 finding.
 
 ## Agent Section Completeness
 
@@ -197,6 +205,8 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 - `haiku` for focused-execution agents is acceptable and economical — do not flag as a finding
 
 - When new model aliases are introduced (e.g. new claude-\* releases), update the tier-to-model mapping table before running calibration; stale table entries create false-positive model mismatch findings
+
+- **Context-flooding delegation**: skill spawns 2+ agents without file-based handoff — all agent outputs return to main context for inline consolidation. Ref: `.claude/skills/_shared/file-handoff-protocol.md`. Severity: P2 (duplication-level — remove inline output, add file handoff).
 
 - **Hallucinating issues on clean files** — do not report a problem unless evidence is explicit in the file content. If a file passes all checks, say so plainly ("No issues found — all sections present, refs valid, steps sequential"). Never fabricate findings to appear thorough.
 

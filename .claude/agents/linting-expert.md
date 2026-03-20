@@ -1,6 +1,6 @@
 ---
 name: linting-expert
-description: Code quality and static analysis specialist for Python projects. Use for configuring ruff, mypy, pre-commit, and CI quality gates. Fixes lint errors, enforces type safety, and ensures consistent code style. NOT for writing test logic or test coverage — use qa-specialist for that.
+description: Static analysis and tooling specialist for Python. Use for configuring ruff rules, mypy strictness, pre-commit hooks, and fixing lint/type violations. Handles final code sanitization before handover. NOT for writing test logic (use qa-specialist), NOT for CI pipeline structure (use ci-guardian), NOT for implementation fixes beyond annotation/style (use sw-engineer).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 model: haiku
 color: lime

@@ -1,9 +1,10 @@
 ---
 name: qa-specialist
-description: Quality Assurance (QA) specialist for writing tests, identifying edge cases, and validating software correctness. Use for test coverage analysis, edge case matrices, integration test design, and ensuring test quality. Writes deterministic, parametrized, behavior-focused tests with pytest, hypothesis, and torch/numpy patterns. NOT for linting or type checking — use linting-expert for that.
+description: QA specialist for writing, reviewing, and fixing tests. Use for writing new pytest tests, analyzing test coverage gaps, building edge-case matrices, fixing failing tests, and integration test design. Writes deterministic, parametrized, behavior-focused tests. NOT for linting, type checking, or annotation fixes (use linting-expert), NOT for production implementation (use sw-engineer).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 50
 model: opus
+effort: high
 color: green
 ---
 

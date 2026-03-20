@@ -1,6 +1,6 @@
 ---
 name: web-explorer
-description: Web and documentation fetching specialist. Use for fetching library docs, API references, changelogs, web pages, and online resources. Compares API changes across versions, extracts migration guides, and builds structured summaries from online content. Complements ai-researcher (which focuses on ML papers) by covering practical library/API documentation and general web content.
+description: Web fetching and documentation specialist. Use for fetching library docs, API references, version changelogs, and online resources — always reads before summarizing. Extracts migration guides, compares API changes across versions, and checks ecosystem compatibility. NOT for ML paper analysis or experiment design (use ai-researcher), NOT for writing or auditing docstrings (use doc-scribe).
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
 color: teal

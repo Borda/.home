@@ -48,22 +48,22 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 
 Skills are orchestrations of agents — invoked via slash commands (`/review`, `/develop fix`, etc.). A single skill typically composes multiple agents in parallel and consolidates their output. Think of agents as specialists you can talk to, and skills as predefined workflows that coordinate them.
 
-| Skill         | Command                                              | What It Does                                                                                                                                                                                              |
-| ------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**    | `/review [file\|PR#] [--reply]`                      | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design); `--reply` drafts a contributor-facing comment via oss-maintainer                                          |
-| **optimize**  | `/optimize [target]`                                 | Measure-change-measure performance loop                                                                                                                                                                   |
-| **release**   | `/release <mode> [range]`                            | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                                                                                          |
-| **survey**    | `/survey [topic]`                                    | SOTA literature survey with implementation plan                                                                                                                                                           |
-| **analyse**   | `/analyse [#\|health\|dupes\|...] [--reply]`         | Issue/PR/Discussion analysis by number (unified index, auto-detected), repo health, duplicate detection; `--reply` drafts a contributor-facing reply, reusing today's report if the item hasn't drifted   |
-| **observe**   | `/observe`                                           | Meta-skill: analyze work patterns and suggest new agents or skills                                                                                                                                        |
-| **audit**     | `/audit [fix [high\|medium\|all]\|upgrade]`          | Full-sweep config audit: broken refs, dead loops, inventory drift, docs freshness + upgrade proposals; `upgrade` applies docs-sourced improvements (config: correctness check, capability: calibrate A/B) |
-| **sync**      | `/sync [apply]`                                      | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                                                                                           |
-| **manage**    | `/manage <op> <type>`                                | Create, update, or delete agents/skills with cross-ref propagation                                                                                                                                        |
-| **develop**   | `/develop feature\|fix\|refactor`                    | Unified development orchestrator: TDD-first feature dev, reproduce-first bug fixing, or test-first refactoring                                                                                            |
-| **calibrate** | `/calibrate [target] [fast\|full]`                   | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias                                                                                                             |
-| **codex**     | `/codex <task> [target]`                             | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                                                                                                       |
-| **resolve**   | `/resolve <PR#\|comment>`                            | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex                                                                         |
-| **research**  | `/research [plan\|resume] <goal> [--team] [--colab]` | Autonomous goal-directed iteration loop: define metric + guard, iterate with specialist agents (perf-optimizer, sw-engineer, ai-researcher), auto-rollback on regression; GPU workloads via Colab MCP     |
+| Skill         | Command                                              | What It Does                                                                                                                                                                                                                                                 |
+| ------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **review**    | `/review [file\|PR#] [--reply]`                      | Parallel code review across 7 dimensions (arch, tests, perf, docs, lint, security, API design); `--reply` drafts a contributor-facing comment via oss-maintainer                                                                                             |
+| **optimize**  | `/optimize [target]`                                 | Measure-change-measure performance loop                                                                                                                                                                                                                      |
+| **release**   | `/release <mode> [range]`                            | Notes, changelog, summary, migration, or full prepare pipeline; `audit` checks release readiness                                                                                                                                                             |
+| **survey**    | `/survey [topic]`                                    | SOTA literature survey with implementation plan                                                                                                                                                                                                              |
+| **analyse**   | `/analyse [#\|health\|dupes\|...] [--reply]`         | Issue/PR/Discussion analysis by number (unified index, auto-detected), repo health, duplicate detection; `--reply` drafts a contributor-facing reply, reusing today's report if the item hasn't drifted                                                      |
+| **observe**   | `/observe`                                           | Meta-skill: analyze work patterns and suggest new agents or skills                                                                                                                                                                                           |
+| **audit**     | `/audit [fix [high\|medium\|all]\|upgrade]`          | Full-sweep config audit: broken refs, dead loops, inventory drift, docs freshness + upgrade proposals; `upgrade` applies docs-sourced improvements (config: correctness check, capability: calibrate A/B)                                                    |
+| **sync**      | `/sync [apply]`                                      | Drift-detect project `.claude/` vs home `~/.claude/`; `apply` performs the sync                                                                                                                                                                              |
+| **manage**    | `/manage <op> <type>`                                | Create, update, or delete agents/skills with cross-ref propagation                                                                                                                                                                                           |
+| **develop**   | `/develop feature\|fix\|refactor`                    | Unified development orchestrator: TDD-first feature dev, reproduce-first bug fixing, or test-first refactoring                                                                                                                                               |
+| **calibrate** | `/calibrate [target\|routing] [fast\|full]`          | Agent calibration: synthetic problems with known outcomes, measures recall vs confidence bias; `routing` mode tests orchestrator dispatch accuracy — generates task prompts and measures whether agent descriptions correctly disambiguate routing decisions |
+| **codex**     | `/codex <task> [target]`                             | Delegate mechanical coding tasks to Codex CLI — Claude orchestrates, Codex executes                                                                                                                                                                          |
+| **resolve**   | `/resolve <PR#\|comment>`                            | Resolve a PR: auto-detects merge conflicts first (semantic resolution with branch intent), then applies review comments via Codex                                                                                                                            |
+| **research**  | `/research [plan\|resume] <goal> [--team] [--colab]` | Autonomous goal-directed iteration loop: define metric + guard, iterate with specialist agents (perf-optimizer, sw-engineer, ai-researcher), auto-rollback on regression; GPU workloads via Colab MCP                                                        |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -309,6 +309,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 /observe               # analyze work patterns, suggest new agents/skills
 /manage create agent security-auditor "..."  # scaffold suggested agent
 /audit                 # verify config integrity — catch broken refs, dead loops
+/calibrate routing     # confirm new agent description doesn't confuse routing
 /sync apply            # propagate clean config to ~/.claude/
 ```
 
@@ -365,6 +366,20 @@ Both `--reply` flags produce the same two-part oss-maintainer output: an overall
 /audit fix                      # structural sweep after calibrate changed instruction files
 /sync apply                     # propagate improved config to ~/.claude/
 ```
+
+</details>
+
+<details>
+<summary><strong>Agent description drift → routing alignment check</strong></summary>
+
+After editing agent descriptions (manually or via `/audit fix`), verify that routing accuracy hasn't degraded:
+
+```
+/audit                      # Check 12 flags description overlap pairs (static, fast)
+/calibrate routing fast     # behavioral test: generates task prompts, measures routing accuracy includes confusion matrix + description improvement proposals
+```
+
+Run `/calibrate routing fast` after any agent description change. Thresholds: routing accuracy ≥90%, hard-problem accuracy ≥80%.
 
 </details>
 

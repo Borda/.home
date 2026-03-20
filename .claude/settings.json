@@ -246,7 +246,11 @@
       "WebFetch(domain:api.codecov.io)",
       "WebFetch(domain:app.codecov.io)",
       "Skill(sync)",
-      "Skill(calibrate)"
+      "Skill(calibrate)",
+      "Read(.claude/**)",
+      "Glob(.claude/**)",
+      "Grep(.claude/**)",
+      "Read(/tmp/**)"
     ],
     "deny": [
       "Bash(git push:*)",

@@ -1,6 +1,6 @@
 ---
 name: data-steward
-description: Data pipeline specialist for dataset management, split integrity, leakage detection, class imbalance, and data quality. Use for auditing train/val/test splits, verifying augmentation pipelines preserve labels, detecting data contamination, and DataLoader configuration.
+description: Data pipeline specialist for ML data integrity and quality. Use for auditing train/val/test splits, detecting data leakage, verifying augmentation pipelines, checking class imbalance, and configuring DataLoaders for reproducibility. NOT for ML experiment design or hypothesis generation (use ai-researcher), NOT for DataLoader throughput optimization (use perf-optimizer).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
 color: cyan

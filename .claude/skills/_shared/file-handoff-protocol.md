@@ -1,0 +1,75 @@
+# File-Based Handoff Protocol
+
+## When to apply
+
+- Any skill spawning **2+ agents in parallel** for analysis or review
+- Any **single agent** expected to produce >500 tokens of findings/analysis
+- Exception: implementation agents (writing code) return inline — their output IS the deliverable
+- Exception: single-agent single-question spawns where output is inherently short (\<200 tokens)
+
+## Agent contract
+
+The spawned agent **must**:
+
+1. Write full output (findings, analysis, Confidence block) to `<RUN_DIR>/<agent-name>.md` using the Write tool
+2. Return to the orchestrator **ONLY** a compact JSON envelope on the final line — nothing else after it:
+
+```json
+{
+  "status": "done",
+  "findings": 3,
+  "severity": {
+    "critical": 0,
+    "high": 1,
+    "medium": 2
+  },
+  "file": "<path>",
+  "confidence": 0.88
+}
+```
+
+Include any additional task-specific keys (e.g. `"papers":5` for survey, `"verdict":"approve"` for review) but keep the envelope ≤200 bytes.
+
+## RUN_DIR convention
+
+- **Ephemeral** (per-run): `/tmp/<skill>-<timestamp>/` — created once before any spawns: `mkdir -p /tmp/<skill>-$(date +%s)`
+- **Persistent** (reports): `tasks/` — for final consolidated reports that survive the session
+
+## Orchestrator contract
+
+1. **Do NOT read agent files back into main context for consolidation** — delegate to a consolidator agent instead
+2. Collect the compact envelopes from each spawn (these are tiny — they stay in context)
+3. Use envelopes to decide which files need further action (e.g., files with critical findings)
+4. Spawn a **consolidator agent** to read all `<RUN_DIR>/*.md` files and write the final report
+
+## Consolidator threshold
+
+- **4+ agent files** → mandatory consolidator; consolidator reads all files and writes the final report
+- **2–3 agent files** → orchestrator may read files directly **only if** total expected content is \<2K tokens
+- Consolidator agent type: same domain as the lead reviewer (e.g., `sw-engineer` for code review, `self-mentor` for config audit)
+
+## Consolidator prompt template
+
+```
+Read all finding files in `<RUN_DIR>/`. Apply the consolidation rules from <checklist path>.
+Write the consolidated report to `<output path>` using the Write tool.
+Return ONLY a one-line summary: `verdict=<VALUE> | findings=N | critical=N | high=N | file=<path>`
+```
+
+Main context receives only the one-liner.
+
+## Envelope fields reference
+
+| Field        | Required | Description                                |
+| ------------ | -------- | ------------------------------------------ |
+| `status`     | yes      | `"done"`, `"timed_out"`, `"error"`         |
+| `findings`   | yes      | total finding count (0 if none)            |
+| `severity`   | yes      | `{"critical":N,"high":N,"medium":N}`       |
+| `file`       | yes      | absolute path to the written findings file |
+| `confidence` | yes      | agent's self-reported confidence (0–1)     |
+
+## Reference implementation
+
+`/calibrate` is the canonical example of file-based handoff at scale — agents write to `/tmp/calibrate-<id>/` files; the orchestrator collects one-line summaries; consolidation happens post-collection without flooding main context.
+
+See also `/audit` Step 3 (`self-mentor` agents per file → `<RUN_DIR>/<file-basename>.md`) and `/review` Step 3–6.

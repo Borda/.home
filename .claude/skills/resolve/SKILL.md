@@ -1,6 +1,6 @@
 ---
 name: resolve
-description: 'Given a Pull Request (PR) number, resolves in two phases: (1) automatically detects and semantically resolves merge conflicts — distills source-branch intent and target-branch drift before touching any markers; (2) processes review comments via Codex. Also accepts bare comment text for single-comment dispatch.'
+description: 'Given a Pull Request (PR) number, resolves in two phases: (1) automatically detects and semantically resolves merge conflicts — distills source-branch intent and target-branch drift before touching any markers; (2) processes review comments via Codex. Also accepts bare comment text for single-comment dispatch followed by a Codex review→fix loop (up to 5 passes) that re-dispatches any found issues until clean.'
 argument-hint: <PR number or URL> | <review comment text>
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
@@ -275,7 +275,7 @@ Mark the task `completed`, then print:
 
 ______________________________________________________________________
 
-## Step 8: Comment dispatch mode (fast path)
+## Step 8: Comment dispatch + Codex review loop
 
 Reached when $ARGUMENTS is bare comment text (not a PR number or URL).
 
@@ -291,24 +291,48 @@ TaskCreate(
 
 If `CODEX_AVAILABLE=false`: stop with `⚠ codex not found — install: npm install -g @openai/codex` and mark the task completed.
 
-Snapshot pre-Codex state:
+### Step 7 — Resolve
 
-```bash
-git diff HEAD --stat
-```
-
-Dispatch:
+Dispatch the comment to Codex:
 
 ```bash
 codex exec "Apply this review comment to the codebase. If the change is already present, or the comment has no actionable code change, make no changes and briefly explain why. Comment: $ARGUMENTS" --sandbox workspace-write
 ```
 
-Check outcome:
+Record the initial dispatch outcome (code changed or no change + reason).
+
+### Step 8 — Codex review loop (max 5 passes)
+
+Review the current diff and fix any real issues found, looping until clean or the cap is hit.
 
 ```bash
-git diff HEAD --stat
-git diff HEAD
+git diff HEAD --stat  # confirm there are changes to review
 ```
+
+If no changes: skip the loop; set `CODEX_REVIEW_FINDINGS=""`.
+
+Otherwise:
+
+```
+for REVIEW_PASS in 1..5:
+
+  # Review phase — identify non-cosmetic issues
+  codex exec "Review all changes in git diff HEAD. List every non-cosmetic issue (bug, logic error, regression, missed edge case) as a numbered list. Do NOT list cosmetic nits. End with: ISSUES_FOUND=<count>." --sandbox workspace-write
+
+  if ISSUES_FOUND == 0:
+    break  # clean — exit loop
+
+  # Fix phase (Step 7) — dispatch each found issue as a targeted fix
+  for each issue in the list:
+    codex exec "Apply this fix to the codebase: <issue description>" --sandbox workspace-write
+
+  # loop back to review
+
+if REVIEW_PASS reached 5 and ISSUES_FOUND > 0:
+  note "⚠ Review loop hit 5-pass cap — N issues remain; surface to user"
+```
+
+Set `CODEX_REVIEW_FINDINGS` to a bullet list of all issues fixed across passes, plus any remaining unfixed issues if the cap was hit.
 
 Mark the task `completed`, then print:
 
@@ -320,6 +344,9 @@ Mark the task `completed`, then print:
 | 1 | <30-char summary> | <what Codex did or its explanation> | ✓ / ✗ |
 
 **Verdict**: ✓ resolved | ⊘ no change — <Codex's reason>
+
+### Codex Review
+<CODEX_REVIEW_FINDINGS, or "No issues found" / "Skipped — no changes to review">
 
 **Next**: review diff and commit | reply to reviewer: <Codex's reason>
 
@@ -337,7 +364,9 @@ Mark the task `completed`, then print:
 - **Case A (already MERGING)** — if a prior merge attempt left markers, the main working tree is used directly; no worktree is created
 - **Escape hatch**: `git merge --abort` (in the worktree or main tree) undoes the entire merge; `git worktree remove --force` + `git branch -d` cleans up if needed
 - **Verdict from git state** — `git diff HEAD~1 HEAD --stat` (merge) and `git diff HEAD --stat` (comment changes) are the authoritative signals, not prose output
-- **Codex does comment resolution; Claude does conflict resolution** — the two are complementary; Claude has the distilled branch context for conflict decisions that Codex lacks
+- **Codex does comment resolution and final review; Claude does conflict resolution** — the two are complementary; Claude has the distilled branch context for conflict decisions that Codex lacks; Codex's final review catches correctness issues introduced across all changes as a unified diff
+- **Final review is a correctness-only loop** — Codex targets bugs, regressions, and logic errors; cosmetic nits are explicitly excluded from the loop trigger; the loop runs until Codex reports zero real issues or the 5-iteration cap is hit; remaining issues at cap are surfaced to the user, not silently dropped
+- **5-iteration cap overrides the global 3-iteration default** — this skill explicitly declares a tighter bound (CLAUDE.md §3.3: "if a skill declares a bound, that bound takes precedence")
 - **`codex exec` timeout**: each call is a synchronous foreground process — allow up to 2 minutes per comment before considering it stalled. Background health monitoring (CLAUDE.md §8) does not apply here because Codex runs sequentially, not as a spawned background agent
 - **Worktree cleanup safety net**: `SessionEnd` hook runs `git worktree prune` and removes stale `.claude/worktrees/` entries older than 2h — catches worktrees orphaned by crashes or interrupted sessions
 - Follow-up chains:

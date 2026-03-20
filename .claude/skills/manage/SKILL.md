@@ -26,6 +26,7 @@ Manage the lifecycle of agents and skills in the `.claude/` directory. Handles c
 - Names must be **kebab-case** (lowercase, hyphens only)
 - Descriptions must be quoted when they contain spaces
 - Permission rules use the Claude Code format: `WebSearch`, `Bash(cmd:*)`, `WebFetch(domain:example.com)`
+- `--skip-audit` — optional flag: skip the Step 9 `/audit` validation (use when running inside an `audit fix` loop to avoid recursion)
 
 **Agent examples:**
 
@@ -124,11 +125,8 @@ Branch into one of six modes:
 
 1. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/sub-agents`
-   - Confirm valid frontmatter fields: `name`, `description`, `tools`, `disallowedTools`,
-     `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`,
-     `background`, `isolation`
-   - Verify model shorthand values are still current (`sonnet`, `opus`, `haiku`, `inherit`)
+   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/sub-agents` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-schema-$(date +%s).md` using the Write tool. Return ONLY a summary line: `fields=N new=N deprecated=N schema_file=/tmp/manage-schema-<ts>.md`"
+   - Read the returned summary and use it to extract: valid frontmatter fields (`name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `isolation`), current model shorthands, and any new fields
    - Note any new fields worth including in the generated template
      Adjust the template generated in steps 2–4 to reflect the current schema. If a new field is
      broadly useful for the agent's role (e.g. `maxTurns` for long-running agents), include it
@@ -151,10 +149,8 @@ Read the agent scaffold template from .claude/skills/manage/templates/agent-scaf
 
 1. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/skills`
-   - Confirm valid frontmatter fields: `name`, `description`, `argument-hint`,
-     `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`,
-     `context`, `agent`, `hooks`
+   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/skills` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-skill-schema-$(date +%s).md` using the Write tool. Return ONLY a summary line: `fields=N new=N deprecated=N schema_file=/tmp/manage-skill-schema-<ts>.md`"
+   - Read the returned summary and use it to extract: valid frontmatter fields (`name`, `description`, `argument-hint`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`, `context`, `agent`, `hooks`), and any new fields
    - Note any new fields worth including in the generated template
      Adjust the template generated in step 3 to reflect the current schema. Include `model`
      or `context: fork` only when the skill's described purpose clearly benefits from them.
@@ -392,7 +388,7 @@ Output a structured report containing:
 - **Cross-References**: count of files updated, broken refs cleaned (n/a for perm operations)
 - **Current Roster**: agents (N) and skills (N) with comma-separated names (n/a for perm operations)
 - **Audit Result**: audit findings (pass / issues found) (n/a for perm operations)
-- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` review generated content; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
+- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` review generated content; for **agent** create/update/delete run `/calibrate routing fast` — any change to the agent roster changes which `subagent_type` values are available for routing, and description changes can introduce or resolve routing confusion; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 
@@ -412,7 +408,8 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
   - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), check the Anthropic skills repository for a `skill-creator` tool
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
+  - **After any agent create/update/delete** → `/calibrate routing fast` to confirm routing accuracy is unaffected; a new agent changes the roster and its description must disambiguate from neighbors; deletion removes a valid routing target; rename changes the `subagent_type` identifier
   - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
-  - Recommended sequence: `/manage <op>` → `/audit` → `/sync apply`
+  - Recommended sequence for agent operations: `/manage <op>` → `/audit` → `/calibrate routing fast` → `/sync apply`
 
 </notes>

@@ -3,7 +3,7 @@ name: optimize
 description: Performance deep-dive orchestrator. Establishes a baseline, spawns perf-optimizer agent to identify the real bottleneck, and produces a before/after report. Covers CPU, memory, Input/Output (I/O), concurrency, and Machine Learning (ML) / Graphics Processing Unit (GPU) workloads.
 argument-hint: <file, module, or directory>
 disable-model-invocation: true
-allowed-tools: Read, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
 
 <objective>
@@ -50,7 +50,8 @@ Task the `perf-optimizer` agent with:
 3. Identify the **single biggest bottleneck** — not a laundry list
 4. Implement a targeted fix for that bottleneck
 5. Identify 2 additional bottlenecks to address next
-6. End your response with a `## Confidence` block per CLAUDE.md output standards.
+6. Write your full analysis (bottleneck identification, optimization reasoning, Confidence block) to `tasks/optimize-analysis-$(date +%Y-%m-%d).md` using the Write tool
+7. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{"status":"done","bottleneck":"<description>","files_modified":[],"confidence":0.N,"file":"tasks/optimize-analysis-<date>.md"}`
 
 ## Step 3: Codex correctness check
 

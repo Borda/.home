@@ -21,7 +21,7 @@ Each mode includes two layers of built-in review before the shared quality stack
 
 Both layers are in-context (no agent spawn). They catch design mismatches, scope creep, and missing edge cases early so `/review` validates rather than discovers.
 
-All modes share a quality stack and a progressive review loop that narrows scope across cycles.
+All modes share a quality stack, a mandatory Codex pre-pass, and a progressive review loop that narrows scope across cycles.
 
 </objective>
 
@@ -96,13 +96,41 @@ python -m pytest --doctest-modules <target_module> -v 2>&1 | tail -20
 
 Spawn a **linting-expert** agent if mypy or ruff issues require non-trivial fixes.
 
+## Shared Step: Codex pre-pass
+
+Mandatory after the quality stack completes. Gracefully degrades if Codex is unavailable.
+
+Read `.claude/skills/_shared/codex-prepass.md` and apply it to the current diff:
+
+1. **Pre-flight**: `which codex` — if not installed, print `⚠ Codex not available — skipping pre-pass` and proceed
+2. **Skip check**: if `git diff HEAD --stat` shows only formatting/comment/whitespace changes, skip
+3. **Dispatch**: run the Codex pre-pass on the implementation diff:
+   ```bash
+   codex exec "Review the staged diff (git diff HEAD). Flag bugs, missed edge cases, incorrect logic, and inconsistencies with existing code patterns. Apply minimal targeted fixes — do not make architectural changes. Skip cosmetic nits." --sandbox workspace-write
+   ```
+4. **Validate**: if Codex made changes, re-run the quality stack on affected files only:
+   ```bash
+   CODEX_CHANGED=$(git diff HEAD --name-only | grep '\.py$' | tr '\n' ' ')
+   [ -n "$CODEX_CHANGED" ] && uv run ruff check $CODEX_CHANGED --fix && uv run pytest <test_dir> -q 2>&1 | tail -10
+   ```
+   - Tests pass → accept Codex corrections
+   - Tests fail → revert Codex changes (`git restore .`) and note in final report
+5. **Collect findings**: build `CODEX_FINDINGS` — a bullet list of every applied fix and every flagged-but-not-fixed issue. If nothing was found or the step was skipped, set `CODEX_FINDINGS=""`.
+
+Include a `### Codex Pre-pass` section in the final report:
+
+- Available + fixes applied: list what Codex fixed
+- Available + no issues: "Codex pre-pass: no issues found"
+- Skipped (unavailable): "Codex not installed — pre-pass skipped"
+- Reverted (tests broke): "Codex corrections reverted — {reason}"
+
 ## Shared Step: Progressive review loop
 
 Maximum 3 cycles. Applied after the quality stack.
 
 **Cycle 1: Full review**
 
-- Invoke `/review` for a full multi-agent code review
+- Invoke `/review` for a full multi-agent code review. If `CODEX_FINDINGS` is non-empty, prepend it to the review brief: "Codex pre-pass found the following — verify these, do not rediscover: $CODEX_FINDINGS"
 - Capture review state: `{agents_with_findings, unresolved_findings, files_reviewed}`
 - If clean (no critical/high findings): skip to report
 
@@ -110,9 +138,10 @@ Maximum 3 cycles. Applied after the quality stack.
 
 - Fix critical/high findings from Cycle 1
 - Re-run quality stack on modified files only
-- For each agent type in `agents_with_findings`: spawn that agent directly (not `/review`) with a focused prompt scoped to modified files + prior findings
+- Set up a run directory for file-based handoff: `RUN_DIR="/tmp/develop-review-$(date +%s)"; mkdir -p "$RUN_DIR"`
+- For each agent type in `agents_with_findings`: spawn that agent directly (not `/review`) with a focused prompt scoped to modified files + prior findings. Each agent prompt must end with: "Write your full findings to `$RUN_DIR/<agent-name>.md` using the Write tool. Return ONLY a compact JSON envelope: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":0},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.N}`"
 - Skip agents that were clean in Cycle 1
-- Update review state
+- Collect envelopes to update review state (do not read the full finding files into context — check envelopes to determine if critical/high remain)
 
 **Cycle 3: Minimal verification**
 
@@ -135,9 +164,11 @@ Maximum 3 cycles. Applied after the quality stack.
 - After compaction, read it back to resume at the correct cycle
 - Delete the file when the review loop completes
 
-## Shared Step: Codex delegation (optional)
+## Shared Step: Codex mechanical delegation (optional)
 
-Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria. Delegate mechanical follow-up to Codex when an accurate, specific brief can be written.
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria. Delegate mechanical follow-up tasks to Codex when an accurate, specific brief can be written.
+
+This step is distinct from the Codex pre-pass above — the pre-pass checks the implementation diff for correctness; mechanical delegation outsources low-level follow-up work (scaffolding, boilerplate, migration scripts, etc.) after the review loop closes.
 
 Only include a `### Codex Delegation` section in the final report when tasks were actually delegated — omit entirely if nothing was delegated.
 

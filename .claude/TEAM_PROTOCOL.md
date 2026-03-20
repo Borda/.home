@@ -146,6 +146,16 @@ epsilon!fail auth attempt:3/3 ?lead          # giving up, reassign
 
 Report security findings as `P0` (auth bypass, injection, secrets in code) or `P1` (broken access control, missing input validation). No separate security agent is needed — QA owns this scope.
 
+## Result Return Protocol
+
+When a teammate completes an analysis task (review, audit, research):
+
+- Write full findings to `tasks/<skill>-<teammate-name>-<date>.md` using the Write tool
+- Send lead a summary message: `DONE <task-id> | findings=N sev=C/H/M | → <file-path>`
+- Lead reads the file only when consolidating the final report — not for every task completion
+
+This keeps inter-agent traffic compact while preserving full findings for the consolidation phase.
+
 ## Anti-Patterns (Do NOT do)
 
 - No greetings ("Hi team!"), acknowledgments ("Great work!"), or sign-offs

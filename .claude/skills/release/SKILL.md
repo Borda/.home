@@ -67,7 +67,8 @@ git log $RANGE --no-merges --format="--- %H%n%B"
 git diff --stat $(echo "$RANGE" | sed 's/\.\./\ /')
 
 # PR titles, bodies, and labels for merged PRs (richer context than commits)
-gh pr list --state merged --base main --limit 100 \
+TRUNK=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}')
+gh pr list --state merged --base "${TRUNK:-main}" --limit 100 \
   --json number,title,body,labels,mergedAt 2>/dev/null
 ```
 

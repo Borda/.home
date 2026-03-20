@@ -21,6 +21,19 @@ ______________________________________________________________________
 
 ______________________________________________________________________
 
+## Built-in tool read permissions
+
+These entries pre-authorize `Read`, `Glob`, and `Grep` on directories that skills and teammates access frequently as part of their own configuration or runtime state. Without them, agents are prompted to confirm reading their own config files.
+
+| Permission         | Description                        | Typical use case                                                                                    |
+| ------------------ | ---------------------------------- | --------------------------------------------------------------------------------------------------- |
+| `Read(.claude/**)` | Read any file under `.claude/`     | Teammates read `TEAM_PROTOCOL.md` and agent files at spawn; skills read their own SKILL.md files    |
+| `Glob(.claude/**)` | Glob-match files under `.claude/`  | `/audit` and `/manage` enumerate agents, skills, and hooks without shell `find`                     |
+| `Grep(.claude/**)` | Search content under `.claude/`    | `/audit` checks cross-references; `/calibrate` locates skill keyword patterns                       |
+| `Read(/tmp/**)`    | Read temporary files under `/tmp/` | `/calibrate` reads checkpoint files for background agent health monitoring; skill temp output files |
+
+______________________________________________________________________
+
 ## Web
 
 | Permission  | Description                            | Typical use case                                                          |
@@ -202,7 +215,9 @@ ______________________________________________________________________
 
 ## Skills — pre-approved invocations
 
-| Permission         | Description                                        | Typical use case                                              |
-| ------------------ | -------------------------------------------------- | ------------------------------------------------------------- |
-| `Skill(sync)`      | Invoke the `/sync` skill without user confirmation | Called from hooks and automation flows that need drift checks |
-| `Skill(calibrate)` | Invoke the `/calibrate` skill without confirmation | Agent quality benchmarking in CI or post-fix verification     |
+Only skills that are invoked **programmatically** (by another skill, hook, or automated workflow) need a `Skill()` entry. Skills invoked directly by the user (`/audit`, `/review`, `/develop`, etc.) never need pre-authorization — the user's own invocation is the approval. Adding all 14 skills to the allow list would be noise.
+
+| Permission         | Description                                        | Why programmatic (not user-invoked)                                                                      |
+| ------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| `Skill(sync)`      | Invoke the `/sync` skill without user confirmation | CLAUDE.md and hooks reference running sync after config changes; called non-interactively                |
+| `Skill(calibrate)` | Invoke the `/calibrate` skill without confirmation | Post-fix quality gate in `/develop` and CLAUDE.md self-improvement loop; runs without user at the prompt |

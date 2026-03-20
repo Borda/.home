@@ -309,7 +309,9 @@ The test: would a reasonable reader expect this content to apply to every single
 
 ### Claude Code docs freshness
 
-Spawn a **web-explorer** agent to fetch the current Claude Code documentation. Try the direct paths below; if they don't resolve, navigate from the Claude Code homepage (`code.claude.com`) to find the current schema pages:
+Spawn a **web-explorer** agent to fetch the current Claude Code documentation. Try the direct paths below; if they don't resolve, navigate from the Claude Code homepage (`code.claude.com`) to find the current schema pages.
+
+**File-based handoff**: the web-explorer agent must write its full findings (validated fields, deprecated fields, new features, upgrade proposals with genuine-value assessment) to `$RUN_DIR/docs-freshness.md` using the Write tool. Return ONLY a summary line: `findings=N deprecated=N new_features=N confidence=0.N` — nothing else in the response.
 
 - Hook event names, types, and schemas — `code.claude.com/docs/en/hooks`
 - Agent frontmatter schema — `code.claude.com/docs/en/sub-agents`
@@ -438,15 +440,81 @@ MEMORY_DIR="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|/|-|
 
 All three sub-checks produce only **low** findings — auto-fixed under `/audit fix all`; reported only under `/audit fix` or lower. Fix action: remove the duplicate section, drop the version pin (keep the surrounding rule), delete the absorbed feedback file.
 
+**Check 12 — Agent description routing alignment**
+
+Three sub-checks, all using model reasoning over extracted agent descriptions. These are **report-only** — never auto-fix; descriptions are semantic and require human judgment.
+
+First, extract all agent descriptions:
+
+```bash
+printf "%-25s %s\n" "AGENT" "DESCRIPTION"
+for f in .claude/agents/*.md; do
+  name=$(basename "$f" .md)
+  desc=$(awk '/^---$/{c++; if(c==2)exit} c==1 && /^description:/{sub(/^description: /,""); print}' "$f")
+  printf "%-25s %s\n" "$name" "$desc"
+done
+```
+
+Apply model reasoning to the collected descriptions:
+
+**12a — Overlap analysis**: For each pair of agents, assess domain overlap. Flag pairs where a reasonable orchestrator could confuse which agent to pick — i.e., given a task in the overlap zone, the descriptions alone do not disambiguate. Each ambiguous pair → **medium** finding.
+
+**12b — NOT-for clause coverage**: For each high-overlap pair found in 12a, check whether at least one agent in the pair has a "NOT for" / "not for" / exclusion clause in its description that references the other or its domain. Missing disambiguation → **medium**.
+
+**12c — Trigger phrase specificity**: For each agent, check whether the description's first clause states an exclusive domain not shared with any other agent. A vague opener that doesn't immediately distinguish this agent from its nearest neighbor → **low**.
+
+Severity: 12a/12b = **medium**; 12c = **low**. Fix reference: run `/calibrate routing` to verify whether description overlap translates to actual routing confusion, then refine descriptions accordingly.
+
+**Check 13 — Codex integration smoke-test**
+
+Skip if codex is not installed (`command -v codex` returns non-zero).
+
+```bash
+RED='\033[1;31m'; GRN='\033[0;32m'; YEL='\033[1;33m'; NC='\033[0m'
+if ! command -v codex &>/dev/null; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 13 — codex not installed\n"
+else
+  SMOKE_FILE="/tmp/audit-codex-smoke-$$.py"
+  SMOKE_OUT="/tmp/audit-codex-smoke-$$.out"
+  # Run a trivial generation task: write a function that checks if n is prime
+  codex exec "Write a Python function is_prime(n: int) -> bool that returns True if n is prime. Put it in $SMOKE_FILE. Include a quick sanity-check: assert is_prime(7) and not is_prime(4)." \
+    --quiet 2>"$SMOKE_OUT"
+  EXIT=$?
+  if [ $EXIT -ne 0 ]; then
+    printf "${RED}! BREAKING${NC}: Check 13 — codex exec exited with code %d\n" "$EXIT"
+    printf "  stderr: %s\n" "$(tail -5 $SMOKE_OUT)"
+  elif [ ! -f "$SMOKE_FILE" ]; then
+    printf "${RED}! BREAKING${NC}: Check 13 — codex ran but produced no output file\n"
+  else
+    # Basic output review: file must contain 'def is_prime', at least 3 lines, no syntax error
+    HAS_DEF=$(grep -c 'def is_prime' "$SMOKE_FILE" || true)
+    LINES=$(wc -l < "$SMOKE_FILE" | tr -d ' ')
+    python3 -m py_compile "$SMOKE_FILE" 2>"$SMOKE_OUT"
+    SYNTAX=$?
+    if [ "$HAS_DEF" -lt 1 ] || [ "$LINES" -lt 3 ] || [ "$SYNTAX" -ne 0 ]; then
+      printf "${RED}! BREAKING${NC}: Check 13 — codex output failed review (def_found=%s lines=%s syntax_ok=%s)\n" \
+        "$HAS_DEF" "$LINES" "$([ $SYNTAX -eq 0 ] && echo yes || echo no)"
+      printf "  output: %s\n" "$(head -5 $SMOKE_FILE)"
+    else
+      printf "${GRN}✓ OK${NC}: Check 13 — codex integration live (generated %d-line function, syntax valid)\n" "$LINES"
+    fi
+  fi
+  rm -f "$SMOKE_FILE" "$SMOKE_OUT"
+fi
+```
+
+- Codex not installed → **skipped** (not a finding)
+- Codex exits non-zero or produces no file → **critical** (integration broken; `/codex` skill will silently fail)
+- Output file missing `def is_prime` or fails `py_compile` → **high** (codex running but producing invalid output)
+- All checks pass → logged as `✓ OK`, no finding
+
 ## Step 5: Aggregate and classify findings
 
-**Antipatterns that indicate severity under-classification**: see antipatterns section in `.claude/skills/audit/severity-table.md`.
+**Delegate aggregation to a consolidator agent** to avoid flooding the main context with all agent findings. Spawn a **self-mentor** consolidator agent with this prompt:
 
-Read findings files from the run directory set in Step 3 — for each file that had any findings (based on the one-line summaries), use the Read tool on `<RUN_DIR>/<file-basename>.md`. Files with `0 critical, 0 high, 0 medium, 0 low` in their summary can be skipped.
+> "Read all finding files in `<RUN_DIR>/` (\*.md files from Steps 3–4, including `docs-freshness.md` if present). Apply the severity classification from `.claude/skills/audit/severity-table.md`. Antipatterns that indicate severity under-classification are also in that file. Group all findings by severity (critical, high, medium, low). Apply the one-finding-per-issue rule: when a single location has multiple distinct problems at different severities, emit one finding entry per problem. Write the aggregated severity table to `<RUN_DIR>/aggregate.md` using the Write tool. Return ONLY a one-line summary: `findings=N critical=N high=N medium=N low=N`"
 
-Group all findings from the Step 3 files and from Steps 1–4 (system-wide checks) into a severity table. Read the severity classification table from `.claude/skills/audit/severity-table.md`.
-
-**One finding per issue, not per field**: when a single field or location has multiple distinct problems at *different* severities, emit one finding entry per problem — never merge them into a single finding at the lower severity. Example: a `model:` field with both a deprecated ID (medium) and a tier mismatch (high) must produce two separate table rows, each with its own severity. The higher-severity concern must be visible in the findings table, not buried in prose.
+Main context receives only that one-liner for the Step 7 report structure. Read `<RUN_DIR>/aggregate.md` only if you need to display specific finding details in Step 7.
 
 ## Step 6: Cross-validate critical findings
 
@@ -464,7 +532,7 @@ Output a structured audit report before fixing anything:
 ### Scope
 - Agents audited: N
 - Skills audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, memory health
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, memory health, agent routing alignment, codex integration smoke-test
 
 ### Findings by Severity
 
@@ -708,6 +776,7 @@ Run `/sync apply` automatically after all proposals are processed.
   - Audit found structural issues → review flagged files manually before syncing
   - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop refactor` for a targeted cleanup pass
   - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration
+  - Audit Check 12 found description overlap → `/calibrate routing` to verify behavioral routing impact; update descriptions for confused pairs based on the routing report
   - Audit surfaced upgrade proposals → `/audit upgrade` to apply with correctness checks and calibrate A/B evidence for capability changes
   - `/audit upgrade` reverted a capability change → run `/calibrate <agent> full` for deeper signal (N=10 vs N=3 used in upgrade mode)
 

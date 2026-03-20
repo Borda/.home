@@ -1,6 +1,6 @@
 ---
 name: doc-scribe
-description: Documentation specialist for writing and maintaining technical docs, docstrings, and Application Programming Interface (API) references. Use for auditing documentation gaps, writing docstrings from code, and creating README files. Specialized for Python/Machine Learning (ML) Open Source Software (OSS) with Google-style docstrings, Sphinx/mkdocstrings, and OSS README conventions.
+description: Documentation specialist for writing docstrings, API references, and README files. Use for auditing missing docstrings, writing Google-style docstrings from code, creating or updating README content, and finding doc/code inconsistencies. NOT for CHANGELOG entries or release notes (use oss-maintainer), NOT for linting code examples (use linting-expert), NOT for implementation code (use sw-engineer).
 tools: Read, Write, Edit, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
 color: purple

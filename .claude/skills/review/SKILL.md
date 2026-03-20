@@ -2,7 +2,6 @@
 name: review
 description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and Application Programming Interface (API) design.
 argument-hint: '[file, directory, or PR number] [--reply]'
-disable-model-invocation: true
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 context: fork
 ---
@@ -65,13 +64,21 @@ Use classification to skip optional agents:
 
 Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the diff identified in Step 1.
 
-If Codex returns findings, include them in every agent spawn prompt in Step 3 as pre-flagged issues to verify or dismiss. If Codex was skipped or found nothing, proceed without seed findings.
+If Codex returns findings, include them in every agent spawn prompt in Step 3 as pre-flagged issues to verify or dismiss. **Truncate the Codex output to a compact findings list** (`[{"loc":"file:line","note":"..."}]`) before injecting — do not inject the full Codex prose output. If Codex was skipped or found nothing, proceed without seed findings.
 
 ## Step 3: Spawn sub-agents in parallel
 
+**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md`. Set up the run directory before spawning any agents:
+
+```bash
+TIMESTAMP=$(date +%s)
+RUN_DIR="/tmp/review-$TIMESTAMP"
+mkdir -p "$RUN_DIR"
+```
+
 Launch agents simultaneously with the Agent tool (security augmentation is folded into Agent 1 — not a separate spawn; Agent 6 is optional). Every agent prompt must end with:
 
-> "End your response with a `## Confidence` block per CLAUDE.md output standards."
+> "Write your FULL findings (all sections, Confidence block) to `$RUN_DIR/<agent-name>.md` using the Write tool — where `<agent-name>` is e.g. `sw-engineer`, `qa-specialist`, `perf-optimizer`, `doc-scribe`, `linting-expert`, `solution-architect`. Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":1,\"medium\":2},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.88}`"
 
 **Agent 1 — sw-engineer**: Review architecture, SOLID adherence, type safety, error handling, and code structure. Check for Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking issues vs suggestions.
 
@@ -153,13 +160,11 @@ Read and follow the cross-validation protocol from `.claude/skills/_shared/cross
 
 ## Step 6: Consolidate findings
 
-Before writing the report, rank findings within each section by impact (blocking > critical > high > medium > low).
+Spawn a **sw-engineer** consolidator agent with this prompt:
 
-Apply consolidation rules from `cat .claude/skills/review/checklist.md` (signal-to-noise filter, annotation completeness, section caps).
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md` — skip any that are missing). Apply the consolidation rules from `.claude/skills/review/checklist.md` (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). Parse each agent's `confidence` from its envelope. Write the consolidated report to `tasks/output-review-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=tasks/output-review-<date>.md`"
 
-**Precision gate**: before including a finding, ask: "Is this a concrete, actionable issue in the code under review, or a general best-practice observation that doesn't specifically apply here?" Omit findings that are valid-in-general but not evidenced in the actual code. Each finding must cite a specific location (function, line range, or variable name). Vague findings without a concrete location are noise — drop them.
-
-**Finding density**: for modules under 100 lines, aim for ≤10 total findings across all sections. When you have more than 10, apply a secondary priority pass: prefer findings that are blocking, affect correctness, or are in the public API surface; defer purely stylistic annotation gaps and minor naming issues to a separate "Minor / Nits" section or omit if already captured by pre-commit hooks. The goal is a report the author can act on in one sitting.
+Main context receives only the one-liner verdict. Proceed with that summary for terminal output.
 
 ```
 ## Code Review: [target]
@@ -253,9 +258,7 @@ Spawn the **oss-maintainer** agent with:
 
 - The review output file path from Step 6
 - The PR number and contributor handle (if known from Step 1)
-- Prompt: "Read the review report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items bundled as a single 'Minor:' line; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose."
-
-Write oss-maintainer's output to `tasks/output-reply-<PR#>-$(date +%Y-%m-%d).md` — **do not print the full content to terminal**.
+- Prompt: "Read the review report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items bundled as a single 'Minor:' line; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose. Write your full output to `tasks/output-reply-<PR#>-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `overall=N_issues blocking=N | inline=N_rows | → tasks/output-reply-<PR#>-<date>.md`"
 
 Print compact terminal summary:
 

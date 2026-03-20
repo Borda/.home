@@ -14,6 +14,7 @@
 - Offload research and exploration to sub-agents
 - Run independent subtasks in parallel, not serially
 - One tack per sub-agent — no multi-tasking within a single agent
+- **File-based handoff**: when spawning 2+ analysis agents, each agent writes full output to a file and returns only a compact JSON envelope (~200 bytes) to the orchestrator — read `.claude/skills/_shared/file-handoff-protocol.md` for the protocol; `/calibrate` is the reference implementation
 - For complex problems, throw more compute at it via sub-agents
 
 ### 3. Self-Improvement Loop

@@ -1,10 +1,11 @@
 ---
 name: sw-engineer
-description: Senior software engineer for implementation and code quality. Use for writing features, refactoring, and ensuring SOLID principles, type safety, and testability. Follows Test-Driven Development (TDD)/test-first development. Specialized for Python/Open Source Software (OSS) libraries with modern tooling (ruff, mypy, uv, pyproject.toml). For system design and Application Programming Interface (API) decisions, use solution-architect instead.
+description: Senior software engineer for writing and refactoring Python code. Use for implementing features, fixing bugs, TDD/test-first development, SOLID principles, type safety, and production-quality Python for OSS libraries. NOT for writing docstrings or docs content (use doc-scribe), configuring ruff/mypy/pre-commit (use linting-expert), or system design decisions (use solution-architect).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 80
 isolation: worktree
 model: opus
+effort: high
 color: blue
 ---
 
