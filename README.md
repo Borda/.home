@@ -34,7 +34,7 @@ Specialist roles with deep domain knowledge. You can request a specific agent by
 | ---------------------- | -------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **sw-engineer**        | Architecture and implementation  | SOLID principles, type safety, clean architecture, doctest-driven dev                                            |
 | **solution-architect** | System design and API planning   | ADRs, interface specs, migration plans, coupling analysis, API surface audit                                     |
-| **oss-maintainer**     | Project lifecycle management     | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
+| **oss-shepherd**       | Project lifecycle management     | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
 | **ai-researcher**      | ML research and implementation   | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
 | **qa-specialist**      | Testing and validation           | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns                                           |
 | **linting-expert**     | Code quality and static analysis | ruff, mypy, pre-commit, rule selection strategy, CI quality gates; runs autonomously (`permissionMode: dontAsk`) |
@@ -382,7 +382,7 @@ Preferred flow for maintainers responding to external contributions:
 gh pr comment 42 --body "$(cat tasks/output-reply-pr-42-<date>.md)"
 ```
 
-Both `--reply` flags produce the same two-part oss-maintainer output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs. Issue/discussion numbers are auto-detected from the unified GitHub index — no type prefix needed.
+Both `--reply` flags produce the same two-part oss-shepherd output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs. Issue/discussion numbers are auto-detected from the unified GitHub index — no type prefix needed.
 
 </details>
 
@@ -635,14 +635,14 @@ Nine specialist roles wired into the multi-agent system. Codex can spawn them au
 | **data-steward**     | gpt-5.3-codex | high   | Split leakage, DataLoader reproducibility, augmentation correctness     |
 | **ci-guardian**      | gpt-5.3-codex | medium | GitHub Actions, trusted PyPI publishing, pre-commit, flaky tests        |
 | **linting-expert**   | gpt-5.3-codex | medium | ruff, mypy, pre-commit config, rule progression, suppression discipline |
-| **oss-maintainer**   | gpt-5.3-codex | high   | Issue triage, PR review, SemVer, pyDeprecate, release checklist         |
+| **oss-shepherd**     | gpt-5.3-codex | high   | Issue triage, PR review, SemVer, pyDeprecate, release checklist         |
 
 ### Model Strategy
 
 All agents in this repo are configured to use `gpt-5.3-codex`. Differentiation is via reasoning effort:
 
 - **xhigh** — adversarial roles (qa-specialist, security-auditor): exhaustive search for what could go wrong
-- **high** — analytical roles (sw-engineer, squeezer, data-steward, oss-maintainer): depth without unbounded budget
+- **high** — analytical roles (sw-engineer, squeezer, data-steward, oss-shepherd): depth without unbounded budget
 - **medium** — writing/config roles (doc-scribe, ci-guardian, linting-expert): quality over deductive intensity
 
 ### Usage

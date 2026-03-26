@@ -54,7 +54,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 ## Routing Alignment
 
 - Agent descriptions should uniquely identify their domain — a reasonable orchestrator should be able to select the correct agent from the description alone
-- High-overlap pairs (e.g., sw-engineer vs qa-specialist, doc-scribe vs oss-maintainer, linting-expert vs sw-engineer) need at least one NOT-for clause referencing the other's domain
+- High-overlap pairs (e.g., sw-engineer vs qa-specialist, doc-scribe vs oss-shepherd, linting-expert vs sw-engineer) need at least one NOT-for clause referencing the other's domain
 - After any description change, run `/calibrate routing` to verify behavioral routing accuracy has not degraded
 
 ## Skill File Checks
@@ -68,7 +68,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 
 ## Agent Section Completeness
 
-- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, ci-guardian, data-steward, oss-maintainer, solution-architect, self-mentor, ai-researcher, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
+- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, ci-guardian, data-steward, oss-shepherd, solution-architect, self-mentor, ai-researcher, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
 
 \</evaluation_criteria>
 
@@ -201,7 +201,7 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 
   | Category              | Model      | Agents                                                    |
   | --------------------- | ---------- | --------------------------------------------------------- |
-  | Plan-gated            | `opusplan` | solution-architect, oss-maintainer, self-mentor           |
+  | Plan-gated            | `opusplan` | solution-architect, oss-shepherd, self-mentor             |
   | Implementation        | `opus`     | sw-engineer, qa-specialist, ai-researcher, perf-optimizer |
   | Diagnostics / writing | `sonnet`   | web-explorer, doc-scribe, data-steward                    |
   | High-freq diagnostics | `haiku`    | linting-expert, ci-guardian — cost optimization           |

@@ -79,6 +79,16 @@ Teams are always user-invoked:
 2. On approval → TaskCreate for each phase; mark complete as you go
 3. Document results in `tasks/results_<name>.md`; capture lessons → see §3 Self-Improvement Loop
 
+### Session-start hygiene
+
+**First action of every interaction**: call `TaskList` and triage all found tasks before any work:
+
+- Work clearly done → `TaskUpdate` status `completed`
+- Orphaned / no longer relevant → `TaskUpdate` status `deleted`
+- Genuinely continuing from prior session → keep, mark `in_progress`
+
+This prevents zombie tasks from accumulating across sessions and showing false progress to the user.
+
 ### In-session task tracking
 
 - **Skills with a predefined workflow**: TaskCreate all steps at start — before any tool calls; keep the list current as work evolves

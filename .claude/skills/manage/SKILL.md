@@ -138,7 +138,7 @@ Branch into one of six modes:
 
 3. Choose model based on role complexity:
 
-   - `opusplan` — plan-gated roles (solution-architect, oss-maintainer, self-mentor): long-horizon reasoning + plan mode
+   - `opusplan` — plan-gated roles (solution-architect, oss-shepherd, self-mentor): long-horizon reasoning + plan mode
    - `opus` — complex implementation roles (sw-engineer, qa-specialist, ai-researcher, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (data-steward, web-explorer, doc-scribe): pattern-matching, structured output
    - `haiku` — high-frequency diagnostics roles (linting-expert, ci-guardian): rule-application, structured lint output
@@ -324,7 +324,7 @@ ls -d .claude/skills/*/ | xargs -n1 basename | paste -sd', ' -
 
 Use the Edit tool with the **absolute auto-memory path** from the conversation context to update these two roster lines in MEMORY.md — they must stay in sync with disk state:
 
-- `- Agents: oss-maintainer, sw-engineer, ...` (the roster line, not the path line)
+- `- Agents: oss-shepherd, sw-engineer, ...` (the roster line, not the path line)
 - `- Skills: review, survey, ...`
 
 ## Step 7: Update README.md

@@ -15,7 +15,7 @@ Problem domain by agent:
 - `ai-researcher` → paper analysis: missed contributions, wrong method attribution
 - `solution-architect` → design issues: leaky abstractions, circular dependencies, missing Architecture Decision Record (ADR), backward-compat violations without deprecation path
 - `web-explorer` → content quality: broken or unverified Uniform Resource Locators (URLs), outdated docs, incomplete extraction from fetched pages
-- `oss-maintainer` → Open Source Software (OSS) governance: incorrect Semantic Versioning (SemVer) decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
+- `oss-shepherd` → Open Source Software (OSS) governance: incorrect Semantic Versioning (SemVer) decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
 
 ### Step 2: Spawn agent pipeline subagents
 

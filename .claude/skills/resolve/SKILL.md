@@ -91,19 +91,19 @@ Fetch full PR metadata in one call:
 gh pr view <PR#> --json \
   number,title,body,author,labels,isDraft,state,\
   headRefName,baseRefName,\
-  headRepositoryOwner,headRepository,baseRepository,\
+  headRepositoryOwner,headRepository,isCrossRepository,url,\
   closingIssuesReferences
 ```
 
 Extract and record:
 
-- `HEAD_REF` — source branch name
-- `BASE_REF` — target branch name (e.g. `main`, `develop`)
-- `PR_AUTHOR` — contributor's GitHub login
-- `HEAD_REPO_OWNER` — owner of the head (PR) repository
-- `BASE_REPO_OWNER` — owner of the base repository
-- `IS_FORK` — `true` when `HEAD_REPO_OWNER != BASE_REPO_OWNER`
-- `CLOSING_ISSUES` — list of linked issue numbers
+- `HEAD_REF` — source branch name (`.headRefName`)
+- `BASE_REF` — target branch name (`.baseRefName`, e.g. `main`, `develop`)
+- `PR_AUTHOR` — contributor's GitHub login (`.author.login`)
+- `HEAD_REPO_OWNER` — owner of the fork/head repository (`.headRepositoryOwner.login`)
+- `BASE_REPO_OWNER` — owner of the base repository; extract from `.url` via `split("/")[3]` or run `gh repo view --json owner -q .owner.login` in the project root
+- `IS_FORK` — use `.isCrossRepository` directly (`true` = fork PR, `false` = same-repo branch)
+- `CLOSING_ISSUES` — list of linked issue numbers (`.closingIssuesReferences[].number`)
 
 Fetch the full discussion:
 

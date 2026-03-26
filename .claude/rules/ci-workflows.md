@@ -8,14 +8,21 @@ paths:
 
 Prefer **semantic version tags** (`@v4`) — they are readable, meaningful, and track the action maintainer's intended stable release. SHA pinning is optional and reserved for workflows with strict supply-chain requirements.
 
+Preferred — semantic version tag:
+
 ```yaml
-# Preferred — semantic version tag
 uses: actions/checkout@v4
+```
 
-# Optional — SHA pin for strict supply-chain hardening (add tag comment)
+Optional — SHA pin for strict supply-chain hardening (add tag comment):
+
+```yaml
 uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
+```
 
-# Wrong — branch ref (mutable, dangerous)
+Wrong — branch ref (mutable, dangerous):
+
+```yaml
 uses: actions/checkout@main
 ```
 

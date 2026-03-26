@@ -7,6 +7,16 @@
   },
   "fastModePerSessionOptIn": false,
   "hooks": {
+    "PostCompact": [
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/task-log.js",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "PostToolUse": [
       {
         "hooks": [
@@ -20,6 +30,16 @@
         "hooks": [
           {
             "command": "node .claude/hooks/lint-on-save.js",
+            "type": "command"
+          }
+        ]
+      }
+    ],
+    "PostToolUseFailure": [
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/task-log.js",
             "type": "command"
           }
         ]
@@ -40,6 +60,7 @@
         "hooks": [
           {
             "command": "node .claude/hooks/task-log.js",
+            "statusMessage": "Logging tool",
             "type": "command"
           }
         ]
@@ -112,6 +133,7 @@
         "hooks": [
           {
             "command": "node .claude/hooks/teammate-quality.js",
+            "statusMessage": "Quality gate",
             "type": "command"
           }
         ]
@@ -122,6 +144,7 @@
         "hooks": [
           {
             "command": "node .claude/hooks/teammate-quality.js",
+            "statusMessage": "Quality gate",
             "type": "command"
           }
         ]

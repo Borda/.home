@@ -171,4 +171,4 @@ Read the compact terminal summary template from `.claude/skills/_shared/terminal
 
 **⛔ DO NOT STOP — `REPLY_MODE=true`**: Skip the Confidence block entirely. Proceed
 **immediately** to the "Draft contributor reply" section in SKILL.md. Your response is not
-complete until you have spawned oss-maintainer and written the reply file.
+complete until you have spawned oss-shepherd and written the reply file.

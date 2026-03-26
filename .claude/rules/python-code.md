@@ -16,7 +16,7 @@ Use `pyDeprecate` (Borda's library — https://pypi.org/project/pyDeprecate/ <!-
 
 ```python
 @deprecated(target=new_fn, deprecated_in="X.Y", remove_in="Z.W")
-def old_fn(...): ...
+def old_fn(*args, **kwargs): ...
 ```
 
 - Also add `.. deprecated:: X.Y.Z` Sphinx directive in the docstring

@@ -117,7 +117,7 @@ Select the Codex agent based on task type. The "internal chain" column shows whi
 | Test writing or improvements                            | `qa-specialist`  | single agent                                   |
 | Continuous Integration (CI) config, GitHub Actions      | `ci-guardian`    | single agent                                   |
 | Data pipeline changes                                   | `data-steward`   | single agent                                   |
-| Release prep, deprecation notices                       | `oss-maintainer` | single agent                                   |
+| Release prep, deprecation notices                       | `oss-shepherd`   | single agent                                   |
 
 For chained tasks (e.g. `sw-engineer`), Codex may take longer and touch more files — factor this into the complexity assessment above.
 

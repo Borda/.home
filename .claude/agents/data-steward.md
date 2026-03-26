@@ -395,6 +395,6 @@ num_workers: [N] | pin_memory: [T/F] | worker_init_fn: [seeded / unseeded]
 - Confirmed leakage or split contamination → `sw-engineer` to fix the pipeline
 - Resolved class imbalance → `ai-researcher` for experiment design (oversampling vs loss weighting vs curriculum)
 - DataLoader bottleneck → `perf-optimizer` for profiling and Input/Output (I/O) fixes
-- Dataset versioning or DVC setup needed → `oss-maintainer` for tooling decisions
+- Dataset versioning or DVC setup needed → `oss-shepherd` for tooling decisions
 
 </notes>

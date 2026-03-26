@@ -18,7 +18,7 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
   - If a number is given (e.g. `42`): review the PR diff
   - If a path is given: review those files
   - If omitted: review recently changed files
-  - `--reply`: after review, spawn oss-maintainer to draft a contributor-facing PR comment from the findings
+  - `--reply`: after review, spawn oss-shepherd to draft a contributor-facing PR comment from the findings
   - **Scope**: this skill reviews Python source code only. If the input is a non-Python file (YAML, JSON, shell script, etc.), state that it is out of scope and suggest the appropriate tool — do not produce findings.
 
 </inputs>
@@ -326,7 +326,7 @@ Only print a `### Codex Delegation` section to the terminal when tasks were actu
 
 If `REPLY_MODE` is not set, skip this step.
 
-Spawn the **oss-maintainer** agent with:
+Spawn the **oss-shepherd** agent with:
 
 - The review output file path from Step 6
 - The PR number and contributor handle (if known from Step 1)
@@ -357,6 +357,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards. F
   - Security findings in auth/input/deps → run `pip-audit` for dependency Common Vulnerabilities and Exposures (CVEs); address Open Web Application Security Project (OWASP) issues inline via `/develop fix`
   - Mechanical issues beyond what Step 6 auto-fixed → `/codex` to delegate additional tasks
   - Docstrings, type annotations, renames, and other mechanical findings → `/codex "<task description>"` per finding to delegate to Codex
-  - PR feedback to be shared directly with a contributor → use `--reply` to auto-draft via oss-maintainer; or invoke oss-maintainer manually for custom framing
+  - PR feedback to be shared directly with a contributor → use `--reply` to auto-draft via oss-shepherd; or invoke oss-shepherd manually for custom framing
 
 </notes>

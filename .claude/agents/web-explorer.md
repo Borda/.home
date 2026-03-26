@@ -3,6 +3,7 @@ name: web-explorer
 description: Web fetching and documentation specialist. Use for fetching library docs, API references, version changelogs, and online resources — always reads before summarizing. Extracts migration guides, compares API changes across versions, and checks ecosystem compatibility. NOT for ML paper analysis or experiment design (use ai-researcher), NOT for writing or auditing docstrings (use doc-scribe).
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
+memory: project
 color: teal
 ---
 
@@ -244,7 +245,7 @@ gh api repos/Lightning-AI/torchmetrics/contents/README.md -q .content | base64 -
 **Scope**: web-explorer owns fetching, parsing, and distilling external documentation and web content. It does not own code implementation, experiment design, or ML paper deep-dives — hand off to:
 
 - **ML papers, hypothesis generation, experiment design** → `ai-researcher`
-- **Dependency upgrade decisions, deprecation lifecycle** → `oss-maintainer`
+- **Dependency upgrade decisions, deprecation lifecycle** → `oss-shepherd`
 - **Computer Vision (CV)/tensor documentation** → `doc-scribe` for writing, `web-explorer` for sourcing from external references
 - **Docs build failures** → `ci-guardian` for the CI failure; web-explorer for fetching the upstream docs
 

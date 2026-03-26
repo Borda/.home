@@ -1,6 +1,6 @@
 ---
 name: analyse
-description: Analyze GitHub issues, Pull Requests (PRs), Discussions, and repo health for an Open Source Software (OSS) project. For any specific item, casts a wide net — finds and lists all related open and closed issues/PRs/discussions, explicitly flags duplicates. Also summarizes long threads, assesses PR readiness, extracts reproduction steps, and generates repo health stats. Uses gh Command Line Interface (CLI) for GitHub Application Programming Interface (API) access. Complements oss-maintainer agent.
+description: Analyze GitHub issues, Pull Requests (PRs), Discussions, and repo health for an Open Source Software (OSS) project. For any specific item, casts a wide net — finds and lists all related open and closed issues/PRs/discussions, explicitly flags duplicates. Also summarizes long threads, assesses PR readiness, extracts reproduction steps, and generates repo health stats. Uses gh Command Line Interface (CLI) for GitHub Application Programming Interface (API) access. Complements oss-shepherd agent.
 argument-hint: <N|health|ecosystem> [--reply]
 allowed-tools: Read, Bash, Write, Agent
 context: fork
@@ -19,7 +19,7 @@ quickly. Produces actionable, structured output — not just summaries.
   - `N` (a number) — any GitHub thread: issue, PR, or discussion; auto-detects the type
   - `health` — repo issue/PR/discussion health overview with duplicate detection
   - `ecosystem` — downstream consumer impact analysis for library maintainers
-  - `--reply` — only valid with `N`; spawns oss-maintainer to draft a contributor-facing
+  - `--reply` — only valid with `N`; spawns oss-shepherd to draft a contributor-facing
     reply after the thread analysis. Silently ignored for `health` and `ecosystem`.
 
 </inputs>
@@ -129,15 +129,15 @@ fi
 
 Decision:
 
-- Report exists **and** `DRIFT=false` → reuse it; go straight to the oss-maintainer spawn.
+- Report exists **and** `DRIFT=false` → reuse it; go straight to the oss-shepherd spawn.
 - Report missing **or** `DRIFT=true` → run full thread analysis first (Step 4), then continue.
   Note `[analysis refreshed — new activity since last report]` in the terminal summary.
 
-**Spawn oss-maintainer** with the report path, the item number, and this prompt:
+**Spawn oss-shepherd** with the report path, the item number, and this prompt:
 
 "Read the report at `<path>` for context. If the item is an issue or discussion, also fetch
 the full thread (`gh issue view <number> --comments` or equivalent GraphQL for discussions)
-and read every comment. Apply voice and formatting rules from oss-maintainer's `<voice>`
+and read every comment. Apply voice and formatting rules from oss-shepherd's `<voice>`
 block — do not embed them inline here. Write your full output to
 `tasks/output-reply-thread-<number>-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY
 a compact JSON envelope on your final line — nothing else after it:
@@ -173,6 +173,6 @@ completing the reply step above, never after the analysis alone.
   - Issue with confirmed bug → `/develop fix` to diagnose, reproduce with test, and apply targeted fix
   - Issue is a feature request → `/develop feature` for TDD-first implementation
   - PR with quality concerns → `/review` for comprehensive multi-agent code review
-  - Draft responses → use `--reply` to auto-draft via oss-maintainer; or invoke oss-maintainer manually
+  - Draft responses → use `--reply` to auto-draft via oss-shepherd; or invoke oss-shepherd manually
 
 </notes>
