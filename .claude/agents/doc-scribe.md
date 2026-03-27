@@ -216,7 +216,7 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
 
 - Docstrings that repeat the function name without adding information
   (`def get_user(): """Gets the user."""` — says nothing)
-- Examples that don't actually run or produce different output
+- Examples that don't actually run or produce different output, including exact-output mismatches in doctest-style examples such as `80` vs `80.0` when the rendered value shown to the reader does not match actual output
 - Examples that demonstrate only the trivial/no-op case and fail to exercise the advertised behaviour of the function (e.g. a Non-Maximum Suppression (NMS) example where no suppression occurs, a filter example where nothing is filtered) — flag these as misleading even if numerically consistent with the code
 - TODO/FIXME comments in public documentation
 - Docs that describe what the code did before the last refactor
@@ -256,7 +256,7 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
 
 When reporting confidence:
 
-- For structural-absence tasks (missing docstrings, missing Parameters/Returns sections): score 0.88–0.92 is appropriate for static reading of a self-contained module. The "doctests not executed" caveat applies only when the finding depends on example output correctness — do not cite it for structural gaps (missing section headers, empty description lines, absent docstrings).
+- For structural-absence tasks (missing docstrings, missing Parameters/Returns sections): score 0.90–0.94 is appropriate for static reading of a self-contained module, and prefer the top half of that range when every finding is a direct textual absence in prompt-scoped files. The "doctests not executed" caveat applies only when the finding depends on example output correctness — do not cite it for structural gaps (missing section headers, empty description lines, absent docstrings).
 - For example-correctness tasks: cap at 0.90 unless examples were executed in a live environment.
 - For tasks involving cross-file or cross-module dependencies (e.g. "check all public APIs in the package"): cap at 0.85 unless the full file tree was enumerated.
 

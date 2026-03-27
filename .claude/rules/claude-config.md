@@ -6,14 +6,18 @@ paths:
 
 ## Before Editing
 
-- **Enter plan mode first** — triggers Opus via `opusplan` for best reasoning on configuration changes
+- **Enter plan mode first** — triggers Opus via `opusplan` for best reasoning on configuration changes.
+  **No exceptions**: typo fixes, single-step edits, and "quick" changes all require plan mode.
+  The global "non-trivial task (3+ steps)" threshold does NOT apply here — any edit to `.claude/` is treated as non-trivial.
 
 ## After Any Change
 
 1. **Cross-references** — if a name or capability changes, update every file that mentions it
 2. **`memory/MEMORY.md`** — keep the agents/skills roster in sync with disk
 3. **`README.md`** — verify agent/skill tables, Status Line, and Config Sync sections
-4. **`settings.json` permissions** — add a matching allow rule for any new `gh`, `bash`, or `WebFetch` calls
+4. **`settings.json` permissions** — IF this change introduces any new `gh`, `bash`, or `WebFetch`
+   call (directly or in a step/workflow you are adding), you MUST add a matching allow rule before
+   marking the task complete. Check: scan the diff for any new CLI invocations before ticking this off.
 5. **`</workflow>` tags** — mode sections must sit inside the block; closing tag after the last mode, before `<notes>`
 6. **Step numbering** — renumber sequentially after adding/removing steps
 

@@ -1,14 +1,14 @@
 ---
-name: observe
-description: Analyzes ongoing work patterns and the existing agent/skill roster to suggest creating new agents or skills for specialized or repetitive tasks. Continuously monitors what tasks are being done repeatedly or where specialist knowledge would help. Avoids recommending duplicates.
-argument-hint: '[review | prune | "<recurring task description>"]'
+name: distill
+description: One-time snapshot that extracts patterns from work history and accumulated lessons, then distills them into concrete improvements — new agent/skill suggestions, roster quality review, memory pruning, or consolidating lessons and feedback into rules and agent/skill updates.
+argument-hint: '[review | prune | lessons | "<recurring task description>"]'
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash, Glob
+allowed-tools: Read, Edit, Bash, Glob, Write
 ---
 
 <objective>
 
-Analyze how Claude Code is being used in this project and suggest new agents or skills that would reduce repetition, improve quality, or handle specialized domains — without duplicating what already exists.
+Analyze how Claude Code is being used in this project and surface concrete improvements — either by suggesting new agents or skills that would reduce repetition, or by consolidating accumulated lessons and feedback into governance files (rules, agent instructions, skill updates) — without duplicating what already exists.
 
 </objective>
 
@@ -18,6 +18,7 @@ Analyze how Claude Code is being used in this project and suggest new agents or 
   - Omitted — analyze the project's existing patterns and agents to generate suggestions proactively.
   - `review` — review the existing agent/skill roster for quality and gaps without suggesting new additions.
   - `prune` — evaluate the project memory file for stale, redundant, or verbose entries and apply a trimmed version.
+  - `lessons` — read `tasks/lessons.md` and memory feedback files, then distill recurring patterns into proposed rule files, agent instruction updates, and skill workflow changes.
   - Description of a recurring task — use the description as context when generating suggestions (e.g. "I keep doing X manually").
 
 </inputs>
@@ -33,6 +34,8 @@ For each agent/skill found, extract: name, description, tools, purpose.
 ## Step 2: Analyze work patterns
 
 **If `$ARGUMENTS` is `prune`**: skip Steps 2–5 entirely and go to "Mode: Memory Pruning" below.
+
+**If `$ARGUMENTS` is `lessons`**: skip Steps 2–5 entirely and go to "Mode: Lessons Distillation" below.
 
 **If `$ARGUMENTS` is `review`**: skip the git analysis below and go directly to Step 3 (Gap analysis). Use the agent/skill descriptions from Step 1 as the sole input — the goal is to assess quality and coverage of the existing roster, not to look for new patterns in recent work. In Step 5, suppress all "Recommend: New Agent/Skill" sections and output only "Existing Coverage", "Recommend: Enhance Existing", and "No Action Needed" entries.
 
@@ -137,7 +140,7 @@ Locate, evaluate, and trim the project memory file.
 
 ```bash
 PROJECT="$(git rev-parse --show-toplevel)"
-MEMORY_FILE="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|/|-|g')/memory/MEMORY.md"
+MEMORY_FILE="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|[/.]|-|g')/memory/MEMORY.md"
 echo "Memory file located."
 ```
 
@@ -165,17 +168,153 @@ Pruned MEMORY.md — <date>
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 
+## Mode: Lessons Distillation (lessons)
+
+Read accumulated lessons and feedback, then identify patterns that should be promoted into durable governance — rule files, agent instruction updates, or skill workflow changes.
+
+**Step L1: Collect raw material**
+
+Find and read all source material in parallel:
+
+```bash
+# tasks/lessons.md (if it exists)
+[ -f tasks/lessons.md ] && echo "found" || echo "not found"
+
+# Memory feedback files
+PROJECT="$(git rev-parse --show-toplevel)"
+MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|[/.]|-|g')/memory"
+ls "$MEMORY_DIR"/feedback_*.md 2>/dev/null || echo "no feedback files"
+```
+
+Read each found file with the Read tool. Also read `.claude/rules/` (Glob `rules/*.md`, path `.claude/`) to understand what's already captured as a rule.
+
+**Step L2: Cluster and classify**
+
+Group all lessons/feedback entries by domain. Use model reasoning to identify clusters of related items:
+
+- **Git & commit discipline** (staging, branching, commit messages, push safety)
+- **Testing & QA** (test patterns, mocking rules, coverage gaps)
+- **Agent & skill config** (agent instructions, skill workflow, CLAUDE.md additions)
+- **Communication & output** (tone, format, reporting)
+- **Tool & permission use** (Bash vs native tools, settings.json)
+- **Other** (project-specific, one-off)
+
+For each lesson entry, classify its disposition:
+
+| Disposition         | Meaning                                                                              |
+| ------------------- | ------------------------------------------------------------------------------------ |
+| `→ rule`            | Recurring enough to warrant a standalone `.claude/rules/<name>.md` file              |
+| `→ agent update`    | Specific to one agent's instructions — edit that agent's `.md` file                  |
+| `→ skill update`    | Specific to one skill's workflow — edit that skill's `SKILL.md`                      |
+| `→ already covered` | Already present verbatim (or near-verbatim) in an existing rule, agent, or CLAUDE.md |
+| `→ too narrow`      | One-off, project-specific, or not generalizable — keep in memory only                |
+
+Thresholds:
+
+- **`→ rule`**: 2+ distinct lessons on the same topic, or a single lesson that applies across ≥3 agents/skills
+- **`→ agent/skill update`**: lesson applies specifically to one file's behavior and is not yet there
+- **`→ already covered`**: exact principle already in the target file — mark and skip
+
+**Step L3: Generate proposals**
+
+Produce a structured proposal table. Do not apply anything yet — report first.
+
+```
+## Lessons Distillation Proposals
+
+### Summary
+- Source files read: N (tasks/lessons.md + N feedback files)
+- Total lessons: N
+- Clusters: N domains
+
+### Proposals
+
+| # | Cluster | Lesson (condensed) | Disposition | Target |
+|---|---------|-------------------|-------------|--------|
+| 1 | Git | Never use git add -A; stage specific files | → already covered | rules/git-commit.md |
+| 2 | Agent config | Agent description must include NOT-for clause | → rule | new: rules/agent-descriptions.md |
+| 3 | Communication | Flag blockers before starting, not mid-task | → already covered | rules/communication.md |
+
+### New Rule Files Proposed (N)
+
+#### rules/<name>.md
+**Cluster**: [domain]
+**Lessons consolidated**: [list lesson IDs, e.g., L1, L3, L7]
+**Draft content**:
+```
+
+______________________________________________________________________
+
+## description: [one-line]
+
+## [Rule heading]
+
+[content distilled from the lessons]
+
+```
+**Why a rule file**: [applies broadly across agents/skills, not specific to one]
+
+### Agent Instruction Updates Proposed (N)
+
+#### agents/<name>.md
+**Change**: [what to add/modify in the agent's instructions]
+**Lesson source**: [which lesson(s) justify this]
+
+### Skill Workflow Updates Proposed (N)
+
+#### skills/<name>/SKILL.md
+**Change**: [what step/note to add or modify]
+**Lesson source**: [which lesson(s) justify this]
+
+### Already Covered (N) — no action needed
+- L2: [lesson] → already in [file]
+
+### Too Narrow (N) — keep in memory
+- L5: [lesson] → one-off, not generalizable
+```
+
+**Step L4: Apply (with confirmation)**
+
+Print the proposal table. Then ask:
+
+> Apply all `→ rule` and `→ agent/skill update` proposals? (y to apply, n to review manually)
+
+If the user confirms `y`, apply changes:
+
+- **New rule files**: Write tool to create `.claude/rules/<name>.md` with the drafted content
+- **Agent updates**: Edit tool to insert the new instruction into the appropriate section of the agent file
+- **Skill updates**: Edit tool to insert the new step/note in the skill file
+
+After applying:
+
+1. Run cross-reference checks — use Grep to confirm new rule files are referenced from CLAUDE.md if they belong there (Check 14d from `/audit`)
+2. Print a compact apply summary:
+
+```
+Applied N changes — <date>
+  New rules:      N files — [names]
+  Agent updates:  N files — [names]
+  Skill updates:  N files — [names]
+  Skipped:        N (already covered or too narrow)
+```
+
+3. Remind the user: "Run `/sync apply` to propagate rule changes to `~/.claude/`"
+
+End your response with a `## Confidence` block per CLAUDE.md output standards.
+
 </workflow>
 
 <notes>
 
 - This skill is introspective: it looks at the tooling itself, not just the code
 
-- Run periodically (e.g., monthly) or after noticing repetitive manual work
+- Invoke periodically (e.g., monthly) or after a burst of correction/feedback; this is a one-time snapshot, not a continuous monitor
 
 - Suggestions are proposals — always review before creating new files
 
 - After creating a new agent/skill based on a suggestion, re-run this skill once to confirm the gap is resolved, then stop
+
+- **`lessons` mode is the primary consolidation path** — run after any session with significant corrections to prevent lesson drift back into MEMORY.md noise
 
 - **Agent Teams signal tracking**: when reviewing patterns, also look for:
 
@@ -187,5 +326,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 
   - Suggestion accepted for new agent/skill → `/manage create` to scaffold and register it
   - Suggestion to enhance existing → edit the agent/skill directly, then `/sync`
+  - `lessons` proposals applied → `/sync apply` to propagate; `/audit rules` to verify new rule files are structurally sound
 
 </notes>

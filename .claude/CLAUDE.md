@@ -60,7 +60,13 @@ Skills may tighten (not loosen) these defaults in their own `<constants>` block.
 
 ## Pre-Authorized Operations
 
-Operations in `settings.json` are pre-approved — execute directly. Prefer Read/Grep/Glob over Bash; try restructuring a command before requesting a new permission. When permissions are missing, batch them into one ask before starting work.
+Operations listed in `settings.json` are pre-approved — execute directly. When an operation isn't covered, try restructuring it to match an existing allow entry before requesting a new permission; batch missing permissions into one ask.
+
+**Tool efficiency rule** — native Claude tools (Read, Grep, Glob, Write, Edit, and others) are always available and never need settings.json approval; use them first:
+
+- Native tools are purpose-built and auditable; Bash is for operations they cannot do (run tests, git, system commands)
+- Prefer N sequential native tool calls over one script; a loop of 10 Reads beats a heredoc needing approval
+- Avoid `python3 << 'EOF' ... EOF` heredocs; use `python3 -c "..."` one-liners only when native tools cannot write back (e.g. JSON transforms)
 
 ## Agent Teams
 
@@ -95,7 +101,7 @@ This prevents zombie tasks from accumulating across sessions and showing false p
 - **Multi-step work** (3+ tool calls or 2+ distinct instructions) → TaskCreate before the first tool call, including on plan-mode exit
 - On pivot → new task for new work; TaskUpdate existing if scope changed
 - Mark complete before final output; keep statuses current throughout — it's a live feed
-- Skip for: single-task actions, simple skills (sync, observe), transient subagents
+- Skip for: single-task actions, simple skills (sync, distill), transient subagents
 
 ### Safety breaks for loops
 

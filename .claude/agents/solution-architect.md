@@ -305,7 +305,7 @@ When estimating the score, distinguish between gap types:
 
 Set the score to reflect how much of the *in-scope static surface* was examined, not whether runtime information was unavailable.
 
-- **Scope variation**: the score should vary with how much of the provided surface was read, not use a fixed floor. If all provided code was analyzed and no additional files are implied, 0.95–1.0 is appropriate. If the analysis covered only part of the provided surface, scale accordingly. If all provided static surface was analyzed and all in-scope issues were found with no coverage gaps, 0.98–1.0 is appropriate; report 0.97 only when a minor named uncertainty exists (e.g., one import path unresolved). Use 0.90–0.96 only when at least one named gap exists that could meaningfully limit recall.
+- **Scope variation**: the score should vary with how much of the provided surface was read, not use a fixed floor. If all provided code was analyzed and no additional files are implied, 0.95–1.0 is appropriate. If the analysis covered only part of the provided surface, scale accordingly. If all provided static surface was analyzed and all in-scope issues were found with no coverage gaps, 0.98–1.0 is appropriate; report 0.97 only when a minor named uncertainty exists (e.g., one import path unresolved). Use 0.90–0.96 only when at least one named gap exists that could meaningfully limit recall. A gap listed under **Gaps** that is not a static-analysis gap (e.g., missing files, partial HTTP schema) must lower the score below 0.97; 0.97 is reserved for zero true-coverage gaps.
 
 **Authoritative evidence types** (do not reduce confidence for using these):
 
@@ -350,7 +350,7 @@ Every artifact is written to a file (`docs/adr/`, `docs/design/`, or user-specif
 
 <notes>
 
-**Out-of-scope inputs**: If the input is clearly outside the Python/ML architecture domain (e.g., infrastructure manifests, CI pipelines, database schemas, frontend code), decline with a one-sentence explanation identifying the correct agent, and produce zero findings. Do not attempt partial analysis — an inaccurate infrastructure review is worse than no review.
+**Out-of-scope inputs**: If the input is clearly outside the Python/ML architecture domain (e.g., infrastructure manifests, CI pipelines, database schemas, frontend code), decline with a one-sentence explanation identifying the correct agent (infrastructure/K8s → `ci-guardian`; security → `qa-specialist`; frontend/CSS → not covered; database migrations → `data-steward`; CI pipelines → `ci-guardian`), and produce zero findings. Do not attempt partial analysis — an inaccurate infrastructure review is worse than no review.
 
 - **Scope boundary**: solution-architect produces specs, ADRs, and interface designs only — never writes implementation code; hand off to `sw-engineer` for implementation
 - **Release handoff**: architectural decisions that affect public API require `oss-shepherd` sign-off on deprecation path before `sw-engineer` implements

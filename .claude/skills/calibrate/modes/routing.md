@@ -1,6 +1,8 @@
 ## Mode: routing
 
-Routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts. Not a per-agent quality benchmark; not included in `all`, `agents`, or `skills` — invoke explicitly.
+> **Codex integration: disabled.** Problem generation and scoring are Claude-only for this mode. Routing tests orchestrator dispatch logic — scoring is a deterministic binary match (`selected == expected`), and Codex lacks context about the agent system internals needed to generate realistic routing problems.
+
+Routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts. Not a per-agent quality benchmark; included in `all`. Use the explicit `routing` target to run this mode in isolation.
 
 Thresholds (from SKILL.md constants): `ROUTING_ACCURACY_THRESHOLD=0.90`, `ROUTING_HARD_THRESHOLD=0.80`.
 

@@ -10,7 +10,7 @@ Every hook file must start with:
 
 ```js
 #!/usr/bin/env node
-// <filename>.js — <HookType> hook
+// <filename>.js — <HookType> hook  ← the word `hook` is literal, not a placeholder
 //
 // PURPOSE
 //   <one-paragraph description of what this hook does and why>
@@ -27,6 +27,9 @@ Every hook file must start with:
 
 Subsection order: `PURPOSE` → `HOW IT WORKS` → `EXIT CODES` (add others like `HOOK EVENT RESPONSIBILITIES` as needed).
 
+All three sections are required in every hook file. `HOW IT WORKS` may not be omitted even for
+simple hooks — use at least one numbered step.
+
 ## Exit Code Rules
 
 - **Always exit 0 on unexpected errors** — hooks must never crash or block Claude due to a bug in the hook itself
@@ -37,7 +40,8 @@ Subsection order: `PURPOSE` → `HOW IT WORKS` → `EXIT CODES` (add others like
 ## Implementation Pattern
 
 - CommonJS: `require()` imports, stdin JSON parse, `process.exit()`
-- Accumulate stdin then process:
+- **Only permitted stdin pattern** — use event-based accumulation; do not use
+  `fs.readFileSync("/dev/stdin")` or any synchronous stdin read:
   ```js
   let raw = "";
   process.stdin.setEncoding("utf8");

@@ -1,7 +1,7 @@
 ---
 name: audit
 description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness, and upgrade proposals. Reports by severity; auto-fixes at the requested level — 'fix high' (critical+high), 'fix medium' (critical+high+medium), 'fix all' (all findings including low); 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes.
-argument-hint: '[agents|skills] [fix [high|medium|all]] | upgrade'
+argument-hint: '[agents|skills|rules|communication] [fix [high|medium|all]] | upgrade'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
@@ -23,6 +23,7 @@ Run a full-sweep quality audit of the `.claude/` configuration: every agent file
   - `agents` — restrict sweep to agent files only, report only
   - `skills` — restrict sweep to skill files only, report only
   - `rules` — restrict sweep to rule files only, report only
+  - `communication` — restrict sweep to communication governance files: `rules/communication.md`, `rules/quality-gates.md`, `TEAM_PROTOCOL.md`, `skills/_shared/file-handoff-protocol.md`
   - Scope and fix level can be combined: `agents fix medium`, `rules fix all` — scope always precedes `fix`
   - `upgrade` — fetch latest Claude Code docs, filter new features by genuine value, then apply: **config** changes (apply + correctness check), **capability** changes (calibrate before → apply → calibrate after → accept if Δrecall ≥ 0 and ΔF1 ≥ 0). Skip to **Mode: upgrade**.
 
@@ -42,6 +43,7 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 - Phase 1: setup + collect (Pre-flight + Steps 1–2) → mark in_progress when starting, completed when file list is ready
 - Phase 2: per-file audit (Step 3) → mark in_progress when agents launch, completed when all reports received
 - Phase 3: system-wide checks (Step 4) → mark in_progress when checks start, completed when all checks done
+- **Phases 2 and 3 launch simultaneously** — mark both in_progress in the same update; they are independent and must not be serialized
 - Phase 4: aggregate + fix (Steps 5–10) → mark in_progress, then completed when fixes land
 - Phase 5: final report (Step 11) → mark in_progress, then completed before output
 - On loop retry or scope change → create a new task; do not reuse the completed task
@@ -104,6 +106,7 @@ Enumerate everything in scope using built-in tools:
 - **Agents**: Glob tool, pattern `agents/*.md`, path `.claude/`
 - **Skills**: Glob tool, pattern `skills/*/SKILL.md`, path `.claude/`
 - **Rules**: Glob tool, pattern `rules/*.md`, path `.claude/`
+- **Communication**: Read tool on `rules/communication.md`, `rules/quality-gates.md`, `TEAM_PROTOCOL.md`, `skills/_shared/file-handoff-protocol.md`
 - **Settings**: Read tool on `.claude/settings.json`
 - **Hooks**: Glob tool, pattern `hooks/*`, path `.claude/`
 
@@ -444,7 +447,7 @@ MEMORY.md has a 200-line truncation limit. Noise accumulates silently over time 
 
 ```bash
 # Find lines with semver pins or "as of" staleness markers in MEMORY.md
-MEMORY_FILE="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|/|-|g')/memory/MEMORY.md"
+MEMORY_FILE="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|[/.]|-|g')/memory/MEMORY.md"
 if [ -f "$MEMORY_FILE" ]; then
   grep -nE '(v[0-9]+\.[0-9]+\.[0-9]+|as of [A-Z][a-z]+ 20[0-9]{2})' "$MEMORY_FILE" || echo "no stale pins found"
 else
@@ -455,7 +458,7 @@ fi
 **11c — Absorbed feedback files**: List all `feedback_*.md` files in the memory directory. For each, read its content and check whether the rule it documents is already present in MEMORY.md or in the relevant agent/skill file. If yes, flag as **low** (delete the feedback file — the lesson is absorbed).
 
 ```bash
-MEMORY_DIR="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|/|-|g')/memory"
+MEMORY_DIR="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|[/.]|-|g')/memory"
 if [ -d "$MEMORY_DIR" ]; then
   ls "$MEMORY_DIR"/feedback_*.md 2>/dev/null || echo "no feedback files"
 else
@@ -876,7 +879,7 @@ Run `/sync apply` automatically after all proposals are processed.
 - **Paths must be portable**: `.claude/` for project-relative paths, `~/` or `$HOME/` for home paths — never a literal `/Users/` or `/home/` path; this rule applies to ALL config files including `settings.json`
 - Pre-flight for `/sync` — run clean before `/sync apply`.
 - **Bash error logging**: if a bash block in Pre-flight checks or Step 4 fails unexpectedly, append a JSONL line to `.claude/logs/audit-errors.jsonl` (`{"ts":"<ISO>","check":"<N>","error":"<message>"}`) for post-mortem — do not swallow errors silently.
-- **Execution order tip**: Steps 1–2 and Step 4 bash checks are fast (seconds); Step 3 (self-mentor spawns) is expensive (seconds per file). For early signal on system-wide issues, run Steps 1–2 + Step 4 first, then spawn Step 3 agents in parallel with any Step 4 analysis that doesn't depend on per-file results.
+- **Parallel execution rule**: After Step 2 (file collection), launch Steps 3 and 4 in the same response — all self-mentor agent spawns AND all system-wide bash checks must be issued together. Do NOT run Step 3 first and Step 4 second. Aggregation (Step 5) waits for both to complete. The docs-freshness web-explorer (within Step 4) also launches in that same parallel batch.
 - **Token cost**: Step 3 (self-mentor spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
 - **Skill-creator complement**: For testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official skill-creator utility from Anthropic. `/audit` checks structural quality; `skill-creator` validates that the right skill is selected by Claude Code's dispatcher when the user types a command.
 - Follow-up chains:

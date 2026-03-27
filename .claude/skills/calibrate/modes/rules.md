@@ -1,6 +1,8 @@
 ## Mode: rules
 
-Rule adherence test: for each rule file in `.claude/rules/`, measures three dimensions of rule quality — trigger fidelity (rule fires at the right time), directive adherence (rule is followed when loaded), and outcome correctness (following the rule produces the expected result). Not included in `all`, `agents`, or `skills` — invoke explicitly.
+> **Codex integration: disabled.** Problem generation and scoring are Claude-only for this mode. Rule adherence tests the behavior of a Claude agent with `.claude/rules/` loaded — Codex has no insight into Claude Code's rule-loading mechanism, path-scoping, or frontmatter parsing, making its problems and scores unreliable here.
+
+Rule adherence test: for each rule file in `.claude/rules/`, measures three dimensions of rule quality — trigger fidelity (rule fires at the right time), directive adherence (rule is followed when loaded), and outcome correctness (following the rule produces the expected result). Included in `all`. Use the explicit `rules` target to run this mode in isolation.
 
 ### Three scoring dimensions
 

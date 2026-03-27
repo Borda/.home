@@ -1,6 +1,8 @@
 ## Mode: communication
 
-Handover + team protocol compliance. Not included in `all`, `agents`, or `skills` — invoke explicitly.
+> **Codex integration: disabled.** Problem generation and scoring are Claude-only for this mode. Ground truth requires deep knowledge of `file-handoff-protocol.md`, `TEAM_PROTOCOL.md`, and AgentSpeak v2 — Codex lacks this context and would produce superficial or incorrect problems.
+
+Handover + team protocol compliance. Included in `all`. Use the explicit `communication` target to run this mode in isolation.
 
 Target agent: `self-mentor`.
 

@@ -4,27 +4,88 @@ AB mode: `<AB_MODE>` — when `true`, also run a `general-purpose` baseline on e
 
 Run dir: `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/`
 
-### Phase 1 — Generate problems
+### Pre-flight — Codex availability
 
-Generate `<N>` synthetic calibration problems for `<TARGET>` targeting domain: `<DOMAIN>`.
+Check Codex availability once at pipeline start and set `CODEX_AVAILABLE` for use throughout all phases:
 
-For each problem produce a JSON object with these fields:
+```bash
+if which codex >/dev/null 2>&1; then CODEX_AVAILABLE=true; else CODEX_AVAILABLE=false; fi
+echo "Codex: $CODEX_AVAILABLE"
+```
 
-- `problem_id`: kebab-slug string
-- `difficulty`: `"easy"`, `"medium"`, or `"hard"`
-- `task_prompt`: the instruction to give the target — what to analyse (do NOT reveal the issues)
-- `input`: the code / config / content inline (no file paths)
-- `ground_truth`: array of objects, each with `issue` (concise description), `location` (function:line or section), and `severity` (`critical`, `high`, `medium`, or `low`)
+Codex integration is active only for `agents` and `skills` modes. If the pipeline was spawned for `routing`, `communication`, or `rules`, treat `CODEX_AVAILABLE=false` regardless of installation status — those modes test Claude-specific internals that Codex lacks context for.
+
+### Phase 1a — Generate problems (dual source)
+
+**When CODEX_AVAILABLE=true**:
+
+Split `<N>` in-scope problems between two generators. Claude always owns the 1 out-of-scope problem.
+
+| Pace        | N_CLAUDE in-scope | N_CODEX in-scope | Scope (Claude) | Total |
+| ----------- | ----------------- | ---------------- | -------------- | ----- |
+| fast (N=3)  | 1                 | 2                | 1              | 4     |
+| full (N=10) | 4                 | 6                | 1              | 11    |
+
+**Step 1 — Codex generates N_CODEX in-scope problems** (runs first; writes directly to file):
+
+```bash
+timeout 300 codex exec "Generate <N_CODEX> synthetic calibration problems for domain: '<DOMAIN>'.
+
+Each problem must be a JSON object with these exact fields:
+- problem_id: kebab-slug string, prefix with 'cx-' (e.g. 'cx-type-mismatch')
+- difficulty: exactly one of: easy, medium, hard — include at least 1 easy
+- task_prompt: instruction to give the reviewer (do NOT reveal the issues)
+- input: the code / config / content inline (no file paths) — must contain the issues
+- ground_truth: array of objects, each with:
+  - issue: concise description (what is wrong)
+  - location: function name, section, or line reference
+  - severity: exactly one of: critical, high, medium, low
+
+Rules:
+- 2-5 known issues per problem; all detectable by reading the code alone (no runtime-only issues)
+- Issues must be unambiguous — a domain expert would confirm them
+- Do NOT include any out-of-scope problem — in-scope problems only
+- Write ONLY a valid JSON array (no prose, no markdown fences, no trailing commas)
+
+Write the JSON array to: .claude/calibrate/runs/<TIMESTAMP>/<TARGET>/problems-codex.json" --sandbox workspace-write
+```
+
+**Step 2 — Claude generates N_CLAUDE in-scope problems + 1 out-of-scope problem**:
+
+Generate `<N_CLAUDE>` in-scope problems for domain `<DOMAIN>`, plus exactly 1 out-of-scope problem, as a JSON array. Fields: `problem_id` (kebab-slug), `difficulty`, `task_prompt`, `input`, `ground_truth` (array of `{issue, location, severity}`).
 
 Rules:
 
 - Issues must be unambiguous — a domain expert would confirm them
-- Cover ≥1 easy and ≥1 medium problem; hard is optional
-- Each problem has 2–5 known issues; no runtime-only-detectable issues
-- **Include exactly 1 out-of-scope problem** (difficulty: `"scope"`): input is clearly outside the agent's domain (e.g., for `linting-expert`, a natural-language question; for `ci-guardian`, a plain Python NumPy data transformation script with no CI/CD configuration). Set `ground_truth: []`. A correct response is declining, redirecting, or returning no findings. Any findings reported = false positives (scope failure). This tests scope discipline directly.
+- Cover ≥1 easy and ≥1 medium in-scope problem; hard is optional
+- Each in-scope problem has 2–5 known issues; no runtime-only-detectable issues
+- **Include exactly 1 out-of-scope problem** (difficulty: `"scope"`): input is clearly outside the agent's domain (e.g., for `linting-expert`, a natural-language question; for `ci-guardian`, a plain Python data script). Set `ground_truth: []`. A correct response declines, redirects, or reports no findings. Any findings = false positives (scope failure).
 - Return a valid JSON array only (no prose)
 
-Write the JSON array to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/problems.json` (the run dir is pre-created by the invoking skill before this pipeline is spawned).
+Write to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/problems-claude.json`.
+
+**When CODEX_AVAILABLE=false**:
+
+Claude generates all `<N>` in-scope problems + 1 out-of-scope problem using the rules above. Write to `problems-claude.json`. Skip Codex step entirely.
+
+### Phase 1b — Validate and merge problems
+
+**Validate problems-codex.json** (skip if CODEX_AVAILABLE=false):
+
+Read the file. Strip any markdown code fences or prose prefix/suffix — find the first `[` and match to its closing `]`. Parse and validate each entry:
+
+Required fields: `problem_id` (string starting with `cx-`), `difficulty` (one of: `easy`/`medium`/`hard` — NOT `scope`), `task_prompt` (non-empty string), `input` (non-empty string), `ground_truth` (non-empty array; each item has `issue`, `location`, `severity`; `severity` must be one of: `critical`/`high`/`medium`/`low`).
+
+Reject and log any entry that fails validation. If fewer than `floor(<N_CODEX> * 0.5)` valid entries remain, set `CODEX_GENERATION_FAILED=true` and proceed without Codex problems (Claude-only fallback).
+
+**Merge and tag**:
+
+- Tag each Codex entry: add `"source": "codex"` field
+- Tag each Claude entry: add `"source": "claude"` field
+- Deduplicate `problem_id`: if collision, prefix with source (`claude-<id>`, `cx-<id>`)
+- Merge into a single array; the scope problem must appear exactly once (from Claude)
+
+Write merged array to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/problems.json`.
 
 ### Phase 2 — Run target on each problem (parallel)
 
@@ -54,7 +115,7 @@ Spawn one `general-purpose` subagent per problem using the **identical prompt** 
 
 **Phase timeout**: same protocol as Phase 2 — 5-min check with one +5-min extension if progress is evident; 15-min hard cutoff; proceed with partial baseline data if any response hangs.
 
-### Phase 3 — Score responses (parallel scorer subagents)
+### Phase 3a — Score responses via Claude scorers (parallel)
 
 Spawn one `general-purpose` scorer subagent per problem using the **Agent tool** — never via Bash or CLI. Issue ALL spawns in a **single response** — no waiting between spawns.
 
@@ -86,25 +147,94 @@ Each scorer receives this prompt (substitute `<PROBLEM_ID>`, `<GROUND_TRUTH_JSON
 > Compute: `recall = found / total` (skip if total=0), `precision = found / (found + fp + 1e-9)`, `f1 = 2·r·p / (r+p+1e-9)`.
 >
 > Return **only** this JSON (no prose):
-> `{"problem_id":"<PROBLEM_ID>","found":[true/false,...],"false_positives":N,"confidence":0.N,"recall":0.N,"precision":0.N,"f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"target_chars":N}`
+> `{"problem_id":"<PROBLEM_ID>","found":[true/false,...],"false_positives":N,"confidence":0.N,"recall":0.N,"precision":0.N,"f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"target_chars":N,"scorer":"claude"}`
 >
 > \[If AB_MODE is true, also include: `"recall_general":0.N,"precision_general":0.N,"f1_general":0.N,"confidence_general":0.N,"severity_accuracy_general":0.N,"format_score_general":0.N,"general_chars":N`\]
 
-Collect the compact JSON from each scorer (each ~200 bytes). Write all to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array.
+Collect the compact JSON from each Claude scorer. **Do not write scores.json yet** — buffer these results; Phase 3c will merge them with Codex scores.
+
+### Phase 3b — Score responses via Codex (skip when CODEX_AVAILABLE=false)
+
+For each problem, run one Codex scoring call via Bash. Run these **sequentially** (not parallel — Codex runs as a subprocess):
+
+```bash
+timeout 120 codex exec "You are scoring a calibration response against ground truth.
+
+Problem ID: <PROBLEM_ID>
+Ground truth (JSON array): <GROUND_TRUTH_JSON>
+
+Read the response from: .claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>.md
+[If AB_MODE is true: also read .claude/calibrate/runs/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>-general.md]
+
+For each ground truth issue: mark true if the response identified the same issue type at the same location (exact or semantically equivalent). Count false positives: reported issues with no ground truth match. Extract confidence from the ## Confidence block (use 0.5 if absent).
+
+For out-of-scope problems (ground_truth is []): set recall=null, all reported findings are FPs, set severity_accuracy=null, format_score=null.
+
+Severity accuracy: for found issues, check severity match (allow +-1 tier; tiers: critical>high>medium>low).
+Format score: for found issues, check for all three of: location reference, severity label, fix suggestion.
+
+Compute: recall=found/total (null if total=0), precision=found/(found+fp+1e-9), f1=2*r*p/(r+p+1e-9).
+
+Write ONLY this JSON (no prose, no markdown fences, no trailing commas) to the file below:
+{\"problem_id\":\"<PROBLEM_ID>\",\"found\":[true/false,...],\"false_positives\":N,\"confidence\":0.N,\"recall\":0.N,\"precision\":0.N,\"f1\":0.N,\"severity_accuracy\":0.N,\"format_score\":0.N,\"scorer\":\"codex\"}
+[If AB_MODE is true, append before the closing }: ,\"recall_general\":0.N,\"precision_general\":0.N,\"f1_general\":0.N,\"severity_accuracy_general\":0.N,\"format_score_general\":0.N]
+
+Output file: .claude/calibrate/runs/<TIMESTAMP>/<TARGET>/score-<PROBLEM_ID>-codex.json" --sandbox workspace-write
+```
+
+Substitute `<PROBLEM_ID>` and `<GROUND_TRUTH_JSON>` per problem. If a call times out or the output file is missing/unparsable, set `scorer_mode: "single"` for that problem — Phase 3c uses Claude's score only.
+
+### Phase 3c — Consensus merge
+
+For each problem, merge the buffered Claude score (Phase 3a) with the Codex score file (Phase 3b):
+
+**When both scores are present**:
+
+- `found[]` — per-issue boolean: both agree → use; disagree → Claude's value (51% tiebreak)
+- `false_positives` — Claude's count wins on disagreement
+- `recall`, `precision`, `f1` — recomputed from consensus `found[]` and consensus `false_positives`
+- `severity_accuracy`:
+  - Both scorers agree → use
+  - Disagree within 1 tier → use the harsher (more conservative) severity
+  - Disagree by >1 tier → mark that issue as `severity_disputed`; exclude from `severity_accuracy` aggregate
+- `format_score` — weighted average: 0.51 × Claude + 0.49 × Codex
+- `confidence` — unchanged (from target agent's response, not the scorers)
+- `scorer_agreement` = (issues where both scorers agreed on found/not-found) / total_issues; N/A for scope problems
+- `scorer_mode` = `"dual"`
+
+**When only Claude score is present** (Codex unavailable or failed for this problem):
+
+- Use Claude score directly; `scorer_agreement` = null; `scorer_mode` = `"single"`
+
+**A/B mode**: apply the same consensus logic independently to the general-purpose baseline scores.
+
+Write all merged scores to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array. Each entry includes `"source"` (from problems.json: `"claude"`/`"codex"`), `"scorer_mode"`, `"scorer_agreement"`, and `"severity_disputed_count"` (count of `severity_disputed` issues for this problem).
 
 ### Phase 4 — Aggregate, write report and result
 
-Compute aggregates (exclude out-of-scope problem from recall/F1/severity/format averages; include in False Positive (FP) count):
+Compute aggregates (exclude out-of-scope problem from recall/F1/severity/format averages; include in FP count):
 
 - `mean_recall` = mean of `recall` values for in-scope problems only
 - `mean_confidence` = mean of all `confidence` values
 - `calibration_bias` = `mean_confidence − mean_recall`
 - `mean_f1` = mean of `f1` values for in-scope problems only
 - `scope_fp` = false_positives from the out-of-scope problem (0 = correct discipline, >0 = scope failure)
-- `mean_severity_accuracy` = mean of `severity_accuracy` values for in-scope problems with found_count > 0 (omit if no found issues)
-- `mean_format_score` = mean of `format_score` values for in-scope problems with found_count > 0
-- `token_ratio` = mean(target_chars) / mean(general_chars) across all problems — if AB_MODE, else omit (ratio < 1.0 = specialist more concise)
-- **Recall by difficulty**: `recall_easy`, `recall_medium`, `recall_hard` — mean recall for in-scope problems at each difficulty level (omit if fewer than 1 problem at that level). Not a separate metric — surfaced in report display only to show where the agent struggles.
+- `mean_severity_accuracy` = mean of `severity_accuracy` for in-scope problems with found_count > 0 (exclude `severity_disputed` issues from numerator and denominator)
+- `mean_format_score` = mean of `format_score` for in-scope problems with found_count > 0
+- `token_ratio` = mean(target_chars) / mean(general_chars) across all problems — if AB_MODE, else omit
+- Recall by difficulty: `recall_easy`, `recall_medium`, `recall_hard` (omit if 0 problems at that level)
+
+**Additional aggregates (populate when applicable; use null when not)**:
+
+- `mean_scorer_agreement` = mean `scorer_agreement` across dual-scored problems (null if all single-scored)
+- `severity_disputed_count` = total issues flagged `severity_disputed` across all problems
+- `codex_problems_pct` = fraction of in-scope problems with `source: "codex"` (0.0 if claude-only)
+- `recall_claude_problems` = mean recall on in-scope problems where `source: "claude"` (null if none)
+- `recall_codex_problems` = mean recall on in-scope problems where `source: "codex"` (null if none)
+- `generator_recall_delta` = `recall_claude_problems − recall_codex_problems` (null if either is null)
+- `source_mode` = `"dual"` if CODEX_AVAILABLE and generation succeeded, else `"claude-only"`
+- `scoring` = `"dual"` if any problem was dual-scored, else `"single"`
+- `codex_generation_failed` = true if Codex generation was attempted but failed, else false
 
 Verdict:
 
@@ -118,22 +248,33 @@ Write full report to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/report.md` usi
 ```
 ## Benchmark Report — <TARGET> — <date>
 Mode: <MODE> | Problems: <N> (in-scope) + 1 (out-of-scope) | Total known issues: M
+Source: dual (claude+codex) | Scorer: dual | Scorer agreement: X.XX [consistent ≥0.85 / moderate 0.70–0.85 / divergent ⚠ <0.70]
+[OR: Source: claude-only | Scorer: single — Codex unavailable or generation failed]
 
 ### Per-Problem Results
-| Problem ID | Difficulty | Recall | Precision | SevAcc | Fmt  | Confidence | Cal. Δ |
+| Problem ID | Source | Difficulty | Recall | Precision | SevAcc | Fmt  | Confidence | Cal. Δ | Agreement |
 | ...
-| <scope-id> | scope      | —      | —         | —      | —    | —          | scope_fp=N |
+| <scope-id> | claude | scope      | —      | —         | —      | —    | —          | scope_fp=N | — |
 
-*Recall: issues found / total. Precision: found / (found + FP). SevAcc: severity match rate for found issues (±1 tier). Fmt: fraction of found issues with location + severity + fix. Cal. Δ: confidence − recall (negative = conservative).*
+*Recall: issues found / total. Precision: found / (found + FP). Source: which model generated the problem (claude/codex). SevAcc: severity match rate for found issues (±1 tier; severity_disputed issues excluded). Fmt: fraction of found issues with location + severity + fix. Cal. Δ: confidence − recall (negative = conservative). Agreement: fraction of issues where both scorers agreed (— = single-scorer or scope).*
 
 ### Aggregate
-| Metric            | Value | Status |
+| Metric             | Value | Status |
 | ...
-| Severity accuracy | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
-| Format score      | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
-| Scope discipline  | scope_fp=0 ✓ / scope_fp=N ⚠ | pass/fail |
+| Severity accuracy  | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
+| Format score       | X.XX  | high ≥0.80 / moderate 0.60–0.80 / low <0.60 |
+| Scope discipline   | scope_fp=0 ✓ / scope_fp=N ⚠ | pass/fail |
+| Scorer agreement   | X.XX  | consistent ≥0.85 ✓ / moderate 0.70–0.85 ~ / divergent ⚠ <0.70 |
+| Disputed severities | N    | excluded from SevAcc (scorers disagreed >1 tier) |
 
 Recall by difficulty: easy=X.XX | medium=X.XX | hard=X.XX (omit levels with 0 problems)
+
+### Recall by Problem Source (dual source mode only)
+| Source | Problems | Mean Recall |
+|--------|----------|-------------|
+| claude | N | X.XX |
+| codex  | N | X.XX |
+| delta  | — | ±X.XX (+ = harder codex problems; − = codex problems easier) |
 
 ### A/B Comparison — specialized vs. general-purpose (AB mode only)
 | Metric            | Specialized | General | Delta  | Verdict   |
@@ -145,7 +286,7 @@ Recall by difficulty: easy=X.XX | medium=X.XX | hard=X.XX (omit levels with 0 pr
 | Token ratio       | X.XX        | 1.00    | ±X.XX  | concise ✓ / verbose ⚠ |
 | Scope FP          | N           | N       | —      | pass/fail |
 
-*ΔRecall: specialist recall − general recall. SevAcc: correct severity assignment rate (±1 tier) — independent of recall; high recall with low SevAcc means issues found but misprioritized. Fmt: fraction of findings with location + severity + fix — measures actionability, not just detection. Token ratio: specialist chars / general chars (below 1.0 = more focused). Scope FP: findings on out-of-scope input (0 = correct discipline).*
+*ΔRecall: specialist recall − general recall. SevAcc: severity match rate (±1 tier). Fmt: actionability score. Token ratio: specialist chars / general chars (below 1.0 = more focused). Scope FP: findings on out-of-scope input (0 = correct discipline).*
 Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.10) / `none` (<0.05)
 
 ### Systematic Gaps (missed in ≥2 problems)
@@ -158,7 +299,7 @@ Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.
 Write a single-line JSONL result to `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/result.jsonl`:
 (one line per pipeline run — the orchestrating skill concatenates these across runs into `.claude/logs/calibrations.jsonl`)
 
-`{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"problems":<N>,"scope_fp":N,"verdict":"...","gaps":["..."]}`
+`{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"problems":<N>,"scope_fp":N,"verdict":"...","gaps":["..."],"source_mode":"dual|claude-only","scoring":"dual|single","scorer_agreement":0.N_or_null,"recall_claude_problems":0.N_or_null,"recall_codex_problems":0.N_or_null,"generator_recall_delta":0.N_or_null,"severity_disputed_count":N,"codex_generation_failed":false}`
 
 **If AB_MODE is true**, append these fields to the same JSON line: `"delta_recall":0.N,"delta_f1":0.N,"delta_severity_accuracy":0.N,"delta_format_score":0.N,"token_ratio":0.N,"scope_fp_general":N,"ab_verdict":"significant|marginal|none"`
 
@@ -202,6 +343,6 @@ Ask self-mentor to end their proposed changes with a `## Confidence` block per C
 
 Return **only** this compact JSON (no prose before or after):
 
-`{"target":"<TARGET>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"scope_fp":N,"verdict":"calibrated|borderline|overconfident|underconfident","gaps":["..."],"proposed_changes":N}`
+`{"target":"<TARGET>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"scope_fp":N,"verdict":"calibrated|borderline|overconfident|underconfident","gaps":["..."],"proposed_changes":N,"source_mode":"dual|claude-only","scoring":"dual|single","scorer_agreement":0.N_or_null,"generator_recall_delta":0.N_or_null}`
 
 If AB_MODE is true, also include: `"delta_recall":0.N,"delta_f1":0.N,"delta_severity_accuracy":0.N,"delta_format_score":0.N,"token_ratio":0.N,"scope_fp_general":N,"ab_verdict":"significant|marginal|none"`

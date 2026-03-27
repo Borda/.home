@@ -386,7 +386,7 @@ Output a structured report containing:
 - **Cross-References**: count of files updated, broken refs cleaned (n/a for perm operations)
 - **Current Roster**: agents (N) and skills (N) with comma-separated names (n/a for perm operations)
 - **Audit Result**: audit findings (pass / issues found) (n/a for perm operations)
-- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` review generated content; for **agent** create/update/delete run `/calibrate routing fast` — any change to the agent roster changes which `subagent_type` values are available for routing, and description changes can introduce or resolve routing confusion; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
+- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` or `update` of an agent/skill run `/calibrate <name>` to baseline or verify the entity's recall and calibration after changes; for **agent** create/update/delete also run `/calibrate routing fast` — any roster or description change affects routing; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 
@@ -408,6 +408,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - **After any agent create/update/delete** → `/calibrate routing fast` to confirm routing accuracy is unaffected; a new agent changes the roster and its description must disambiguate from neighbors; deletion removes a valid routing target; rename changes the `subagent_type` identifier
   - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
-  - Recommended sequence for agent operations: `/manage <op>` → `/audit` → `/calibrate routing fast` → `/sync apply`
+  - Recommended sequence for agent operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/calibrate routing fast` (routing) → `/sync apply`
+  - Recommended sequence for skill operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/sync apply`
 
 </notes>

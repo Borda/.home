@@ -14,7 +14,7 @@ Preferred — semantic version tag:
 uses: actions/checkout@v4
 ```
 
-Optional — SHA pin for strict supply-chain hardening (add tag comment):
+Optional (but more secure) — SHA pin for strict supply-chain hardening (add tag comment):
 
 ```yaml
 uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
@@ -46,12 +46,17 @@ Severity tiers:
 
 ## Python Matrix
 
-- Python matrix must start at **3.10** minimum (Python 3.9 reached EOL Oct 2025)
+- Python matrix must start at **3.10** minimum (Python 3.9 reached EOL Oct 2025 — check [endoflife.date/python](https://endoflife.date/python) for the current schedule)
 - Always test on at least 2 Python versions
 - Recommended matrix: `['3.10', '3.11', '3.12', '3.13']`
+- Always set `fail-fast: false` on the strategy block — early exit hides failures in other matrix cells
 
 ## Other Rules
 
-- `fail-fast: false` on matrix jobs — early exit hides failures in other cells
 - Never `continue-on-error: true` on required status checks
-- Gate image pushes: `push: ${{ github.event_name != 'pull_request' }}`
+- Gate image pushes with an `if:` condition on the push step:
+  ```yaml
+    - name: Push Docker image
+      run: docker push myimage:latest
+      if: ${{ github.event_name != 'pull_request' }}
+  ```

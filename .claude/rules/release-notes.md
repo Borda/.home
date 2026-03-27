@@ -5,6 +5,11 @@ paths:
   - '**/PUBLIC-NOTES.md'
 ---
 
+## File Scope
+
+- `CHANGELOG.md` — full technical record; all sections apply; PR references required
+- `PUBLIC-NOTES.md` — user-facing release announcement; PR references optional; may omit Removed/Deprecated sections if empty; tone should be accessible, not just technical
+
 ## Section Order (fixed — never reorder)
 
 `## 🚀 Added` → `## ⚠️ Breaking Changes` → `## 🌱 Changed` → `## 🗑️ Deprecated` → `## ❌ Removed` → `## 🔧 Fixed`
@@ -28,15 +33,24 @@ paths:
 
 - End with `---` separator then `## 🏆 Contributors` (h2, NOT h3)
 - **NEVER guess or hallucinate a contributor's real name** — wrong names in public release notes are a serious error
-- Name lookup: `gh api /users/<handle> --jq '.name'` first; if empty, spawn `web-explorer` to search LinkedIn; if still uncertain, use @handle only
+- Name lookup order:
+  1. `gh api /users/<handle> --jq '.name'` — if non-empty, name is confirmed
+  2. If empty → spawn `web-explorer` with query `"<handle> site:linkedin.com"` — use the name only if the profile page unambiguously matches the GitHub handle (same avatar, bio, or repos cross-referenced)
+  3. If still uncertain → use @handle-only format; never guess
+- LinkedIn link: include only if found in step 2 with high confidence; use the direct profile URL returned by web-explorer
 - Format when name confirmed: `* **Full Name** (@handle) ([LinkedIn](url)) – *description*`
 - Format when name not confirmed: `* @handle – *description*`
 - LinkedIn link only if found via lookup; never construct a URL by guessing
 - Description is brief and italicised, focused on what they built/fixed
-- Include @Borda at the end with infra/docs/coordination work
+- Always include `* @Borda – *release coordination*` as the final contributor entry; omit only if Borda made zero commits, reviews, or coordination work for this release (rare)
 
-## Last Line
+## Last Line (required)
+
+Every release entry must end with:
 
 `**Full changelog**: https://github.com/[org]/[repo]/compare/vPREV...vNEXT`
+
+- This line must be the final line of the entry, after the Contributors section
+- Never omit it, even for patch releases
 
 Full template + writing-patterns table in `.claude/skills/release/SKILL.md` (Step 3).

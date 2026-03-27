@@ -1,3 +1,7 @@
+---
+description: Pagination and completeness rules for external APIs and the gh CLI — never work on partial result sets
+---
+
 # External Data & API Completeness
 
 ## Core Principle
@@ -29,12 +33,14 @@ Rules:
 - `--limit 30` (default) is never acceptable for analysis tasks — set it at least 10× higher than you expect
 - When counting ("how many open issues"), use `--paginate` or a high `--limit`; verify the count is plausible
 - `gh api` without `--paginate` returns one page only — always add `--paginate` for completeness
+- The `--limit` requirement applies equally when using `--json` + `--jq` — the default 30-item cap is not lifted by `--json`; always pair with `--limit 1000` or higher
 
 ## REST APIs (curl / WebFetch)
 
 - Check response for pagination signals: `Link` header (GitHub-style), `next_cursor`, `next_page_token`, `has_more`, `total_count`
 - If `total_count` > items returned → you have a partial result; fetch remaining pages
 - Loop until no next-page signal; never stop after one response
+- If the response contains no pagination signals and the item count is a round number (10, 20, 25, 50, 100…), treat it as a likely default page size and verify by requesting page 2; if page 2 returns items, the first response was truncated
 
 ## GraphQL APIs
 

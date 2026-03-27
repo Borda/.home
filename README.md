@@ -65,7 +65,7 @@ Skills are orchestrations of agents — invoked via slash commands (`/review`, `
 | **manage**     | `/manage <op> <type>`                                 | Create, rename, or delete agents/skills with cross-ref propagation and routing calibration                                                  |
 | **sync**       | `/sync [apply]`                                       | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                |
 | **codex**      | `/codex <task> [target]`                              | Delegate mechanical coding tasks to Codex CLI                                                                                               |
-| **observe**    | `/observe`                                            | Analyse work patterns and suggest new agents or skills                                                                                      |
+| **distill**    | `/distill`                                            | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons into rules and agent/skill updates        |
 
 <details>
 <summary><strong>Skill usage examples</strong></summary>
@@ -332,10 +332,10 @@ Skills chain naturally — the output of one becomes the input for the next.
 </details>
 
 <details>
-<summary><strong>Observe → create → audit → sync</strong></summary>
+<summary><strong>Distill → create → audit → sync</strong></summary>
 
 ```
-/observe               # analyze work patterns, suggest new agents/skills
+/distill               # analyze work patterns, suggest new agents/skills
 /manage create agent security-auditor "..."  # scaffold suggested agent
 /audit                 # verify config integrity — catch broken refs, dead loops
 /calibrate routing     # confirm new agent description doesn't confuse routing
@@ -390,7 +390,7 @@ Both `--reply` flags produce the same two-part oss-shepherd output: an overall P
 <summary><strong>Agent self-improvement loop</strong></summary>
 
 ```
-/observe                        # analyze work patterns, surface what agents are missing or miscalibrated
+/distill                        # analyze work patterns, surface what agents are missing or miscalibrated
 /calibrate all fast ab apply    # benchmark all agents vs general-purpose baseline, apply improvement proposals
 /audit fix                      # structural sweep after calibrate changed instruction files
 /sync apply                     # propagate improved config to ~/.claude/
@@ -462,7 +462,7 @@ Claude Code's experimental Agent Teams feature is enabled. Teams are always **us
 | Sequential pipeline (fix → test → lint)             |      |     ✓     |
 | Independent parallel review dimensions              |      |     ✓     |
 | Single file / single module scope                   |      |     ✓     |
-| Routine tasks (sync, observe, release)              |      |     ✓     |
+| Routine tasks (sync, distill, release)              |      |     ✓     |
 
 #### Skills with team support
 

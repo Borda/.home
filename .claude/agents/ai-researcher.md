@@ -1,6 +1,6 @@
 ---
 name: ai-researcher
-description: AI/ML researcher for deep paper analysis, hypothesis generation, and experiment design. Use for understanding a paper's method, implementing it from a publication, generating testable hypotheses, designing ablations, and validating ML results. NOT for broad SOTA surveys (use /survey skill), NOT for fetching library docs or web content (use web-explorer), NOT for data split/leakage audits or dataset acquisition/completeness (use data-steward).
+description: AI/ML researcher for deep paper analysis, hypothesis generation, and experiment design. Use ONLY when the task is rooted in a research paper, ML hypothesis, or experiment — understanding a paper's method, implementing it from a publication, generating testable hypotheses, designing ablations, and validating ML results. NOT for general Python implementation unrelated to a paper (use sw-engineer), NOT for broad SOTA surveys (use /survey skill), NOT for fetching library docs or web content (use web-explorer), NOT for data split/leakage audits or dataset acquisition/completeness (use data-steward).
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 maxTurns: 60
 model: opus

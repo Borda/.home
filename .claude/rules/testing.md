@@ -31,7 +31,8 @@ Mirror `src/` layout in `tests/unit/`: `src/foo/bar.py` → `tests/unit/foo/test
 
 ## Seeding / Randomness
 
-- Never seed manually inside test bodies
+- Never seed RNG anywhere except inside an `autouse=True` fixture — not in test bodies,
+  not at module level, not in non-autouse fixtures
 - Use a pytest fixture that resets all RNG sources: `torch.manual_seed`, `numpy.random.seed`, `random.seed`, `torch.cuda.manual_seed_all`
 - Fixture should use `autouse=True`
 
@@ -82,7 +83,7 @@ def test_cuda_inference():
 
 ## TDD for New Features
 
-For new features, follow Test-Driven Development — write tests before implementation; tests define the contract.
+For new features, follow Test-Driven Development — write tests before implementation; tests define the contract. (Applies at development time; not verifiable during post-hoc code review.)
 
 ## Doctests
 
