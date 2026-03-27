@@ -68,7 +68,7 @@ git diff --stat $(echo "$RANGE" | sed 's/\.\./\ /')
 # PR titles, bodies, and labels for merged PRs (richer context than commits)
 TRUNK=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | awk '{print $NF}')
 gh pr list --state merged --base "${TRUNK:-main}" --limit 100 \
-  --json number,title,body,labels,mergedAt 2>/dev/null
+  --json number,title,body,labels,mergedAt,author 2>/dev/null
 ```
 
 Cross-reference commit bodies against Pull Request (PR) descriptions — the canonical source of
@@ -95,6 +95,22 @@ Section order (fixed — never reorder): 🚀 Added → ⚠️ Breaking Changes 
 Filter out: merge commits, minor dep bumps, CI config, comment typos.
 Always include: any breaking change, any behavior change, any new API surface.
 
+## Step 2.5: Explore interesting changes
+
+For the top 3–5 most significant classified changes (features, breaking changes,
+major behaviour changes), read the actual diff or changed files:
+
+```bash
+git diff $RANGE -- <file>    # for specific files
+git show <commit>:<file>     # to see final state
+```
+
+Goal: understand what the change actually does at the implementation level —
+new APIs, new parameters, new behaviour — so notes and changelog describe
+real functionality, not just commit subject lines.
+
+Skip this for trivial changes (typos, dep bumps, CI config).
+
 ## Step 3: Choose output format
 
 Before writing, fetch the last 2–3 releases from the repo to check for project-specific formatting conventions:
@@ -110,6 +126,12 @@ If the existing releases deviate significantly from the templates below (e.g., n
 ### Notes — user-facing, public (`notes`)
 
 Omit any section that has no content.
+
+For `notes` mode: first produce a CHANGELOG-format classification (Step 2 output in
+changelog structure). Then derive the user-facing notes FROM that classification,
+expanding interesting features with implementation insights from Step 2.5.
+The changelog classification is a working document — do not write it to disk in
+`notes` mode, but use it as the structural backbone for the notes.
 
 Read the PUBLIC-NOTES template from .claude/skills/release/templates/PUBLIC-NOTES.tmpl.md and use it as the format for the notes output.
 
@@ -216,6 +238,14 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 **Purpose**: Pre-release readiness check — surfaces outstanding work, alignment gaps, and blocking issues before cutting a release.
 
 Read and execute all checks from `.claude/skills/release/templates/audit-checks.md`. Checks cover: version consistency across manifests, docs/CHANGELOG alignment, open blocking issues, dependency CVE scan, and unreleased commits since last tag.
+
+After the readiness table, if any issues were found, append a **Findings summary** table with one row per issue:
+
+| #   | Issue           | Location          | Severity                 |
+| --- | --------------- | ----------------- | ------------------------ |
+| 1   | <what is wrong> | <section or file> | critical/high/medium/low |
+
+This ensures every finding has an explicit location reference, severity label, and action — matching the structured output format used by `notes` and `changelog` modes.
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 

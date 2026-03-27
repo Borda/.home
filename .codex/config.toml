@@ -85,6 +85,6 @@ config_file = "agents/ci-guardian.toml"
 description = "Code quality and static analysis: ruff, mypy, pre-commit config, rule selection progression, suppression discipline."
 config_file = "agents/linting-expert.toml"
 
-[agents.oss-maintainer]
+[agents.oss-shepherd]
 description = "OSS lifecycle: issue triage, PR review, SemVer decisions, pyDeprecate, release checklist, trusted publishing."
-config_file = "agents/oss-maintainer.toml"
+config_file = "agents/oss-shepherd.toml"

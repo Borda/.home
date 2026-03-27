@@ -3,7 +3,7 @@ Write for the reader, not the commit author.
 | Element          | Rule                                                                       |
 | ---------------- | -------------------------------------------------------------------------- |
 | Feature heading  | Bold title, period, then plain-English description — no jargon             |
-| PR numbers       | Always at line end: `(#N)` or `(#N, #M)` — never omit                      |
+| PR numbers       | Omit — do not include `(#N)` references in changelog or notes              |
 | Code examples    | Real usage showing the new surface; not pseudocode                         |
 | Tables           | Use for option/preset comparisons; skip for single-item features           |
 | Breaking changes | Rare — use sparingly; false alarms scare users more than the change itself |
@@ -21,9 +21,10 @@ Bad/good examples:
 
 **Contributors rules:**
 
-- List every external contributor, even for a one-liner fix
+- List **every** PR author in the range — human and bot alike; community acknowledgement is essential for growth
+- **Bots**: collect all bot handles (accounts ending in `[bot]` or known bots like `dependabot`, `renovate`, `github-actions`) and render them as a single italic line at the bottom of the section: `*Automated contributions: @bot1, @bot2*` — never list bots individually
 - **NEVER guess or hallucinate a real name.** A wrong name in public release notes is a serious error. When in doubt, omit the name entirely.
-- **Name lookup protocol** — run for every contributor @handle before writing their entry:
+- **Name lookup protocol** — run for every human contributor @handle before writing their entry:
   1. `gh api /users/<handle> --jq '.name'` — if non-null and non-empty, use as the real name (high confidence)
   2. If empty: spawn `web-explorer` to search `site:linkedin.com "<handle>" developer` — use the name only if the profile clearly matches (same avatar, repos, or employer). Note the LinkedIn URL for inclusion.
   3. If still uncertain: use `@handle` only — no name field at all

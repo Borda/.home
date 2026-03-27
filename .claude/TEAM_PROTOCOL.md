@@ -1,4 +1,4 @@
-# Agent Teams Protocol — Borda.local
+# Agent Teams Protocol — Borda.ai-home
 
 AgentSpeak v2 compressed inter-agent messaging for Claude Code Agent Teams. Achieves ~60% token savings vs natural language on inter-agent messages. Adapted from [github.com/yuvalsuede/claude-teams-language-protocol](https://github.com/yuvalsuede/claude-teams-language-protocol) (MIT).
 

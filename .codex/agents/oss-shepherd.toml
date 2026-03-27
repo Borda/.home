@@ -1,4 +1,4 @@
-# .codex/agents/oss-maintainer.toml
+# .codex/agents/oss-shepherd.toml
 
 model                   = "gpt-5.3-codex"
 model_reasoning_effort  = "high"

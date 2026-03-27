@@ -200,7 +200,7 @@ Parent agent responsibilities:
 - pre-commit hook versions need updating or a quality gate is being added to CI
 - Suppression comments (`# noqa`, `# type: ignore`) need auditing or justification
 
-### Spawn `oss-maintainer` when:
+### Spawn `oss-shepherd` when:
 
 - A new GitHub issue needs triage (labeling, reproduction request, scope check)
 - A PR is ready for maintainer-level review (correctness, compatibility, docs)

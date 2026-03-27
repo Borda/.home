@@ -44,6 +44,8 @@ A special welcome to our new contributors and a big thank you to everyone who he
 * **Full Name** (@handle) ([LinkedIn](url)) – *What they built or fixed*
 * @handle – *What they built or fixed* (use this form when real name is not confirmed)
 
+*Automated contributions: @bot1, @bot2, @bot3*
+
 ---
 
 **Full changelog**: https://github.com/[org]/[repo]/compare/vPREV...vNEXT

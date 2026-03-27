@@ -281,6 +281,8 @@
       "WebFetch(domain:github.blog)",
       "WebFetch(domain:api.codecov.io)",
       "WebFetch(domain:app.codecov.io)",
+      "WebFetch(domain:hr.linkedin.com)",
+      "WebFetch(domain:scholar.google.com)",
       "Skill(sync)",
       "Skill(calibrate)"
     ],

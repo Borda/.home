@@ -3,7 +3,7 @@ name: brainstorm
 description: Interactive design-first skill for turning fuzzy ideas into approved specs. Asks clarifying questions one at a time, proposes 2–3 approaches with trade-offs, writes a structured spec to docs/specs/, runs a self-mentor review for gaps and ambiguity, then gates on explicit user approval before any implementation begins.
 argument-hint: <fuzzy idea or feature goal>
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Glob, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 ---
 
 <objective>
@@ -26,7 +26,13 @@ Examples:
 
 <workflow>
 
-**Task tracking**: create tasks for all steps before any tool calls.
+**Task tracking**: Before Step 1, create TaskCreate entries for all 6 steps
+(context scan, clarifying questions, propose approaches, write spec, spec review,
+present + gate). Then print a session plan to the user:
+
+> **Brainstorming: \<goal from $ARGUMENTS>**
+> Plan: context scan → clarifying questions → propose approaches → write spec → review → approval gate.
+> Starting with a codebase scan...
 
 ## Step 1: Context scan
 
@@ -40,20 +46,22 @@ Goal: understand constraints so questions are targeted, not generic. If the idea
 
 ## Step 2: Clarifying questions
 
-Ask questions to sharpen the problem definition:
+Use `AskUserQuestion` for every clarifying question — this renders an interactive prompt inline, not plain text.
 
-- Ask **one question at a time** — wait for the answer before asking the next
-- Prefer **multiple-choice** format: "Is the goal (a) X, (b) Y, or (c) something else?"
-- Maximum **3 questions** — after 3, propose two framings and ask which is closer
+Rules:
+
+- Ask **one question at a time** — call `AskUserQuestion` once, wait for the answer, then decide whether another question is needed
+- Always use **multiple-choice** options in `AskUserQuestion`: list lettered choices so the user can reply with just "a", "b", or "c"; mark the option you recommend with **★** (e.g., `a) Option A ★ recommended`) so the user has a sensible default
+- Maximum **3 questions** — after 3, call `AskUserQuestion` with two framings and ask which is closer
 - No solution proposals during this step — only gather information
 
 **Gate**: do not proceed to Step 3 until the problem is well-defined.
 
 ## Step 3: Propose approaches
 
-Present 2–3 candidate approaches based on the clarified problem:
+Present 2–3 candidate approaches based on the clarified problem in your text response. Write the full approach table — including Name, Summary, Pros, Cons, and When to prefer for every option — **before** making any tool call. Only after all approaches are written in prose, call `AskUserQuestion` to ask the user to pick one:
 
-For each approach include:
+For each approach in the text include:
 
 - **Name**: short label (e.g. "Lazy cache", "Eager precompute")
 - **Summary**: one sentence
@@ -61,7 +69,7 @@ For each approach include:
 - **Cons**: 1–3 bullets
 - **When to prefer**: one sentence
 
-Ask the user to pick one (or a mix). Do not proceed until a direction is chosen.
+After presenting, call `AskUserQuestion` with the lettered options so the user can reply with a single letter. Do not proceed until a direction is chosen.
 
 ## Step 4: Write spec
 
@@ -112,11 +120,13 @@ If `findings > 0`: address them (revise the spec, re-run the review) before proc
 
 ## Step 6: Present and gate
 
-Show the spec path and a summary to the user:
+Show the spec path and a one-paragraph summary of the spec. Then call `AskUserQuestion` with:
 
-> "Spec written to `docs/specs/<file>`. Does this capture what you had in mind? Approve to proceed to planning, or tell me what to change."
+- (a) Approved — proceed to planning
+- (b) Needs changes — describe what to revise
+- (c) Start over — back to clarifying questions
 
-**Gate**: do not exit until the user gives explicit approval. On change requests: revise the spec and loop back to Step 5.
+**Gate**: do not exit until the user approves. On (b): revise the spec and loop back to Step 5. On (c): loop back to Step 2.
 
 On approval suggest the natural next step:
 
