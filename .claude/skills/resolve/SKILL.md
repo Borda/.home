@@ -24,7 +24,10 @@ When given bare comment text, skip straight to Codex dispatch (Step 12).
 
 <inputs>
 
-- **$ARGUMENTS**: a PR number (e.g. `42`), a GitHub PR URL, or bare review comment text
+- **$ARGUMENTS**: one of:
+  - Omitted → **review-handoff mode**: auto-detect PR from the most recent `tasks/output-review-*.md` file
+  - A PR number (e.g. `42`) or GitHub PR URL → **PR mode**
+  - Bare review comment text → **comment dispatch mode** (jumps to Step 12)
 
 </inputs>
 
@@ -65,6 +68,29 @@ git remote -v
 If gh is missing or not authenticated: stop (error printed above)
 
 If codex is missing: set `CODEX_AVAILABLE=false` and continue — Steps 3–7 (intelligence + conflict resolution) work without Codex; Step 8 (action items) will be skipped with a notice: `⚠ codex not found — skipping action items. Install: npm install -g @openai/codex`
+
+### Review-handoff auto-detect (when $ARGUMENTS is empty)
+
+If `$ARGUMENTS` is empty:
+
+```bash
+# Find most recent review output (written by /review to _outputs/YYYY/MM/)
+REVIEW_FILE=$(ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1)
+if [ -z "$REVIEW_FILE" ]; then
+  echo "No review output found in _outputs/ — run /review <PR#> first, or provide a PR number"
+  exit 1
+fi
+echo "→ Using: $REVIEW_FILE"
+```
+
+Read `$REVIEW_FILE` with the Read tool. Extract the PR number from the header line:
+
+- Pattern: `## Code Review: PR #<N>` or `## Code Review: <N>` (where N is a number)
+- Grep: `grep -oE '(PR #|#)?[0-9]+' "$REVIEW_FILE" | head -1 | grep -oE '[0-9]+'`
+
+If a PR number is found, set `$ARGUMENTS = <extracted number>` and proceed in PR mode (Step 2 onwards). Print: `→ Resolved PR #<N> from review output.`
+
+If no PR number is extractable (review was run on a local path, not a PR), print: "Review output does not reference a PR — provide a PR number explicitly: `/resolve <PR#>`" and exit 1.
 
 Parse $ARGUMENTS:
 
@@ -148,11 +174,11 @@ Print the action item table:
 ```
 ### Action Items — PR #<number>
 
-| # | Type | Author | Summary | File:Line |
-|---|------|--------|---------|-----------|
-| 1 | [req] | @reviewer | rename param `x` to `count` | src/foo.py:42 |
-| 2 | [suggest] | @maintainer | add docstring | — |
-| 3 | [question] | @reviewer | why not use X instead? | — |
+| Type | Author | Status | Summary | File:Line |
+|------|--------|--------|---------|-----------|
+| [req] | @reviewer | pending | rename param `x` to `count` | src/foo.py:42 |
+| [suggest] | @maintainer | pending | add docstring | — |
+| [question] | @reviewer | pending | why not use X instead? | — |
 ```
 
 > **Guard**: if `[req]` items > 15, print the full list and use `AskUserQuestion` to ask which subset to implement, listing up to 4 grouped options drawn from the items table (mark the first/smallest group as "(Recommended)"), before continuing.
@@ -329,7 +355,7 @@ Record per-item: `committed <SHA>` or `skipped — <Codex reason>`.
 ## Step 9: Lint and QA gate
 
 ```bash
-RUN_DIR="_resolve/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
+RUN_DIR="_resolutions/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
 ```
 
 Spawn both agents in parallel:
@@ -341,11 +367,18 @@ Agent(qa-specialist): "Review all files changed in the current branch since orig
 ```
 
 ```bash
-# Health monitoring (CLAUDE.md §8): checkpoint after spawning
-RESOLVE_CHECK="/tmp/resolve-check-$(date +%s)"
+# Health monitoring (CLAUDE.md §8)
+LAUNCH_AT=$(date +%s)
+RESOLVE_CHECK="/tmp/resolve-check-$LAUNCH_AT"
 touch "$RESOLVE_CHECK"
-# Every 5 min: find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f | wc -l — new files = alive
-# Hard cutoff: 15 min of no file activity → timed out; mark ⏱ in report
+# Poll every 5 min; hard cutoff at 15 min of no new file activity
+sleep 300
+NEW=$(find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f 2>/dev/null | wc -l | tr -d ' ')
+touch "$RESOLVE_CHECK"
+ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
+if [ "$NEW" -eq 0 ] && [ "$ELAPSED" -ge 15 ]; then
+  echo "⏱ resolve agents timed out after ${ELAPSED}min — surfacing partial results"
+fi
 ```
 
 Wait for both. Then:
@@ -396,11 +429,11 @@ Mark the task `completed`, then print:
 
 ### Action Items
 
-| # | Type | Summary | Result | Commit |
-|---|------|---------|--------|--------|
-| 1 | [req] | rename param x → count | ✓ committed | abc1234 |
-| 2 | [suggest] | add docstring | ✓ committed | def5678 |
-| 3 | [question] | why not use X? | ⊘ answered inline — existing approach is correct per linked issue #42 | — |
+| Type | Author | Status | Summary | File:Line |
+|------|--------|--------|---------|-----------|
+| [req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 |
+| [suggest] | @maintainer | ✓ resolved | add docstring | — |
+| [question] | @reviewer | ⊘ answered inline — existing approach is correct per linked issue #42 | why not use X? | — |
 
 ### Lint + QA
 <linting-expert summary: N fixes applied | or "no violations"> / <qa-specialist summary: N blocking fixed, N warnings | or "clean">
@@ -483,7 +516,7 @@ fi
 If code was changed (dispatch or review loop produced commits):
 
 ```bash
-RUN_DIR="_resolve/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
+RUN_DIR="_resolutions/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
 ```
 
 Spawn both agents in parallel:
@@ -495,11 +528,18 @@ Agent(qa-specialist): "Review all files changed in the most recent commits for c
 ```
 
 ```bash
-# Health monitoring (CLAUDE.md §8): checkpoint after spawning
-RESOLVE_CHECK="/tmp/resolve-check-$(date +%s)"
+# Health monitoring (CLAUDE.md §8)
+LAUNCH_AT=$(date +%s)
+RESOLVE_CHECK="/tmp/resolve-check-$LAUNCH_AT"
 touch "$RESOLVE_CHECK"
-# Every 5 min: find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f | wc -l — new files = alive
-# Hard cutoff: 15 min of no file activity → timed out; mark ⏱ in report
+# Poll every 5 min; hard cutoff at 15 min of no new file activity
+sleep 300
+NEW=$(find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f 2>/dev/null | wc -l | tr -d ' ')
+touch "$RESOLVE_CHECK"
+ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
+if [ "$NEW" -eq 0 ] && [ "$ELAPSED" -ge 15 ]; then
+  echo "⏱ resolve agents timed out after ${ELAPSED}min — surfacing partial results"
+fi
 ```
 
 - If `linting-expert` made changes → commit: `lint: auto-fix violations after resolve cycle`
@@ -544,6 +584,7 @@ Mark the task `completed`, then print:
 - **5-iteration cap** on the Step 12 Codex review loop overrides the global 3-iteration default — skill-declared bounds take precedence (CLAUDE.md §3 "Safety breaks for loops")
 - **`codex exec` timeout**: allow up to 2 minutes per call; background health monitoring (CLAUDE.md §8) does not apply because Codex runs sequentially, not as a spawned background agent
 - **Worktree cleanup safety net**: `SessionEnd` hook runs `git worktree prune` — catches any orphaned worktrees from prior sessions
+- **Review → resolve handoff**: `/review <PR#>` writes its consolidated findings to `tasks/output-review-<date>.md`. `/resolve` (no arguments) reads the most recent file from this path, extracts the PR number, and proceeds with the normal PR mode workflow — fetching live comments and implementing them. This means the review report serves as the PR number lookup, not as the action item list (the live GitHub comments are re-fetched). The review output file persists across turns because the review skill always writes it; no additional output is needed.
 - Follow-up chains:
   - After push → `gh pr review <PR#> --approve` if satisfied; for substantial maintainer changes, comment on the PR explaining what was done and why — don't silently push to a contributor's fork
   - For `[question]` items left unanswered → post a PR comment with the rationale before merging; gives the contributor context and closes the thread

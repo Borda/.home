@@ -182,7 +182,7 @@ Find and read all source material in parallel:
 
 # Memory feedback files
 PROJECT="$(git rev-parse --show-toplevel)"
-MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|[/.]|-|g')/memory"
+MEMORY_DIR="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|[/.]|-|g')/memory"  # slug derivation: git rev-parse --show-toplevel | sed 's|[/.]|-|g'
 ls "$MEMORY_DIR"/feedback_*.md 2>/dev/null || echo "no feedback files"
 ```
 
@@ -275,11 +275,14 @@ ______________________________________________________________________
 
 **Step L4: Apply (with confirmation)**
 
-Print the proposal table. Then ask:
+Print the proposal table. Then use AskUserQuestion:
 
-> Apply all `→ rule` and `→ agent/skill update` proposals? (y to apply, n to review manually)
+> "Apply the distillation proposals?"
+> (a) Apply — write all `→ rule` and `→ agent/skill update` changes now
+> (b) Review first — show a diff of each proposed change before writing
+> (c) Skip — discard proposals and exit without changes
 
-If the user confirms `y`, apply changes:
+If the user selects (a), apply changes:
 
 - **New rule files**: Write tool to create `.claude/rules/<name>.md` with the drafted content
 - **Agent updates**: Edit tool to insert the new instruction into the appropriate section of the agent file

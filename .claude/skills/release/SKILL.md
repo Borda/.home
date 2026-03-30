@@ -19,7 +19,7 @@ Mode comes **first**; range or version follows:
 | -------------------------------- | -------------------------------------------- | ------------------------------------------------------------------------------------------- |
 | `/release notes [range]`         | optional git range (default: last-tag..HEAD) | `PUBLIC-NOTES.md`                                                                           |
 | `/release changelog [range]`     | optional git range                           | Prepends `CHANGELOG.md`                                                                     |
-| `/release summary [range]`       | optional git range                           | `tasks/output-release-<date>.md`                                                            |
+| `/release summary [range]`       | optional git range                           | `_outputs/<year>/<month>/output-release-summary-<date>.md`                                  |
 | `/release migration <from> <to>` | two version tags, e.g. `v1.2 v2.0`           | Terminal only                                                                               |
 | `/release prepare <version>`     | version to stamp, e.g. `v1.3.0`              | All artifacts: audit → `PUBLIC-NOTES.md` + `CHANGELOG.md` + summary + migration if breaking |
 | `/release audit [version]`       | optional target version                      | Terminal readiness report                                                                   |
@@ -155,7 +155,7 @@ After applying the guidelines above to polish the output, write to disk per mode
 
 - **`notes`**: write to `PUBLIC-NOTES.md` at the repo root. Notify: `→ written to PUBLIC-NOTES.md`
 - **`changelog`**: prepend the entry to `CHANGELOG.md` after the `# Changelog` heading (create the file with that heading if it does not exist). Notify: `→ prepended to CHANGELOG.md`
-- **`summary`**: save to `tasks/output-release-$(date +%Y-%m-%d).md`. Notify: `→ saved to tasks/output-release-$(date +%Y-%m-%d).md`
+- **`summary`**: save to `_outputs/$(date +%Y)/$(date +%m)/output-release-summary-$(date +%Y-%m-%d).md`. Notify: `→ saved to _outputs/<year>/<month>/output-release-summary-<date>.md`
 - **`migration`**: print to terminal only
 
 ## Step 5: Publish (after writing notes)

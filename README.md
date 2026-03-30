@@ -81,7 +81,6 @@ Specialist roles with deep domain knowledge — requested by name, or auto-selec
 | **oss-shepherd**       | ✓      | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
 | **perf-optimizer**     | ✓      | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
 | **qa-specialist**      | ✓      | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
-| **security-auditor**   | —      | ✓     | OWASP Python, ML supply chain, secrets, CI/CD hygiene         |
 | **self-mentor**        | ✓      | —     | Config quality review, duplication detection, cross-ref audit |
 | **solution-architect** | ✓      | —     | System design, ADRs, API surface, migration plans             |
 | **squeezer**           | —      | ✓     | Profile-first optimization, GPU throughput, memory efficiency |
@@ -112,6 +111,7 @@ Skills are multi-agent workflows invoked via slash commands. Each skill composes
 | **sync**        | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                                                                  |
 | **codex**       | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                 |
 | **investigate** | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                               |
+| **session**     | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                               |
 | **distill**     | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                       |
 
 → Full command reference, orchestration flows, rules (11 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
@@ -204,7 +204,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 
 ```
 /distill               # analyze work patterns, suggest new agents/skills
-/manage create agent security-auditor "..."  # scaffold suggested agent
+/manage create agent my-agent "..."          # scaffold suggested agent
 /audit                 # verify config integrity — catch broken refs, dead loops
 /calibrate routing     # confirm new agent description doesn't confuse routing
 /sync apply            # propagate clean config to ~/.claude/
@@ -243,10 +243,10 @@ Preferred flow for maintainers responding to external contributions:
 
 # or if you need the full deep review first:
 /review 42 --reply        # 7-agent + Codex co-review + draft overall comment + inline comments table
-                          # output: _out/YYYY/MM/output-reply-pr-42-<date>.md
+                          # output: _outputs/YYYY/MM/output-reply-pr-42-<date>.md
 
 # post when ready:
-gh pr comment 42 --body "$(cat _out/YYYY/MM/output-reply-pr-42-<date>.md)"
+gh pr comment 42 --body "$(cat _outputs/YYYY/MM/output-reply-pr-42-<date>.md)"
 ```
 
 Both `--reply` flags produce the same two-part oss-shepherd output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs.
@@ -320,7 +320,7 @@ Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex
 
 ```bash
 codex                                                          # interactive — auto-selects agents
-codex "use the security-auditor to review src/api/auth.py"    # address agent by name
+codex "use the qa-specialist to review src/api/auth.py"        # address agent by name
 codex --profile deep-review "full security audit of src/api/" # activate a profile
 ```
 

@@ -103,7 +103,7 @@ Design one targeted test per hypothesis that gives a clear confirm/rule-out sign
 python3 -c "import sys; print(sys.executable, sys.version)"
 
 # Missing allow entry: check settings.json
-python3 -c "import json; d=json.load(open('${HOME}/.claude/settings.json')); print([p for p in d['permissions']['allow'] if 'Bash' in p and 'relevant-cmd' in p])"
+python3 -c "import json, os; d=json.load(open(os.path.expanduser('~/.claude/settings.json'))); print([p for p in d['permissions']['allow'] if 'Bash' in p and 'relevant-cmd' in p])"
 
 # Hook path wrong: verify hook file exists
 ls -la ~/.claude/hooks/

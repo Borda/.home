@@ -120,8 +120,6 @@ Mandatory after the quality stack completes. Gracefully degrades if Codex is una
 
 Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the changes.
 
-If codex-prepass.md step count changes, verify alignment of steps below.
-
 ## Additional steps not in shared file:
 
 3. **Validate**: if Codex made changes, re-run the quality stack on affected files only:
@@ -155,7 +153,7 @@ Maximum 3 cycles. Applied after the quality stack.
 
 - Fix critical/high findings from Cycle 1
 - Re-run quality stack on modified files only
-- Set up a run directory for file-based handoff: `RUN_DIR="_develop/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"`
+- Set up a run directory for file-based handoff: `RUN_DIR="_developments/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"`
 - For each agent type in `agents_with_findings`: spawn that agent directly (not `/review`) with a focused prompt scoped to modified files + prior findings. Each agent prompt must end with: "Write your full findings to `$RUN_DIR/<agent-name>.md` using the Write tool. Return ONLY a compact JSON envelope: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.N,\"summary\":\"<agent-name>: N critical, N high\"}`"
   ```bash
   # Health monitoring (CLAUDE.md §8): create checkpoint after spawns

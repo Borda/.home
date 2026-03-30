@@ -87,7 +87,7 @@ Set up the run directory (shared by Codex and all agent spawns in Step 3):
 
 ```bash
 TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-RUN_DIR="_review/$TIMESTAMP"
+RUN_DIR="_reviews/$TIMESTAMP"
 mkdir -p "$RUN_DIR"
 ```
 
@@ -136,7 +136,7 @@ Flag rules:
 - Caught=Yes + Action=`pass` or bare `except` → **MEDIUM** (swallowed error)
 - Cap at 15 rows. Focus on new/changed paths only, not the entire codebase.
 
-Read the review checklist: `cat .claude/skills/review/checklist.md` — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
+Read the review checklist (use the Read tool to read `.claude/skills/review/checklist.md`) — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
 
 If `ISSUE_NUMS` is non-empty, linked issue analysis files exist at `$RUN_DIR/issue-*.md`. Read them. Evaluate whether the code changes address the root cause identified in each linked issue — not just the symptom or the PR description. If the PR addresses only a symptom while the root cause remains unfixed, flag as `[blocking] HIGH — root cause misalignment`. If the PR description diverges from the issue's stated problem (solving something different than what was reported), flag as `HIGH — PR/issue scope divergence`.
 
@@ -221,7 +221,7 @@ Read and follow the cross-validation protocol from `.claude/skills/_shared/cross
 
 Spawn a **sw-engineer** consolidator agent with this prompt:
 
-> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Apply the consolidation rules from `.claude/skills/review/checklist.md` (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `tasks/output-review-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=tasks/output-review-<date>.md`"
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `_outputs/$(date +%Y)/$(date +%m)/output-review-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=_outputs/$(date +%Y)/$(date +%m)/output-review-$(date +%Y-%m-%d).md`"
 
 Main context receives only the one-liner verdict. Proceed with that summary for terminal output.
 
@@ -295,7 +295,7 @@ Main context receives only the one-liner verdict. Proceed with that summary for 
 
 After parsing confidence scores: if any agent scored < 0.7, prepend **⚠ LOW CONFIDENCE** to that agent's findings section and explicitly state the gap. Do not silently drop uncertain findings — flag them so the reviewer can decide whether to investigate further.
 
-Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **PR Summary** template with the **Extended Fields (review only)** addendum. Replace `[entity-line]` with `Review — [target]` and replace `[skill-specific path]` with `tasks/output-review-$(date +%Y-%m-%d).md`.
+Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **PR Summary** template with the **Extended Fields (review only)** addendum. Replace `[entity-line]` with `Review — [target]` and replace `[skill-specific path]` with `_outputs/$(date +%Y)/$(date +%m)/output-review-$(date +%Y-%m-%d).md`.
 
 ## Step 7: Delegate implementation follow-up (optional)
 

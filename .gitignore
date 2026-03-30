@@ -14,13 +14,13 @@ tasks/
 
 # Skill run artifacts and temp outputs (ephemeral, TTL-managed)
 docs/
-_calibrate/
-_resolve/
-_audit/
-_review/
-_optimize/
-_develop/
-_out/
+_calibrations/
+_resolutions/
+_audits/
+_reviews/
+_optimizations/
+_developments/
+_outputs/
 
 # Agent auto-memory (machine-local, not source)
 .claude/agent-memory/

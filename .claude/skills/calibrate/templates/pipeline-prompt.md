@@ -2,7 +2,7 @@ You are a calibration pipeline runner for `<TARGET>`. Complete all phases in seq
 
 AB mode: `<AB_MODE>` — when `true`, also run a `general-purpose` baseline on every problem and compute delta metrics.
 
-Run dir: `_calibrate/<TIMESTAMP>/<TARGET>/`
+Run dir: `_calibrations/<TIMESTAMP>/<TARGET>/`
 
 ### Pre-flight — Codex availability
 
@@ -52,7 +52,7 @@ Rules:
 - Do NOT include any out-of-scope problem — in-scope problems only
 - Write ONLY a valid JSON array (no prose, no markdown fences, no trailing commas)
 
-Write the JSON array to: _calibrate/<TIMESTAMP>/<TARGET>/problems-codex.json" --sandbox workspace-write
+Write the JSON array to: _calibrations/<TIMESTAMP>/<TARGET>/problems-codex.json" --sandbox workspace-write
 ```
 
 **Step 2 — Claude generates N_CLAUDE in-scope problems + 1 out-of-scope problem**:
@@ -67,7 +67,7 @@ Rules:
 - **Include exactly 1 out-of-scope problem** (difficulty: `"scope"`): input is clearly outside the agent's domain (e.g., for `linting-expert`, a natural-language question; for `ci-guardian`, a plain Python data script). Set `ground_truth: []`. A correct response declines, redirects, or reports no findings. Any findings = false positives (scope failure).
 - Return a valid JSON array only (no prose)
 
-Write to `_calibrate/<TIMESTAMP>/<TARGET>/problems-claude.json`.
+Write to `_calibrations/<TIMESTAMP>/<TARGET>/problems-claude.json`.
 
 **When CODEX_AVAILABLE=false**:
 
@@ -90,7 +90,7 @@ Reject and log any entry that fails validation. If fewer than `floor(<N_CODEX> *
 - Deduplicate `problem_id`: if collision, prefix with source (`claude-<id>`, `cx-<id>`)
 - Merge into a single array; the scope problem must appear exactly once (from Claude)
 
-Write merged array to `_calibrate/<TIMESTAMP>/<TARGET>/problems.json`.
+Write merged array to `_calibrations/<TIMESTAMP>/<TARGET>/problems.json`.
 
 ### Phase 2 — Run target on each problem (parallel)
 
@@ -106,11 +106,11 @@ The prompt for each subagent is exactly:
 >
 > Do not self-review or refine before answering — report your initial analysis directly.
 >
-> **Write your complete response** (including the Confidence block) to `_calibrate/<TIMESTAMP>/<TARGET>/response-<problem_id>.md` using the Write tool. Then end your reply with exactly one line: `Wrote: <problem_id>`
+> **Write your complete response** (including the Confidence block) to `_calibrations/<TIMESTAMP>/<TARGET>/response-<problem_id>.md` using the Write tool. Then end your reply with exactly one line: `Wrote: <problem_id>`
 
 **Context discipline**: subagents write to disk and return a single-line acknowledgment. The pipeline agent must NOT accumulate their full analyses in its context — scorers read from disk in Phase 3. Receiving only `Wrote: <problem_id>` per agent is correct and expected.
 
-**Phase timeout**: after 5 min of no acknowledgment, run `tail -20 _calibrate/<TIMESTAMP>/<TARGET>/response-<problem_id>.md` — if output shows active progress, grant one +5-min extension. Hard cutoff at 15 min of no new file activity: mark that problem as `{"timed_out": true}` in scores.json and proceed. Never block indefinitely on a single response.
+**Phase timeout**: after 5 min of no acknowledgment, run `tail -20 _calibrations/<TIMESTAMP>/<TARGET>/response-<problem_id>.md` — if output shows active progress, grant one +5-min extension. Hard cutoff at 15 min of no new file activity: mark that problem as `{"timed_out": true}` in scores.json and proceed. Never block indefinitely on a single response.
 
 For **skill targets** (target starts with `/`): spawn a `general-purpose` subagent with the skill's SKILL.md content prepended as context, running against the synthetic input from the problem. Apply the same write-and-acknowledge pattern.
 
@@ -168,8 +168,8 @@ ${TIMEOUT_CMD:+$TIMEOUT_CMD 120} codex exec "You are scoring a calibration respo
 Problem ID: <PROBLEM_ID>
 Ground truth (JSON array): <GROUND_TRUTH_JSON>
 
-Read the response from: _calibrate/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>.md
-[If AB_MODE is true: also read _calibrate/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>-general.md]
+Read the response from: _calibrations/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>.md
+[If AB_MODE is true: also read _calibrations/<TIMESTAMP>/<TARGET>/response-<PROBLEM_ID>-general.md]
 
 For each ground truth issue: mark true if the response identified the same issue type at the same location (exact or semantically equivalent). Count false positives: reported issues with no ground truth match. Extract confidence from the ## Confidence block (use 0.5 if absent).
 
@@ -184,7 +184,7 @@ Write ONLY this JSON (no prose, no markdown fences, no trailing commas) to the f
 {\"problem_id\":\"<PROBLEM_ID>\",\"found\":[true/false,...],\"false_positives\":N,\"confidence\":0.N,\"recall\":0.N,\"precision\":0.N,\"f1\":0.N,\"severity_accuracy\":0.N,\"format_score\":0.N,\"scorer\":\"codex\"}
 [If AB_MODE is true, append before the closing }: ,\"recall_general\":0.N,\"precision_general\":0.N,\"f1_general\":0.N,\"severity_accuracy_general\":0.N,\"format_score_general\":0.N]
 
-Output file: _calibrate/<TIMESTAMP>/<TARGET>/score-<PROBLEM_ID>-codex.json" --sandbox workspace-write
+Output file: _calibrations/<TIMESTAMP>/<TARGET>/score-<PROBLEM_ID>-codex.json" --sandbox workspace-write
 ```
 
 Substitute `<PROBLEM_ID>` and `<GROUND_TRUTH_JSON>` per problem. If a call times out or the output file is missing/unparsable, set `scorer_mode: "single"` for that problem — Phase 3c uses Claude's score only.
@@ -213,7 +213,7 @@ For each problem, merge the buffered Claude score (Phase 3a) with the Codex scor
 
 **A/B mode**: apply the same consensus logic independently to the general-purpose baseline scores.
 
-Write all merged scores to `_calibrate/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array. Each entry includes `"source"` (from problems.json: `"claude"`/`"codex"`), `"scorer_mode"`, `"scorer_agreement"`, and `"severity_disputed_count"` (count of `severity_disputed` issues for this problem).
+Write all merged scores to `_calibrations/<TIMESTAMP>/<TARGET>/scores.json` as a JSON array. Each entry includes `"source"` (from problems.json: `"claude"`/`"codex"`), `"scorer_mode"`, `"scorer_agreement"`, and `"severity_disputed_count"` (count of `severity_disputed` issues for this problem).
 
 ### Phase 4 — Aggregate, write report and result
 
@@ -248,7 +248,7 @@ Verdict:
 - `bias > 0.15` → `overconfident`
 - `bias < −0.15` → `underconfident`
 
-Write full report to `_calibrate/<TIMESTAMP>/<TARGET>/report.md` using this structure:
+Write full report to `_calibrations/<TIMESTAMP>/<TARGET>/report.md` using this structure:
 
 ```
 ## Benchmark Report — <TARGET> — <date>
@@ -301,7 +301,7 @@ Verdict: `significant` (delta_recall or delta_f1 > 0.10) / `marginal` (0.05–0.
 ...
 ```
 
-Write a single-line JSONL result to `_calibrate/<TIMESTAMP>/<TARGET>/result.jsonl`:
+Write a single-line JSONL result to `_calibrations/<TIMESTAMP>/<TARGET>/result.jsonl`:
 (one line per pipeline run — the orchestrating skill concatenates these across runs into `.claude/logs/calibrations.jsonl`)
 
 `{"ts":"<TIMESTAMP>","target":"<TARGET>","mode":"<MODE>","mean_recall":0.N,"mean_confidence":0.N,"calibration_bias":0.N,"mean_f1":0.N,"severity_accuracy":0.N,"format_score":0.N,"problems":<N>,"scope_fp":N,"verdict":"...","gaps":["..."],"source_mode":"dual|claude-only","scoring":"dual|single","scorer_agreement":0.N_or_null,"recall_claude_problems":0.N_or_null,"recall_codex_problems":0.N_or_null,"generator_recall_delta":0.N_or_null,"severity_disputed_count":N,"codex_generation_failed":false}`
@@ -322,7 +322,7 @@ Spawn a **self-mentor** subagent using the **Agent tool** — never via Bash or 
 > **Files to read** (use the Read tool on each):
 >
 > 1. Target file: `<AGENT_OR_SKILL_FILE_PATH>`
-> 2. Benchmark report: `_calibrate/<TIMESTAMP>/<TARGET>/report.md` — focus on the **Systematic Gaps** and **Improvement Signals** sections
+> 2. Benchmark report: `_calibrations/<TIMESTAMP>/<TARGET>/report.md` — focus on the **Systematic Gaps** and **Improvement Signals** sections
 >
 > Propose specific, minimal instruction edits that directly address each systematic gap (issues missed in ≥2/N problems) and each false-positive pattern. Be conservative: one targeted change per gap. Do not refactor sections unrelated to the findings.
 >
@@ -341,7 +341,7 @@ Spawn a **self-mentor** subagent using the **Agent tool** — never via Bash or 
 > **Rationale**: one sentence — why this closes the gap
 > ```
 
-Write the self-mentor response verbatim to `_calibrate/<TIMESTAMP>/<TARGET>/proposal.md`.
+Write the self-mentor response verbatim to `_calibrations/<TIMESTAMP>/<TARGET>/proposal.md`.
 Ask self-mentor to end their proposed changes with a `## Confidence` block per CLAUDE.md output standards.
 
 ### Return value

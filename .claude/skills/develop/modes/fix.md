@@ -113,6 +113,7 @@ Full review of the fix. This is a **loop** — review → fix → re-review unti
 - File: <test_file>
 - Test: <test_name>
 - Confirms: [what behavior the test locks in]
+- Disposition: keep if a test runner auto-discovers this file; otherwise add to Follow-up as a cleanup candidate
 
 ### Changes Made
 | File | Change | Lines |
@@ -126,6 +127,7 @@ Full review of the fix. This is a **loop** — review → fix → re-review unti
 
 ### Follow-up
 - [any related issues or code that should be reviewed]
+- [if no test runner: `rm <test_file>` — no test suite will re-execute it; it served the gate, now expendable]
 
 ## Confidence
 **Score**: [0.N]

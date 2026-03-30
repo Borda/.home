@@ -18,7 +18,7 @@ This skill is NOT for deep single-paper analysis or experiment design — use th
 
 - **$ARGUMENTS**: one of:
   - `<topic>` — topic, method name, or problem description (e.g. "object detection for small objects", "efficient transformers", "self-supervised pretraining for medical images")
-  - `plan` — produce a phased implementation plan from the most recent research output (auto-detected from `_out/`)
+  - `plan` — produce a phased implementation plan from the most recent research output (auto-detected from `_outputs/`)
   - `plan <path-to-output.md>` — produce a plan from a specific existing research output file
 
 </inputs>
@@ -47,9 +47,9 @@ Use this prompt scaffold (adapt the constraints from Step 1):
 Research the literature on: <$ARGUMENTS>
 Codebase constraints: <framework, Python version, compute budget, existing dependencies from Step 1>
 Deliver: comparison table (method, key idea, benchmarks, compute, code available), recommendation for best method, a 3-step implementation plan for this codebase, key hyperparameters (name, typical range, what it controls) for the recommended method, and common gotchas (failure modes and how to avoid them).
-Write your full findings (comparison table, paper analysis, recommendation, implementation plan, Confidence block) to `_out/$(date +%Y)/$(date +%m)/output-research-agent-$(date +%Y-%m-%d).md` using the Write tool.
+Write your full findings (comparison table, paper analysis, recommendation, implementation plan, Confidence block) to `_outputs/$(date +%Y)/$(date +%m)/output-research-agent-$(date +%Y-%m-%d).md` using the Write tool.
 Then return ONLY a compact JSON envelope on your final line — nothing else after it:
-{"status":"done","papers":N,"recommendation":"<method name>","file":"_out/YYYY/MM/output-research-agent-<date>.md","confidence":0.N}
+{"status":"done","papers":N,"recommendation":"<method name>","file":"_outputs/YYYY/MM/output-research-agent-<date>.md","confidence":0.N}
 ```
 
 **If the Agent tool is unavailable** (running as a subagent where nested agent spawning is blocked), skip the Agent call and conduct the research inline: use WebSearch and WebFetch to find the top 5 papers, then synthesize the comparison table yourself. Notify the user: "Note: ai-researcher agent could not be spawned in this context — conducting research inline."
@@ -106,7 +106,7 @@ Use the Grep tool to search the codebase for any existing related code:
 | ai-researcher | [score] | [gaps] |
 ```
 
-Write the full report to `_out/$(date +%Y)/$(date +%m)/output-research-$(date +%Y-%m-%d).md` using the Write tool — **do not print the full report to terminal**.
+Write the full report to `_outputs/$(date +%Y)/$(date +%m)/output-research-$(date +%Y-%m-%d).md` using the Write tool — **do not print the full report to terminal**.
 
 Then print a compact terminal summary:
 
@@ -118,7 +118,7 @@ Best method: [recommended approach / architecture]
 Key papers:  [top 2–3 papers with year]
 Gaps:        [what the research couldn't cover or needs runtime validation]
 Confidence:  [aggregate score] — [key gaps]
-→ saved to _out/YYYY/MM/output-research-[date].md
+→ saved to _outputs/YYYY/MM/output-research-[date].md
 ---
 ```
 
@@ -148,13 +148,13 @@ You are an ai-researcher teammate researching: [topic].
 Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your cluster: [method family N] (e.g., "attention-free architectures" vs "linear attention variants").
 Research the top 3 methods in your cluster: comparison table + recommendation given constraints.
-Write your full findings (comparison table, analysis, Confidence block) to `_out/$(date +%Y)/$(date +%m)/output-research-<teammate-name>-$(date +%Y-%m-%d).md` using the Write tool.
-Report completion with deltaT# HOOK:verify and include: papers=N recommendation="<method>" confidence=0.N file=_out/$(date +%Y)/$(date +%m)/output-research-<teammate-name>-<date>.md
+Write your full findings (comparison table, analysis, Confidence block) to `_outputs/$(date +%Y)/$(date +%m)/output-research-<teammate-name>-$(date +%Y-%m-%d).md` using the Write tool.
+Report completion with deltaT# HOOK:verify and include: papers=N recommendation="<method>" confidence=0.N file=_outputs/$(date +%Y)/$(date +%m)/output-research-<teammate-name>-<date>.md
 Compact Instructions: preserve paper titles, benchmarks, code links. Discard protocol handshakes.
 Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```
 
-Lead synthesizes by reading teammate file paths from their delta messages. For 3 teammates, spawn a consolidator ai-researcher agent: "Read the research files at [paths from deltas]. Synthesize into the Step 3 unified report structure. Write to `_out/$(date +%Y)/$(date +%m)/output-research-$(date +%Y-%m-%d).md`. Return ONLY: `papers=N best_method=<name> confidence=0.N file=<path>`"
+Lead synthesizes by reading teammate file paths from their delta messages. For 3 teammates, spawn a consolidator ai-researcher agent: "Read the research files at [paths from deltas]. Synthesize into the Step 3 unified report structure. Write to `_outputs/$(date +%Y)/$(date +%m)/output-research-$(date +%Y-%m-%d).md`. Return ONLY: `papers=N best_method=<name> confidence=0.N file=<path>`"
 
 ## Plan Mode
 
@@ -162,12 +162,12 @@ Produce a sequenced, dependency-ordered implementation plan from SOTA research f
 
 **Input detection** (parse the argument after `plan`):
 
-- No argument → **auto-detect**: use Glob (pattern `**/output-research-*.md`, path `_out/`) to find recent research outputs; exclude any path containing `-plan-` or `-codebase-`; sort by modification time descending; pick the most recent. Print `→ Using: <path>` to terminal before proceeding. If no file found, stop with: "No recent research output found — run `/research <topic>` first."
+- No argument → **auto-detect**: use Glob (pattern `**/output-research-*.md`, path `_outputs/`) to find recent research outputs; exclude any path containing `-plan-` or `-codebase-`; sort by modification time descending; pick the most recent. Print `→ Using: <path>` to terminal before proceeding. If no file found, stop with: "No recent research output found — run `/research <topic>` first."
 - Ends in `.md` → treat as path to an existing research output file; skip to Step R1-B
 
 ### Step R1: Gather research findings
 
-**R1-A — From fresh research**: After Steps 1–3 complete, read the generated `_out/.../output-research-<date>.md`. Extract: Recommendation section, Implementation Plan, Key Hyperparameters, Gotchas, and Integration with Current Codebase.
+**R1-A — From fresh research**: After Steps 1–3 complete, read the generated `_outputs/.../output-research-<date>.md`. Extract: Recommendation section, Implementation Plan, Key Hyperparameters, Gotchas, and Integration with Current Codebase.
 
 **R1-B — From existing output**: Read the file at the given path directly. Extract the same sections.
 
@@ -186,14 +186,14 @@ Analyze the current codebase to map the recommended method against existing code
 4. Flag conflicts: existing patterns that would need to change
 5. Estimate complexity per integration point (low/medium/high)
 
-Write your full analysis to `_out/$(date +%Y)/$(date +%m)/output-research-codebase-$(date +%Y-%m-%d).md` using the Write tool.
+Write your full analysis to `_outputs/$(date +%Y)/$(date +%m)/output-research-codebase-$(date +%Y-%m-%d).md` using the Write tool.
 Return ONLY a compact JSON envelope on your final line — nothing else after it:
-{"status":"done","integration_points":N,"conflicts":N,"file":"_out/YYYY/MM/output-research-codebase-<date>.md","confidence":0.N,"summary":"N integration points, N conflicts"}
+{"status":"done","integration_points":N,"conflicts":N,"file":"_outputs/YYYY/MM/output-research-codebase-<date>.md","confidence":0.N,"summary":"N integration points, N conflicts"}
 ```
 
 ### Step R3: Synthesize plan
 
-Read both files (research findings from R1 + codebase analysis from R2). Produce a phased plan and write it to `_out/$(date +%Y)/$(date +%m)/output-research-plan-$(date +%Y-%m-%d).md`:
+Read both files (research findings from R1 + codebase analysis from R2). Produce a phased plan and write it to `_outputs/$(date +%Y)/$(date +%m)/output-research-plan-$(date +%Y-%m-%d).md`:
 
 ```
 ## Implementation Roadmap: [method name]
@@ -242,7 +242,7 @@ Phases:      [N] phases, [M] tasks total
 Complexity:  [N low / M medium / K high]
 Top risk:    [one-line from risks table]
 Confidence:  [score] — [key gaps]
-→ saved to _out/YYYY/MM/output-research-plan-[date].md
+→ saved to _outputs/YYYY/MM/output-research-plan-[date].md
 ---
 ```
 

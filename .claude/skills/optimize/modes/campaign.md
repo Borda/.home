@@ -296,7 +296,7 @@ Update `state.json`: `iteration = i`, `status = running`.
 
 ### Step C6: Results report
 
-Write full report to `_out/$(date +%Y)/$(date +%m)/output-optimize-campaign-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
+Write full report to `_outputs/$(date +%Y)/$(date +%m)/output-optimize-campaign-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
 
 **Report structure:**
 
@@ -331,7 +331,7 @@ Iterations: <total>  Kept: <kept>  Reverted: <reverted>
 Baseline:   <metric_key> = <baseline>
 Best:       <metric_key> = <best> (<delta>% improvement, commit <sha>)
 Agent:      <agent type used>
-→ saved to _out/YYYY/MM/output-optimize-campaign-<date>.md
+→ saved to _outputs/YYYY/MM/output-optimize-campaign-<date>.md
 ---
 ```
 
@@ -376,7 +376,7 @@ ______________________________________________________________________
 3. Lead defines the run output directory and spawns 2–3 teammates (reasoning agents at `opus` per CLAUDE.md §Agent Teams), each assigned a different axis and a matching ideation agent type. Each teammate runs in an isolated worktree (`isolation: worktree`).
 
 ```bash
-RUN_DIR="_optimize/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR="_optimizations/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"
 ```
 

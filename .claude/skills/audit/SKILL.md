@@ -120,7 +120,7 @@ Record the full file list — this becomes the audit scope for Steps 3–4. Cros
 Set up the run directory once before spawning any agents:
 
 ```bash
-RUN_DIR="_audit/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR="_audits/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"
 echo "Run dir: $RUN_DIR"
 ```
@@ -727,7 +727,7 @@ fi
 
 **Severity**: **low** per stale entry (no functional impact, but expands permission surface unnecessarily). Fix: remove the stale entry from `settings.json` (report only — `settings.json` is never auto-edited per audit policy).
 
-**Important**: some allow entries intentionally grant broad patterns (e.g., `Bash(mkdir -p _audit/*)`) that do not appear verbatim in config files — they are exercised at runtime. Flag only entries whose command fragment appears nowhere in any `.claude/` file; entries where a partial substring match exists are not stale.
+**Important**: some allow entries intentionally grant broad patterns (e.g., `Bash(mkdir -p _audits/*)`) that do not appear verbatim in config files — they are exercised at runtime. Flag only entries whose command fragment appears nowhere in any `.claude/` file; entries where a partial substring match exists are not stale.
 
 ## Step 5: Aggregate and classify findings
 

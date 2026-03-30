@@ -119,13 +119,7 @@ Each mode file defines `<TARGET>`, `<DOMAIN>`, any N overrides, and extra instru
 
 ## Step 3: Collect results and print combined report
 
-**Health monitoring** — apply the protocol from CLAUDE.md §8. Run dir for liveness checks: `_calibrate/<TIMESTAMP>/<TARGET>/`. Constants below tighten the global defaults for this skill:
-
-Issue all subagents from both agents and skills in a **single response** — agents and skills are independent and run concurrently. One `general-purpose` subagent per target; do not wait for one to finish before spawning the next.
-
-Each subagent receives this self-contained prompt (substitute `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>` before spawning — set `<AB_MODE>` to `true` or `false`):
-
-______________________________________________________________________
+**Health monitoring** — apply the protocol from CLAUDE.md §8. Run dir for liveness checks: `_calibrations/<TIMESTAMP>/<TARGET>/`. Constants below tighten the global defaults for this skill:
 
 ```bash
 # Initialise checkpoints after all pipeline spawns
@@ -133,7 +127,7 @@ LAUNCH_AT=$(date +%s)
 for TARGET in <target-list>; do touch /tmp/calibrate-check-$TARGET; done
 
 # Every HEALTH_CHECK_INTERVAL_MIN (5 min): check each still-running pipeline
-NEW=$(find _calibrate/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')
+NEW=$(find _calibrations/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')
 touch /tmp/calibrate-check-$TARGET
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -gt 0 ]; then
@@ -141,7 +135,7 @@ if [ "$NEW" -gt 0 ]; then
 elif [ "$ELAPSED" -ge 10 ]; then
   echo "⏱ $TARGET TIMED OUT (hard limit)"
 elif [ "$ELAPSED" -ge 5 ]; then
-  OUTPUT_FILE="_calibrate/<TIMESTAMP>/$TARGET/pipeline.jsonl"
+  OUTPUT_FILE="_calibrations/<TIMESTAMP>/$TARGET/pipeline.jsonl"
   if tail -20 "$OUTPUT_FILE" 2>/dev/null | grep -qi 'delay\|wait\|slow'; then
     echo "⏸ $TARGET: extension granted (+5 min)"
   else
@@ -187,7 +181,7 @@ If `apply` was **not** set, print:
 
 ```
 → Review proposals above, then run `/calibrate <targets> [fast|full] apply` to apply them.
-→ Proposals saved to: _calibrate/<TIMESTAMP>/<TARGET>/proposal.md
+→ Proposals saved to: _calibrations/<TIMESTAMP>/<TARGET>/proposal.md
 ```
 
 If `apply` **was** set (benchmark + auto-apply mode), print `→ Auto-applying proposals now…` and proceed to Step 6.
@@ -198,7 +192,7 @@ Targets with verdict `calibrated` and no proposed changes get a single line: `�
 
 Append each target's result line to `.claude/logs/calibrations.jsonl` using native tools (no Bash needed):
 
-1. Use Glob (pattern `*/result.jsonl`, path `_calibrate/<TIMESTAMP>/`) to find all result files
+1. Use Glob (pattern `*/result.jsonl`, path `_calibrations/<TIMESTAMP>/`) to find all result files
 2. Read each result file with the Read tool
 3. Read `.claude/logs/calibrations.jsonl` (if it exists; use empty string if missing)
 4. Append the new lines and Write the combined content back to `.claude/logs/calibrations.jsonl`
@@ -227,15 +221,15 @@ Mark "Apply findings" in_progress.
 - Pure apply mode (only `apply`, no `fast`/`full`): find the most recent run:
 
 ```bash
-LATEST=$(ls -td _calibrate/*/ 2>/dev/null | head -1)
+LATEST=$(ls -td _calibrations/*/ 2>/dev/null | head -1)
 TIMESTAMP=$(basename "$LATEST")
 ```
 
-For each target in the target list, check whether `_calibrate/<TIMESTAMP>/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
+For each target in the target list, check whether `_calibrations/<TIMESTAMP>/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
 
 Print `⚠ No proposal found for <target> — run /calibrate <target> [fast|full] first` for each missing target.
 
-**Print the run's report before applying**: for each found target, read and print `_calibrate/<TIMESTAMP>/<target>/report.md` verbatim so the user sees the benchmark basis before any file is changed.
+**Print the run's report before applying**: for each found target, read and print `_calibrations/<TIMESTAMP>/<target>/report.md` verbatim so the user sees the benchmark basis before any file is changed.
 
 **Spawn one `general-purpose` subagent per found target. Issue ALL spawns in a single response — no waiting between spawns.**
 

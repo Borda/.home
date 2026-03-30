@@ -42,6 +42,8 @@ Failure type → Response
 > ```yaml
 > uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
 > ```
+>
+> To resolve a tag to its full SHA: `gh api repos/actions/checkout/git/ref/tags/v4 --jq '.object.sha'`
 
 ## Modern Python CI (uv + ruff + mypy + pytest)
 

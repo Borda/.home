@@ -544,13 +544,13 @@ Row 2:  🕵 5 agents (self-mentor ×3, opus, sw-engineer) │ 🤖 codex ×2 �
 Runtime artifacts live at the project root in `_<skill>/` dirs — separate from versioned config in `.claude/`. The `_` prefix sorts them together and signals "generated output, not source".
 
 ```
-_calibrate/          ← /calibrate benchmark runs
-_resolve/            ← /resolve lint+QA gate outputs
-_audit/              ← /audit analysis runs
-_review/             ← /review multi-agent outputs
-_optimize/           ← /optimize skill runs (perf + campaign modes)
-_develop/            ← /develop review-cycle handoffs
-_out/                ← long output from any skill (quality-gates rule)
+_calibrations/       ← /calibrate benchmark runs
+_resolutions/        ← /resolve lint+QA gate outputs
+_audits/             ← /audit analysis runs
+_reviews/            ← /review multi-agent outputs
+_optimizations/      ← /optimize skill runs (perf + campaign modes)
+_developments/       ← /develop review-cycle handoffs
+_outputs/                ← long output from any skill (quality-gates rule)
   YYYY/MM/
 tasks/_plans/        ← active and closed plans (tracked)
 tasks/_working/      ← lessons, diary, guides (tracked)

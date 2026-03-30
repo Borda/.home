@@ -79,7 +79,7 @@
         "hooks": [
           {
             "async": true,
-            "command": "find _calibrate _resolve _audit _review _optimize _develop -maxdepth 2 -name 'result.jsonl' -mtime +30 2>/dev/null | xargs -r dirname | xargs -r rm -rf; find _out -type f -mtime +30 2>/dev/null | xargs -r rm -f; find _out -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs -r rmdir",
+            "command": "find _calibrations _resolutions _audits _reviews _optimizations _developments -maxdepth 2 -name 'result.jsonl' -mtime +30 2>/dev/null | xargs -r dirname | xargs -r rm -rf; find _outputs -type f -mtime +30 2>/dev/null | xargs -r rm -f; find _outputs -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs -r rmdir",
             "type": "command"
           }
         ]
@@ -251,9 +251,6 @@
       "Bash(pip show:*)",
       "Bash(pip list:*)",
       "Bash(pip index:*)",
-      "Bash(pip3 show:*)",
-      "Bash(pip3 list:*)",
-      "Bash(pip3 index:*)",
       "Bash(pip-audit:*)",
       "Bash(uv run pytest:*)",
       "Bash(uv run python -m pytest:*)",
@@ -274,20 +271,20 @@
       "Bash(basename:*)",
       "Bash(dirname:*)",
       "Bash(node --check:*)",
-      "Bash(find _calibrate*)",
-      "Bash(find _resolve*)",
-      "Bash(find _audit*)",
-      "Bash(find _review*)",
-      "Bash(find _optimize*)",
-      "Bash(find _develop*)",
-      "Bash(find _out*)",
-      "Bash(mkdir -p _calibrate/*)",
-      "Bash(mkdir -p _resolve/*)",
-      "Bash(mkdir -p _audit/*)",
-      "Bash(mkdir -p _review/*)",
-      "Bash(mkdir -p _optimize/*)",
-      "Bash(mkdir -p _develop/*)",
-      "Bash(mkdir -p _out/*/*)",
+      "Bash(find _calibrations*)",
+      "Bash(find _resolutions*)",
+      "Bash(find _audits*)",
+      "Bash(find _reviews*)",
+      "Bash(find _optimizations*)",
+      "Bash(find _developments*)",
+      "Bash(find _outputs*)",
+      "Bash(mkdir -p _calibrations/*)",
+      "Bash(mkdir -p _resolutions/*)",
+      "Bash(mkdir -p _audits/*)",
+      "Bash(mkdir -p _reviews/*)",
+      "Bash(mkdir -p _optimizations/*)",
+      "Bash(mkdir -p _developments/*)",
+      "Bash(mkdir -p _outputs/*/*)",
       "Bash(codex:*)",
       "Bash(claude:*)",
       "Bash(node:*)",
@@ -319,7 +316,9 @@
     "deny": [
       "Bash(git branch -D:*)",
       "Bash(git branch -d:*)",
-      "Bash(git tag -d:*)"
+      "Bash(git tag -d:*)",
+      "Bash(curl -X DELETE:*)",
+      "Bash(curl --request DELETE:*)"
     ]
   },
   "statusLine": {

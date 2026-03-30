@@ -54,7 +54,7 @@
 //       across turns and must stay visible on the status line.
 //
 //   SessionEnd  (full session teardown)
-//     • Clears state/agents/, state/tools/, and state/codex/ completely.
+//     • Clears state/agents/, state/tools/, state/codex/, and state/queue/ completely.
 //     • Runs `git worktree prune` to remove stale worktree refs.
 //     • Removes any worktrees under .claude/worktrees/ older than 2 hours
 //       (orphaned by crashed agents or interrupted sessions).
@@ -232,6 +232,9 @@ process.stdin.on("end", () => {
         } catch (_) {}
       }
     } else if (hook_event_name === "UserPromptSubmit") {
+      // Deduplication lock — project and home settings.json both register this hook.
+      // Guard: if a lock for UserPromptSubmit exists and is < 500ms old, skip (duplicate fire).
+      if (isDuplicateEvent("UserPromptSubmit")) process.exit(0);
       // User submitted a message — write a queue marker so statusline shows pending count
       // Cleared on Stop (turn complete) or after 5 min safety-net in statusline.js
       try {
@@ -240,6 +243,11 @@ process.stdin.on("end", () => {
         fs.writeFileSync(path.join(queueDir, `${id}.json`), JSON.stringify({ since: ts }));
       } catch (_) {}
     } else if (hook_event_name === "Stop") {
+      // Deduplication lock — project and home settings.json both register this hook.
+      // Guard: if a lock for Stop exists and is < 500ms old, skip (duplicate fire).
+      // Without this, double-fire deletes two markers per turn — incorrectly consuming
+      // genuinely queued messages when the user sends while Claude is processing.
+      if (isDuplicateEvent("Stop")) process.exit(0);
       // End of turn — clear tool activity and queue markers (both are per-turn)
       // Agents intentionally NOT cleared — subagents can still be running across turns
       try {
@@ -251,16 +259,18 @@ process.stdin.on("end", () => {
         }
       } catch (_) {}
       try {
-        const qFiles = fs.readdirSync(queueDir);
-        for (const f of qFiles) {
+        // Delete only the OLDEST marker — it corresponds to the turn just processed.
+        // Any remaining markers are genuinely queued (submitted while this turn ran).
+        const qFiles = fs.readdirSync(queueDir).sort();
+        if (qFiles.length > 0) {
           try {
-            fs.unlinkSync(path.join(queueDir, f));
+            fs.unlinkSync(path.join(queueDir, qFiles[0]));
           } catch (_) {}
         }
       } catch (_) {}
     } else if (hook_event_name === "SessionEnd") {
       // Full session teardown — clear agents, tools, and codex sessions
-      for (const dir of [agentsDir, toolsDir, codexDir]) {
+      for (const dir of [agentsDir, toolsDir, codexDir, queueDir]) {
         try {
           const files = fs.readdirSync(dir);
           for (const f of files) {
@@ -297,6 +307,22 @@ process.stdin.on("end", () => {
   }
   process.exit(0);
 });
+
+// isDuplicateEvent — deduplication guard for events that fire from both project and home
+// settings.json (e.g. UserPromptSubmit, Stop). Uses a per-event lock file in /tmp with a
+// 500ms TTL. The first instance creates the lock and proceeds; the second finds a fresh lock
+// and exits 0 silently. Genuine subsequent events (seconds later) are unaffected.
+function isDuplicateEvent(eventName) {
+  const lockFile = `/tmp/task-log-lock-${eventName}.lock`;
+  try {
+    const lockStat = fs.statSync(lockFile);
+    if (Date.now() - lockStat.mtimeMs < 500) return true; // duplicate — skip
+  } catch (_) {} // lock absent — first instance, proceed
+  try {
+    fs.writeFileSync(lockFile, String(process.pid));
+  } catch (_) {}
+  return false;
+}
 
 function readAgentInfo(root, agentType) {
   if (!agentType || agentType === "unknown") return { model: "inherit", color: null };

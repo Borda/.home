@@ -112,11 +112,11 @@ Read docs/specs/<spec-file>. Audit for spec quality only:
 - Scope creep: does the Proposed design exceed the stated Goal?
 - Placeholders: any "[TBD]" or "[TODO]" that must be filled before approval?
 When scoring confidence: the score reflects capability certainty on the spec as written; document context-dependent assumptions (e.g., project norms) in Gaps rather than deflating the score.
-Write your full findings to `_out/$(date +%Y)/$(date +%m)/output-brainstorm-review-<ts>.md` using the Write tool.
+Write your full findings to `_outputs/$(date +%Y)/$(date +%m)/output-brainstorm-review-<ts>.md` using the Write tool.
 Return ONLY a compact JSON envelope: {"status":"done","findings":N,"file":"<path>","confidence":0.N,"summary":"<one-line>"}
 ```
 
-If `findings > 0`: address them (revise the spec, re-run the review) before proceeding to Step 6.
+If `findings > 0`: revise the spec to address the findings and loop back to Step 5 (max 2 revision cycles total). After 2 cycles with remaining findings, surface unresolved issues to the user and proceed to Step 6 anyway.
 
 ## Step 6: Present and gate
 

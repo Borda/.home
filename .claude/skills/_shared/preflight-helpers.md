@@ -1,35 +1,58 @@
-# Shared Pre-flight Helpers
+# Preflight Helpers
 
-Skills that need to verify binary or environment prerequisites before running should use this caching pattern instead of bare `which`/`command -v` calls.
+TTL-based binary availability caching for skill pre-flight checks. Results are cached for 4 hours (14400 seconds) per binary name under `.claude/state/preflight/`. Avoids repeated `command -v` calls across checks within the same session.
 
-## Pattern
+## Functions
 
 ```bash
-# Paste at the top of any Step 0 / Step 1 block that uses pre-flight checks
+# Returns 0 (true) if binary $1 passed preflight within the last 4 hours
 preflight_ok()  { local f=".claude/state/preflight/$1.ok"; [ -f "$f" ] && [ $(( $(date +%s) - $(cat "$f") )) -lt 14400 ]; }
+
+# Records a passing preflight result for binary $1 at the current timestamp
 preflight_pass(){ mkdir -p .claude/state/preflight; date +%s > ".claude/state/preflight/$1.ok"; }
 ```
 
-**TTL**: 4 hours (14400 seconds). Binary presence on PATH does not change within a normal session.
+Cache files are written to `.claude/state/preflight/<binary>.ok` and contain a Unix timestamp. The 4-hour TTL check handles staleness — no manual cleanup needed.
 
-**Usage** — replace a bare check with a cached one:
+## Usage
+
+Check a binary and optionally skip a step if it is unavailable:
 
 ```bash
-# Before
-which gh || { echo "gh not found"; exit 1; }
-
-# After
-preflight_ok gh || which gh || { echo "gh not found"; exit 1; }
-preflight_pass gh
+if preflight_ok jq; then
+  JQ_AVAILABLE=true
+elif command -v jq &>/dev/null; then
+  preflight_pass jq; JQ_AVAILABLE=true
+else
+  printf "⚠ MISSING: jq not found — skipping check\n"
+  JQ_AVAILABLE=false
+fi
 ```
 
-The cache is per-working-directory (`.claude/state/preflight/` is relative to the project root). If a skill runs in a different repo, it gets its own cache.
+Warning-only form (absence is non-fatal):
+
+```bash
+if ! preflight_ok git && ! command -v git &>/dev/null; then
+  printf "⚠ MISSING: git not found\n"
+else
+  preflight_ok git || preflight_pass git
+fi
+```
+
+Combined check-and-run pattern (inline pass on first use):
+
+```bash
+if (preflight_ok pre-commit || { command -v pre-commit &>/dev/null && preflight_pass pre-commit; }) \
+    && [ -f .pre-commit-config.yaml ]; then
+  pre-commit run --all-files
+fi
+```
 
 ## Key Registry
 
 | Key          | Check                                        | Used by            |
 | ------------ | -------------------------------------------- | ------------------ |
-| `git`        | `git rev-parse --git-dir` — git repo present | `codex`, `audit`   |
+| `git`        | `command -v git` — git on PATH               | `codex`, `audit`   |
 | `codex`      | `which codex` — Codex CLI on PATH            | `codex`, `resolve` |
 | `gh`         | `which gh` — GitHub CLI on PATH              | `resolve`          |
 | `jq`         | `command -v jq` — jq on PATH                 | `audit`            |
@@ -38,8 +61,6 @@ The cache is per-working-directory (`.claude/state/preflight/` is relative to th
 **Update this table** when adding a new cacheable check to any skill.
 
 ## What NOT to Cache
-
-Some checks look stable but are not — never cache these:
 
 - `gh auth status` — validates token against GitHub API; token can expire
 - `git status --porcelain` — live working-tree state, changes constantly
