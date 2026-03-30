@@ -96,22 +96,23 @@ Agents and skills for [Claude Code](https://claude.ai/code) (Anthropic's AI codi
 
 Skills are multi-agent workflows invoked via slash commands. Each skill composes several agents in a defined topology.
 
-| Skill          | What It Does                                                                                                                                                                                  |
-| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**     | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts comment                                                                                                 |
-| **analyse**    | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                       |
-| **brainstorm** | Interactive spec: clarifying questions → approaches → spec → self-mentor review → approval gate                                                                                               |
-| **develop**    | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                    |
-| **resolve**    | Resolve PR conflicts or apply review comments via Codex                                                                                                                                       |
-| **calibrate**  | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                      |
-| **audit**      | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                |
-| **release**    | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                      |
-| **research**   | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                   |
-| **optimize**   | Four modes: `plan` = config wizard → `program.md`; `campaign` = metric-driven iteration loop; `resume` = continue after crash; `perf` = profiling deep-dive; `--team` and `--colab` supported |
-| **manage**     | Create, update (content-edit or rename), delete agents/skills/rules with auto type-detection and cross-ref propagation                                                                        |
-| **sync**       | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                                                                  |
-| **codex**      | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                 |
-| **distill**    | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                       |
+| Skill           | What It Does                                                                                                                                                                                  |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **review**      | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts comment                                                                                                 |
+| **analyse**     | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                       |
+| **brainstorm**  | Interactive spec: clarifying questions → approaches → spec → self-mentor review → approval gate                                                                                               |
+| **develop**     | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                    |
+| **resolve**     | Resolve PR conflicts or apply review comments via Codex                                                                                                                                       |
+| **calibrate**   | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                      |
+| **audit**       | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                |
+| **release**     | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                      |
+| **research**    | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                   |
+| **optimize**    | Four modes: `plan` = config wizard → `program.md`; `campaign` = metric-driven iteration loop; `resume` = continue after crash; `perf` = profiling deep-dive; `--team` and `--colab` supported |
+| **manage**      | Create, update (content-edit or rename), delete agents/skills/rules with auto type-detection and cross-ref propagation                                                                        |
+| **sync**        | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                                                                  |
+| **codex**       | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                 |
+| **investigate** | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                               |
+| **distill**     | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                       |
 
 → Full command reference, orchestration flows, rules (11 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
 

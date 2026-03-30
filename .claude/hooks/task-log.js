@@ -43,8 +43,13 @@
 //       modified file paths, and writes state/session-context.md — a lightweight
 //       breadcrumb that survives context compaction and is re-read at session resume.
 //
+//   UserPromptSubmit
+//     • Writes a marker file to state/queue/ so statusline.js can show 📨 N on Line 1
+//       when the user has inputs queued while Claude is processing a prior turn.
+//
 //   Stop  (end of Claude's turn)
 //     • Clears state/tools/ so the 🔧 line resets between turns.
+//     • Clears state/queue/ — the queued message was just consumed.
 //       Agents are intentionally NOT cleared here — subagents can still be running
 //       across turns and must stay visible on the status line.
 //
@@ -60,6 +65,7 @@
 //   .claude/state/agents/<id>.json      — one file per active subagent
 //   .claude/state/codex/<id>.json       — one file per active /codex skill session
 //   .claude/state/tools/<tool>.json     — one file per tool type, current turn only
+//   .claude/state/queue/<ts>.json       — one file per pending user input (cleared on Stop)
 //   .claude/state/session-context.md    — modified-files breadcrumb for compaction
 //
 // EXIT CODES
@@ -84,6 +90,7 @@ process.stdin.on("end", () => {
     const agentsDir = path.join(stateDir, "agents");
     const toolsDir = path.join(stateDir, "tools");
     const codexDir = path.join(stateDir, "codex");
+    const queueDir = path.join(stateDir, "queue");
     const logFile = path.join(logsDir, "invocations.jsonl");
     const compactFile = path.join(logsDir, "compactions.jsonl");
 
@@ -224,14 +231,30 @@ process.stdin.on("end", () => {
           fs.writeFileSync(path.join(stateDir, "session-context.md"), lines.join("\n") + "\n");
         } catch (_) {}
       }
+    } else if (hook_event_name === "UserPromptSubmit") {
+      // User submitted a message — write a queue marker so statusline shows pending count
+      // Cleared on Stop (turn complete) or after 5 min safety-net in statusline.js
+      try {
+        fs.mkdirSync(queueDir, { recursive: true });
+        const id = ts.replace(/[:.]/g, "-");
+        fs.writeFileSync(path.join(queueDir, `${id}.json`), JSON.stringify({ since: ts }));
+      } catch (_) {}
     } else if (hook_event_name === "Stop") {
-      // End of turn — clear tool activity only (tools are per-turn; agents persist across turns
-      // while subagents are running and must NOT be wiped here or they disappear from statusline)
+      // End of turn — clear tool activity and queue markers (both are per-turn)
+      // Agents intentionally NOT cleared — subagents can still be running across turns
       try {
         const files = fs.readdirSync(toolsDir);
         for (const f of files) {
           try {
             fs.unlinkSync(path.join(toolsDir, f));
+          } catch (_) {}
+        }
+      } catch (_) {}
+      try {
+        const qFiles = fs.readdirSync(queueDir);
+        for (const f of qFiles) {
+          try {
+            fs.unlinkSync(path.join(queueDir, f));
           } catch (_) {}
         }
       } catch (_) {}

@@ -8,7 +8,7 @@
 //
 // OUTPUT FORMAT
 //   Line 1 — session metadata:
-//     <model>  <project-dir>  <billing>  <context-bar pct%>
+//     <model>  <project-dir>  <billing>  <context-bar pct%>  [📨 N when queue > 0]
 //
 //   Line 2 — runtime activity (always shown, "none" when idle):
 //     🕵 N agent(s) (<type> [×N], …)  │  🤖 <codex>  │  🔧 <tools>
@@ -134,7 +134,25 @@ process.stdin.on("end", () => {
       parts.push(`\x1b[${color}m${bar} ${Math.round(pct)}%\x1b[0m`);
     }
 
-    const now = Date.now(); // shared by agents and tools sections
+    const now = Date.now(); // shared by agents, tools, and queue sections
+
+    // Line 1 — queue badge (📨 N) — shown only when pending user inputs exist
+    try {
+      const queueDir = path.join(workspace?.current_dir || process.cwd(), ".claude/state/queue");
+      const MAX_QUEUE_AGE_MS = 5 * 60 * 1000; // 5 min — matches CLAUDE.md §8 health monitoring interval
+      const queueFiles = fs.readdirSync(queueDir).filter((f) => f.endsWith(".json"));
+      const pending = queueFiles.filter((f) => {
+        try {
+          const q = JSON.parse(fs.readFileSync(path.join(queueDir, f), "utf8"));
+          return !q.processed_at && (!q.since || now - new Date(q.since).getTime() < MAX_QUEUE_AGE_MS);
+        } catch (_) {
+          return false;
+        }
+      });
+      if (pending.length > 0) {
+        parts.push(`\x1b[33m📨 ${pending.length}\x1b[0m`); // yellow — matches codex segment color
+      }
+    } catch (_) {}
 
     // Line 2 — agents (always shown, even when 0)
     try {

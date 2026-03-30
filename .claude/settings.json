@@ -158,6 +158,16 @@
           }
         ]
       }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/task-log.js",
+            "type": "command"
+          }
+        ]
+      }
     ]
   },
   "model": "opusplan",

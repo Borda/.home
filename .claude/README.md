@@ -496,11 +496,11 @@ Agent Teams is Claude Code's experimental multi-agent feature. Teams are always 
 A lightweight hook (`hooks/statusline.js`) adds a persistent two-row status bar to every Claude Code session:
 
 ```
-Row 1:  claude-sonnet-4-6 │ Borda.ai-home │ Pro ~$1.20 │ ████░░░░░░ 38%
+Row 1:  claude-sonnet-4-6 │ Borda.ai-home │ Pro ~$1.20 │ ████░░░░░░ 38% │ 📨 2
 Row 2:  🕵 5 agents (self-mentor ×3, opus, sw-engineer) │ 🤖 codex ×2 │ 🔧 Bash ×3 · Edit · Read ×12
 ```
 
-**Row 1** — model name · project directory · billing indicator · 10-segment context bar (green → yellow → red)
+**Row 1** — model name · project directory · billing indicator · 10-segment context bar (green → yellow → red) · pending input queue badge `📨 N` (yellow; only shown when N ≥ 1)
 
 **Row 2** — agent count · Codex sessions · active tools (last 30 seconds)
 
@@ -518,7 +518,7 @@ Row 2:  🕵 5 agents (self-mentor ×3, opus, sw-engineer) │ 🤖 codex ×2 �
 - **Subscription (Pro/Max):** `Max/Pro/Sub ~$X.XX` in cyan — plan from `~/.claude/state/subscription.json`; `~$X.XX` is theoretical API-rate cost (tokens × list price), not an actual charge
 - **API key:** `API $X.XX` in yellow — actual spend at pay-per-token rates
 
-**Hook mechanics:** `statusline.js` reads `state/agents/`, `state/codex/`, and `state/tools/` on each render. `task-log.js` writes those files; `statusline.js` only reads. Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
+**Hook mechanics:** `statusline.js` reads `state/agents/`, `state/codex/`, `state/tools/`, and `state/queue/` on each render. `task-log.js` writes those files (including `UserPromptSubmit` → queue markers, `Stop` → queue drain); `statusline.js` only reads. Configured via `statusLine` in `settings.json`. Zero external dependencies — stdlib `path` and `fs` only.
 
 ## 🤝 Integration with Codex
 
