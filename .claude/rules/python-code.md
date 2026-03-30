@@ -56,8 +56,9 @@ def old_fn(*args, **kwargs):
 
 ## PyTorch AMP
 
-- `torch.cuda.amp.autocast` deprecated in PyTorch 2.4
-- Use `torch.amp.autocast('cuda', ...)` and `torch.amp.GradScaler('cuda')`
+- `torch.cuda.amp.autocast` deprecated since PyTorch 2.4 — stable replacement:
+  `torch.amp.autocast('cuda', ...)` and `torch.amp.GradScaler('cuda')`
+  (verify current stable release at pytorch.org before citing specific versions)
 
 ## Security
 

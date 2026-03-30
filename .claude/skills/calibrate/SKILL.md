@@ -18,7 +18,7 @@ Calibration data drives the improvement loop: systematic gaps become instruction
 - **$ARGUMENTS**: `{all|agents|skills|routing|communication|<name>} [fast|full] [ab] [apply]`
 
   - **Target** (first token — defaults to `all`):
-    - `all` — all agents + all calibratable skills (`/audit`, `/review`) + routing + communication + rules
+    - `all` — all agents + relevant skills + routing + communication + all rules (i.e., everything)
     - `agents` — all agents only
     - `skills` — calibratable skills only (`/audit`, `/review`)
     - `routing` — routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts (not a per-agent quality benchmark; included in `all`)
@@ -127,14 +127,14 @@ LAUNCH_AT=$(date +%s)
 for TARGET in <target-list>; do touch /tmp/calibrate-check-$TARGET; done
 
 # Every HEALTH_CHECK_INTERVAL_MIN (5 min): check each still-running pipeline
-NEW=$(find _calibrations/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')
+NEW=$(find _calibrations/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')  # tr -d strips leading spaces from wc -l on macOS
 touch /tmp/calibrate-check-$TARGET
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -gt 0 ]; then
   echo "✓ $TARGET active"
-elif [ "$ELAPSED" -ge 10 ]; then
+elif [ "$ELAPSED" -ge "$PIPELINE_TIMEOUT_MIN" ]; then
   echo "⏱ $TARGET TIMED OUT (hard limit)"
-elif [ "$ELAPSED" -ge 5 ]; then
+elif [ "$ELAPSED" -ge "$HEALTH_CHECK_INTERVAL_MIN" ]; then
   OUTPUT_FILE="_calibrations/<TIMESTAMP>/$TARGET/pipeline.jsonl"
   if tail -20 "$OUTPUT_FILE" 2>/dev/null | grep -qi 'delay\|wait\|slow'; then
     echo "⏸ $TARGET: extension granted (+5 min)"
@@ -144,7 +144,7 @@ elif [ "$ELAPSED" -ge 5 ]; then
 fi
 ```
 
-**On timeout**: read `tail -100 <output_file>` for partial JSON; if none use: `{"target":"<TARGET>","verdict":"timed_out","mean_recall":null,"gaps":["pipeline timed out at 10 min — re-run individually with /calibrate <target> fast"]}`. Timed-out targets appear in the report with ⏱ prefix and null metrics.
+**On timeout**: read `tail -100 <output_file>` for partial JSON; if none use: `{"target":"<TARGET>","verdict":"timed_out","mean_recall":null,"gaps":["pipeline timed out — re-run individually with /calibrate <target> fast"]}`. Timed-out targets appear in the report with ⏱ prefix and null metrics.
 
 After all pipeline subagents have completed or timed out: mark "Calibrate agents", "Calibrate skills", "Calibrate routing", "Calibrate communication", and "Calibrate rules" completed (whichever ran). Mark "Analyse and report" in_progress. Parse the compact JSON summary from each.
 
@@ -249,7 +249,7 @@ For each change:
 
 After processing all changes return **only** this compact JSON:
 
-`{"target":"<TARGET>","applied":N,"skipped":N}`
+`{"status":"done","target":"<TARGET>","applied":N,"skipped":N,"file":"<AGENT_FILE>","summary":"Applied N, skipped N changes to <AGENT_FILE>"}`
 
 ______________________________________________________________________
 
@@ -290,7 +290,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **`apply` semantics**: `fast apply` / `full apply` = run fresh benchmark then auto-apply the new proposals in one go. `apply` alone (no `fast`/`full`) = apply proposals from the most recent past run without re-running the benchmark.
 - **Stale proposals**: `apply` uses verbatim text matching (`old_string` = **Current** from proposal). If the agent file was edited between the benchmark run and `apply`, any change whose **Current** text no longer matches is skipped with a warning — no silent clobbering of intermediate edits.
 - **`routing` target vs `/audit` Check 12**: `/audit` Check 12 performs static analysis of description overlap (finds potential confusion zones); `/calibrate routing` tests behavioral impact — it generates real routing decisions and measures whether descriptions actually disambiguate. Run in sequence: `/audit` first (fast, structural), then `/calibrate routing` (behavioral, slower). They are complementary, not redundant.
-- **`routing`, `communication`, `rules` in `all`**: all three modes are included in `all` — `all` truly means all modes. Use explicit targets (`routing`, `communication`, `rules`) only when you want to run a specific mode in isolation.
+- **`routing`, `communication`, `rules` in `all`**: see the `all` entry in `<inputs>` for the authoritative definition — use explicit targets only when running a single mode in isolation.
 - Follow-up chains:
   - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement — stop and escalate to user if recall is still < 0.70 after this cycle (max 1 apply cycle per run)
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
@@ -298,8 +298,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - Recommended cadence: run before and after any significant agent instruction change; run `/calibrate routing` after any agent description change; run `/calibrate communication` after any protocol or handoff change
 - **Internal Quality Loop suppressed during benchmarking**: the Phase 2 prompt explicitly tells target agents not to self-review before answering. This ensures calibration measures raw instruction quality — not the `(agent + loop)` composite. If the loop were enabled, it would inflate both recall and confidence by an unknown ratio, masking real instruction gaps and making it impossible to attribute improvement to instruction changes vs. the loop self-correcting at inference time.
 - **Skill-creator complement**: Trigger accuracy and A/B description testing are not yet implemented — a future skill-creator skill from Anthropic would own this domain; run `/calibrate` for quality and recall.
-- **A/B mode rationale**: every specialized agent adds system-prompt tokens — if a `general-purpose` subagent matches its recall and F1, the specialization adds no value. `ab` mode quantifies this gap per-target. `significant` (Δ>0.10) confirms the agent's domain depth earns its cost; `marginal` (0.05–0.10) suggests instruction improvements may help; `none` (\<0.05) signals the agent's current instructions add no measurable lift over a vanilla agent. Token cost is informational (logged in scores.json) but not part of the verdict — prioritize recall/F1 delta as the primary signal.
-- **A/B blind spot — role-specificity beyond recall**: for any agent whose domain is well-covered by general training data, `none` AB verdict does NOT mean "retire the agent". Their specialization shows up in severity accuracy, output actionability, token efficiency, and scope discipline — not recall alone. A `none` ΔRecall result paired with positive ΔSevAcc, ΔFmt, and negative ΔTokens still confirms the specialist earns its cost.
+- **A/B interpretation**: every specialized agent adds system-prompt tokens — if a `general-purpose` subagent matches its recall and F1, the specialization adds no value. `ab` mode quantifies this gap per-target. `significant` (Δ>0.10) confirms the agent's domain depth earns its cost; `marginal` (0.05–0.10) suggests instruction improvements may help; `none` (\<0.05) signals the agent's current instructions add no measurable lift over a vanilla agent. Token cost is informational (logged in scores.json) but not part of the verdict — prioritize recall/F1 delta as the primary signal. Role-specificity caveat: for agents whose domain is well-covered by general training data, `none` ΔRecall does NOT mean "retire the agent" — specialization shows up in ΔSevAcc, ΔFmt, and ΔTokens even when ΔRecall ≈ 0; positive ΔSevAcc/ΔFmt combined with negative ΔTokens still confirms the specialist earns its cost.
 - **AB mode nesting**: Phase 2b spawns `general-purpose` baseline agents inside the pipeline subagent. Phase 3 spawns `general-purpose` scorer agents inside the same pipeline subagent. All at 2 levels (main → pipeline → agents) — no additional depth.
 - **Mode files**: domain tables and mode-specific spawn instructions live in `modes/agents.md`, `modes/skills.md`, `modes/routing.md`, `modes/communication.md`, `modes/rules.md`. Add a new target mode by creating a new file in `modes/` and adding a row to the Step 2 dispatch table.
 

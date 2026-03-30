@@ -111,10 +111,11 @@ Read docs/specs/<spec-file>. Audit for spec quality only:
 - Ambiguity: any section vague enough that two implementers would build different things?
 - Scope creep: does the Proposed design exceed the stated Goal?
 - Placeholders: any "[TBD]" or "[TODO]" that must be filled before approval?
-When scoring confidence: the score reflects capability certainty on the spec as written; document context-dependent assumptions (e.g., project norms) in Gaps rather than deflating the score.
-Write your full findings to `_outputs/$(date +%Y)/$(date +%m)/output-brainstorm-review-<ts>.md` using the Write tool.
+First run `date +%Y` and `date +%m` via Bash to construct the output path, then write your full findings to `_outputs/<YYYY>/<MM>/output-brainstorm-review-<ts>.md` using the Write tool (replace <YYYY>, <MM>, <ts> with the resolved values).
 Return ONLY a compact JSON envelope: {"status":"done","findings":N,"file":"<path>","confidence":0.N,"summary":"<one-line>"}
 ```
+
+**Passive health monitoring**: the Agent tool is synchronous — Claude awaits self-mentor's response natively. If self-mentor does not return within 15 min (Claude Code's internal timeout), surface any partial output already written to `_outputs/` with a ⏱ marker and continue to Step 6 with an incomplete review noted.
 
 If `findings > 0`: revise the spec to address the findings and loop back to Step 5 (max 2 revision cycles total). After 2 cycles with remaining findings, surface unresolved issues to the user and proceed to Step 6 anyway.
 
@@ -126,7 +127,7 @@ Show the spec path and a one-paragraph summary of the spec. Then call `AskUserQu
 - (b) Needs changes — describe what to revise
 - (c) Start over — back to clarifying questions
 
-**Gate**: do not exit until the user approves. On (b): revise the spec and loop back to Step 5. On (c): loop back to Step 2.
+**Gate**: do not exit until the user approves. On (b): revise the spec and loop back to Step 5. On (c): loop back to Step 2. (max 3 approval cycles — after 3 (b) rejection responses with no convergence, surface unresolved concerns to user and stop rather than looping again.)
 
 On approval suggest the natural next step based on what the spec targets:
 

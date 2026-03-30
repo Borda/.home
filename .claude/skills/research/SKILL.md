@@ -23,6 +23,11 @@ This skill is NOT for deep single-paper analysis or experiment design — use th
 
 </inputs>
 
+<constants>
+HARD_CUTOFF: 900   # 15 min — if ai-researcher does not return, surface partial results from _outputs/
+EXTENSION:   300   # one +5 min extension if output file explains the delay
+</constants>
+
 <workflow>
 
 **Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase — paper collection, ai-researcher analysis, and report generation. Mark in_progress/completed throughout.
@@ -51,6 +56,8 @@ Write your full findings (comparison table, paper analysis, recommendation, impl
 Then return ONLY a compact JSON envelope on your final line — nothing else after it:
 {"status":"done","papers":N,"recommendation":"<method name>","file":"_outputs/YYYY/MM/output-research-agent-<date>.md","confidence":0.N}
 ```
+
+**Health monitoring** — the Agent tool is synchronous; Claude awaits the ai-researcher response natively (no Bash checkpoint available in this skill). If ai-researcher does not return within `$HARD_CUTOFF` seconds (~15 min), use the Read tool to surface any partial results already written to `_outputs/` and continue with what was found; mark timed-out agents with ⏱ in the report. Grant one `$EXTENSION` extension if the output file explains the delay.
 
 **If the Agent tool is unavailable** (running as a subagent where nested agent spawning is blocked), skip the Agent call and conduct the research inline: use WebSearch and WebFetch to find the top 5 papers, then synthesize the comparison table yourself. Notify the user: "Note: ai-researcher agent could not be spawned in this context — conducting research inline."
 

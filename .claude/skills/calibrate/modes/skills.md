@@ -1,3 +1,5 @@
+<!-- Step 1 in SKILL.md dispatches to this mode file. Steps here continue from Step 2. -->
+
 ## Mode: skills
 
 ### Domain table
@@ -22,4 +24,6 @@ Each subagent receives the pipeline template from `.claude/skills/calibrate/temp
 - `<MODE>` = `fast` or `full`
 - `<AB_MODE>` = `true` or `false`
 
-Run dir per skill: `.claude/calibrate/runs/<TIMESTAMP>/<TARGET>/` (strip `/` from target name for the dir)
+Only skills with deterministic, measurable outputs are currently calibrated. Orchestration-heavy or context-dependent skills (e.g. `codex`, `resolve`, `manage`) are excluded because their ground truth cannot be established synthetically without significant test infrastructure.
+
+Run dir per skill: `_calibrations/<TIMESTAMP>/<TARGET>/` (strip `/` from target name for the dir, e.g. `audit` or `review`)

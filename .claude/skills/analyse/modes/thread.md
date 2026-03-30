@@ -58,7 +58,7 @@ gh pr list --state all --search "$TITLE" --json number,title,state --limit 30 \
 gh api graphql -f query='
   query($owner:String!,$repo:String!){
     repository(owner:$owner,name:$repo){
-      discussions(first:20,orderBy:{field:UPDATED_AT,direction:DESC}){
+      discussions(first:100,orderBy:{field:UPDATED_AT,direction:DESC}){
         nodes { number title closed }
       }
     }
@@ -162,13 +162,14 @@ _Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 [Critical / High / Medium / Low] — [rationale]  ← omit for discussions
 ````
 
-Write the full report to `tasks/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md` using the
+Run `mkdir -p _analyses/thread` then write the full report to
+`_analyses/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md` using the
 Write tool — **do not print the full analysis to terminal**.
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md`
 — use the **Issue Summary** template. Replace `[skill-specific path]` with
-`tasks/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`.
+`_analyses/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`.
 
-**⛔ DO NOT STOP — `REPLY_MODE=true`**: Skip the Confidence block entirely. Proceed
+**⛔ DO NOT STOP — `REPLY_MODE=true`**: Skip the Confidence block here — it is emitted in SKILL.md Step 5 after the reply, or as the last step of SKILL.md if not in reply mode. Proceed
 **immediately** to the "Draft contributor reply" section in SKILL.md. Your response is not
 complete until you have spawned oss-shepherd and written the reply file.

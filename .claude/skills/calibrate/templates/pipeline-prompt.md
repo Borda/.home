@@ -94,7 +94,13 @@ Write merged array to `_calibrations/<TIMESTAMP>/<TARGET>/problems.json`.
 
 ### Phase 2 — Run target on each problem (parallel)
 
-Spawn one `<TARGET>` named subagent per problem using the **Agent tool** — never via Bash or CLI. Issue ALL spawns in a **single response** — no waiting between spawns.
+Spawn one `<TARGET>` named subagent per problem using the **Agent tool** — never via Bash or CLI.
+
+```bash
+touch /tmp/calibrate-<TARGET>-phase2-<TIMESTAMP>
+```
+
+Issue ALL spawns in a **single response** — no waiting between spawns.
 
 The prompt for each subagent is exactly:
 
@@ -102,7 +108,7 @@ The prompt for each subagent is exactly:
 >
 > `<input from that problem>`
 >
-> End your response with a `## Confidence` block: **Score**: 0.N (high >=0.9 / moderate 0.7-0.9 / low \<0.7) and **Gaps**: what limited thoroughness.
+> End your response with a `## Confidence` block: **Score**: 0.N (high >=0.9 / moderate 0.8-0.9 / low \<0.8) and **Gaps**: what limited thoroughness.
 >
 > Do not self-review or refine before answering — report your initial analysis directly.
 >
@@ -110,15 +116,21 @@ The prompt for each subagent is exactly:
 
 **Context discipline**: subagents write to disk and return a single-line acknowledgment. The pipeline agent must NOT accumulate their full analyses in its context — scorers read from disk in Phase 3. Receiving only `Wrote: <problem_id>` per agent is correct and expected.
 
-**Phase timeout**: after 5 min of no acknowledgment, run `tail -20 _calibrations/<TIMESTAMP>/<TARGET>/response-<problem_id>.md` — if output shows active progress, grant one +5-min extension. Hard cutoff at 15 min of no new file activity: mark that problem as `{"timed_out": true}` in scores.json and proceed. Never block indefinitely on a single response.
+**Phase timeout**: after 5 min of no acknowledgment, run `find _calibrations/<TIMESTAMP>/<TARGET>/ -newer /tmp/calibrate-<TARGET>-phase2-<TIMESTAMP> -name "response-*.md" | wc -l` — non-zero = alive, grant one +5-min extension. Hard cutoff at 15 min of no new file activity: mark that problem as `{"timed_out": true}` in scores.json and proceed. Never block indefinitely on a single response.
 
 For **skill targets** (target starts with `/`): spawn a `general-purpose` subagent with the skill's SKILL.md content prepended as context, running against the synthetic input from the problem. Apply the same write-and-acknowledge pattern.
 
 ### Phase 2b — Run general-purpose baseline (skip if AB_MODE is false)
 
-Spawn one `general-purpose` subagent per problem using the **identical prompt** as Phase 2 (same task_prompt + input + Confidence instruction), plus the same write-and-acknowledge suffix pointing to `response-<problem_id>-general.md`. Issue ALL spawns in a **single response** — no waiting between spawns.
+Spawn one `general-purpose` subagent per problem using the **identical prompt** as Phase 2 (same task_prompt + input + Confidence instruction), plus the same write-and-acknowledge suffix pointing to `response-<problem_id>-general.md`.
 
-**Phase timeout**: same protocol as Phase 2 — 5-min check with one +5-min extension if progress is evident; 15-min hard cutoff; proceed with partial baseline data if any response hangs.
+```bash
+touch /tmp/calibrate-<TARGET>-phase2b-<TIMESTAMP>
+```
+
+Issue ALL spawns in a **single response** — no waiting between spawns.
+
+**Phase timeout**: after 5 min, run `find _calibrations/<TIMESTAMP>/<TARGET>/ -newer /tmp/calibrate-<TARGET>-phase2b-<TIMESTAMP> -name "response-*-general.md" | wc -l` — non-zero = alive, grant one +5-min extension; 15-min hard cutoff; proceed with partial baseline data if any response hangs.
 
 ### Phase 3a — Score responses via Claude scorers (parallel)
 
@@ -160,7 +172,7 @@ Collect the compact JSON from each Claude scorer. **Do not write scores.json yet
 
 ### Phase 3b — Score responses via Codex (skip when CODEX_AVAILABLE=false)
 
-For each problem, run one Codex scoring call via Bash. Run these **sequentially** (not parallel — Codex runs as a subprocess):
+For each problem, run one Codex scoring call via Bash. Run these **sequentially** (not parallel — Codex runs as a subprocess): <!-- sequential: Codex subprocess shares a single shell session; parallel invocations risk interleaved stdout -->
 
 ```bash
 ${TIMEOUT_CMD:+$TIMEOUT_CMD 120} codex exec "You are scoring a calibration response against ground truth.
@@ -182,7 +194,7 @@ Compute: recall=found/total (null if total=0), precision=found/(found+fp+1e-9), 
 
 Write ONLY this JSON (no prose, no markdown fences, no trailing commas) to the file below:
 {\"problem_id\":\"<PROBLEM_ID>\",\"found\":[true/false,...],\"false_positives\":N,\"confidence\":0.N,\"recall\":0.N,\"precision\":0.N,\"f1\":0.N,\"severity_accuracy\":0.N,\"format_score\":0.N,\"scorer\":\"codex\"}
-[If AB_MODE is true, append before the closing }: ,\"recall_general\":0.N,\"precision_general\":0.N,\"f1_general\":0.N,\"severity_accuracy_general\":0.N,\"format_score_general\":0.N]
+[If AB_MODE is true, append before the closing }: ,\"recall_general\":0.N,\"confidence_general\":0.N,\"precision_general\":0.N,\"f1_general\":0.N,\"severity_accuracy_general\":0.N,\"format_score_general\":0.N]
 
 Output file: _calibrations/<TIMESTAMP>/<TARGET>/score-<PROBLEM_ID>-codex.json" --sandbox workspace-write
 ```

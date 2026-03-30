@@ -16,9 +16,11 @@
 //   3. Runs `pre-commit run --files <file_path>` targeting only the changed
 //      file, which is fast (no full-repo scan).
 //   4. On success (exit 0) → silent, no output.
-//      On failure (exit 1 or 2) → writes hook output to stdout and exits 2,
+//      On failure (exit 1 or 2) → writes hook output to stderr and exits 2,
 //      which causes Claude Code to surface the message as feedback so Claude
 //      can immediately read it and apply the necessary fix.
+//      If pre-commit exits non-zero with no output (e.g. no hooks apply to
+//      the file type), this hook exits 0 silently — no false-positive block.
 //
 // EXIT CODES
 //   0  All hooks passed, or pre-commit is not configured / not installed.
@@ -98,13 +100,14 @@ process.stdin.on("end", () => {
           ? "pre-commit timed out after 60s"
           : `pre-commit failed to run: ${result.error.message}`;
       const out = [result.stdout, result.stderr, errMsg].filter(Boolean).join("\n").trim();
-      process.stdout.write(out);
+      process.stderr.write(out);
       process.exit(2);
     }
 
     if (result.status !== 0) {
       const out = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
-      process.stdout.write(out || "pre-commit: hooks failed (no output)");
+      if (!out) process.exit(0); // no hooks apply to this file type — silent pass
+      process.stderr.write(out);
       process.exit(2);
     }
 

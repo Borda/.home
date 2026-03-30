@@ -19,7 +19,7 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 
 ## 🎯 Why
 
-Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 14 calibrated specialist agents and 14 slash-command skill workflows in a version-controlled, continuously benchmarked setup optimized for:
+Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 12 specialist agents and 16 slash-command skill workflows in a version-controlled, continuously benchmarked setup optimized for:
 
 - Python/ML OSS libraries requiring SemVer discipline and deprecation cycles
 - ML training and inference codebases needing GPU profiling and data pipeline validation
@@ -73,11 +73,11 @@ Specialist roles with deep domain knowledge — requested by name, or auto-selec
 
 | Agent                  | Claude | Codex | Purpose                                                       |
 | ---------------------- | ------ | ----- | ------------------------------------------------------------- |
-| **ai-researcher**      | ✓      | —     | Paper analysis, experiment design, LLM evaluation             |
-| **ci-guardian**        | ✓      | ✓     | GitHub Actions, trusted publishing, flaky test detection      |
+| **ai-researcher**      | ✓      | —     | Paper analysis, hypothesis generation, experiment design      |
+| **ci-guardian**        | ✓      | ✓     | GitHub Actions, test matrices, flaky test detection, caching  |
 | **data-steward**       | ✓      | ✓     | Dataset versioning, split validation, leakage detection       |
-| **doc-scribe**         | ✓      | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, changelog          |
-| **linting-expert**     | ✓      | ✓     | ruff, mypy, pre-commit, CI quality gates                      |
+| **doc-scribe**         | ✓      | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references     |
+| **linting-expert**     | ✓      | ✓     | ruff, mypy, pre-commit, type annotations                      |
 | **oss-shepherd**       | ✓      | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
 | **perf-optimizer**     | ✓      | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
 | **qa-specialist**      | ✓      | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
@@ -101,20 +101,20 @@ Skills are multi-agent workflows invoked via slash commands. Each skill composes
 | **analyse**     | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                       |
 | **brainstorm**  | Interactive spec: clarifying questions → approaches → spec → self-mentor review → approval gate                                                                                               |
 | **develop**     | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                    |
-| **resolve**     | Resolve PR conflicts or apply review comments via Codex                                                                                                                                       |
+| **resolve**     | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)             |
 | **calibrate**   | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                      |
 | **audit**       | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                |
-| **release**     | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                      |
+| **release**     | Notes, changelog, summary, migration, full prepare pipeline, or readiness `audit`                                                                                                             |
 | **research**    | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                   |
 | **optimize**    | Four modes: `plan` = config wizard → `program.md`; `campaign` = metric-driven iteration loop; `resume` = continue after crash; `perf` = profiling deep-dive; `--team` and `--colab` supported |
-| **manage**      | Create, update (content-edit or rename), delete agents/skills/rules with auto type-detection and cross-ref propagation                                                                        |
-| **sync**        | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                                                                  |
+| **manage**      | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                 |
+| **sync**        | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                    |
 | **codex**       | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                 |
 | **investigate** | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                               |
 | **session**     | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                               |
 | **distill**     | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                       |
 
-→ Full command reference, orchestration flows, rules (11 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
+→ Full command reference, orchestration flows, rules (12 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
 
 ### Common Workflow Sequences
 
@@ -135,7 +135,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
 ```
-/optimize src/mypackage/dataloader.py   # profile and fix top bottleneck
+/optimize perf src/mypackage/dataloader.py   # profile and fix top bottleneck
 /develop refactor src/mypackage/dataloader.py "extract caching layer"  # structural improvement
 /review                                 # full quality pass on changes
 ```
@@ -307,7 +307,7 @@ Run `/calibrate routing fast` after any agent description change. Thresholds: ro
 <summary><strong>Release preparation</strong></summary>
 
 ```
-/release v1.2.0..HEAD  # generate release notes from git history
+/release notes v1.2.0..HEAD  # generate release notes from git history
 ```
 
 </details>

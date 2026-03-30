@@ -1,3 +1,5 @@
+<!-- Step 1 in SKILL.md dispatches to this mode file. Steps here continue from Step 2. -->
+
 ## Mode: communication
 
 > **Codex integration: disabled.** Problem generation and scoring are Claude-only for this mode. Ground truth requires deep knowledge of `file-handoff-protocol.md`, `TEAM_PROTOCOL.md`, and AgentSpeak v2 — Codex lacks this context and would produce superficial or incorrect problems.
@@ -37,11 +39,11 @@ is a critical violation
 
 **N override** (communication problems are high-complexity — tighter N prevents context window overflow in the pipeline subagent): fast=3, full=5. Do NOT use the global FULL_N=10 for this mode.
 
-Mark "Calibrate communication" in_progress. Use the standard pipeline template from `.claude/skills/calibrate/templates/pipeline-prompt.md` with `<TARGET>=self-mentor` and `<DOMAIN>` set to the domain string above. Required substitutions: `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>`. Substitute `<N>` (3 for fast, **5** for full), `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>`. Spawn a **single** `general-purpose` pipeline subagent — it runs self-mentor against synthetic agent responses, full/compact response pairs, and team transcripts with injected violations.
+Mark "Calibrate communication" in_progress. Use the standard pipeline template from `.claude/skills/calibrate/templates/pipeline-prompt.md` with `<TARGET>=self-mentor` and `<DOMAIN>` set to the domain string above. Required substitutions: `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>`. Spawn a **single** `general-purpose` pipeline subagent — it runs self-mentor against synthetic agent responses, full/compact response pairs, and team transcripts with injected violations.
 
 **Phase 2 batching**: instruct the pipeline to spawn Phase 2 target agents in **batches of 3** (not all at once), collecting acknowledgments between batches. Each self-mentor response is ~1–4KB of prompt + response context; batching prevents accumulation of all N problem inputs in the pipeline's context simultaneously. Add to the pipeline prompt: "Spawn Phase 2 agents in batches of 3 — await all acknowledgments in a batch before spawning the next. Maximum batches: ceil(N/3) — for fast (N=3) that is 1 batch; for full (N=5) that is 2 batches."
 
-Run dir: `.claude/calibrate/runs/<TIMESTAMP>/self-mentor/` (relative to project root)
+Run dir: `_calibrations/<TIMESTAMP>/self-mentor/` (relative to project root)
 
 ### Active instruction — token optimization (additional scoring measure)
 

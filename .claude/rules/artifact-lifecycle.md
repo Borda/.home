@@ -67,7 +67,7 @@ find _outputs -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs -r rmdi
 
 The deterministic `_*/` paths allow precise allow rules:
 
-```json
+```text
 "Bash(mkdir -p _calibrations/*)",
 "Bash(mkdir -p _resolutions/*)",
 "Bash(mkdir -p _audits/*)",

@@ -79,7 +79,7 @@ Spawn one `general-purpose` subagent per problem. **Issue ALL spawns in a single
 
 Each subagent receives this prompt (substitute `<PROBLEM_ID>`, `<TASK_PROMPT>`, `<CONTEXT>`, `<RUN_DIR>` before spawning):
 
-______________________________________________________________________
+<!-- BEGIN SPAWN PROMPT -->
 
 You are a general-purpose coding assistant. The following rule is in effect — apply it in your response:
 
@@ -93,9 +93,9 @@ Task: `<TASK_PROMPT>`
 
 Write your complete response to `<RUN_DIR>/response-<PROBLEM_ID>.md` using the Write tool. Then end your reply with exactly one line: `Wrote: <PROBLEM_ID>`
 
-______________________________________________________________________
+<!-- END SPAWN PROMPT -->
 
-**Context discipline**: subagents write to disk and return a single-line acknowledgment. Do NOT accumulate their full responses — scorers read from disk in Phase 3. Receiving only `Wrote: <PROBLEM_ID>` per agent is correct and expected.
+**Context discipline**: subagents write to disk and return a single-line acknowledgment. The pipeline agent must NOT accumulate their full analyses in its context — scorers read from disk in Phase 3. Receiving only `Wrote: <PROBLEM_ID>` per agent is correct and expected.
 
 **Phase timeout**: every 5 min run `find _calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/ -newer /tmp/calibrate-rules-<TIMESTAMP>-<RULE_BASENAME> -name "response-*.md" | wc -l` — new files = alive; zero = stalled. Hard cutoff: 15 min of no new files → mark remaining as `{"timed_out": true}` in scores.json; grant one +5 min extension if the last response file shows active content.
 
@@ -107,7 +107,7 @@ Spawn one `general-purpose` scorer per problem. **Issue ALL spawns in a single r
 
 Each scorer receives this prompt (substitute `<PROBLEM_ID>`, `<PROBLEM_TYPE>`, `<DIRECTIVE_TEXT>`, `<EXPECTED_BEHAVIOR>`, `<EXPECTED_TRIGGER>`, `<RUN_DIR>` before spawning):
 
-______________________________________________________________________
+<!-- BEGIN SPAWN PROMPT -->
 
 You are scoring a rule compliance test. Read the response from `<RUN_DIR>/response-<PROBLEM_ID>.md` using the Read tool.
 
@@ -146,7 +146,7 @@ Determine whether the rule's directives are visible in the response:
 Return ONLY this JSON (no prose):
 `{"problem_id":"<PROBLEM_ID>","type":"trigger","triggered":true|false,"expected_trigger":<EXPECTED_TRIGGER>,"correct":true|false,"reasoning":"<one sentence>"}`
 
-______________________________________________________________________
+<!-- END SPAWN PROMPT -->
 
 Collect all scorer compact JSONs. Write to `_calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/scores.json` as a JSON array.
 

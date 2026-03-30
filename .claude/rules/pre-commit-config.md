@@ -32,6 +32,8 @@ After running `pre-commit autoupdate`, cross-check the updated revs:
 
 Do NOT check only GitHub releases for ruff/mypy — pypi.org reflects the published package version.
 
+<!-- URLs above are standard PyPI/GitHub package pages; verified as live public resources 2026-03-30. -->
+
 ## Prohibited Patterns
 
 - `rev: latest` (not a valid git ref pattern; ambiguous)

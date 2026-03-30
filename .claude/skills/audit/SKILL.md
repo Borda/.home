@@ -1,6 +1,6 @@
 ---
 name: audit
-description: Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Two mutually exclusive action modes: 'fix [high|medium|all]' auto-fixes at the requested severity level; 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes.
+description: "Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Two mutually exclusive action modes: 'fix [high|medium|all]' auto-fixes at the requested severity level; 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes."
 argument-hint: '[agents|skills|rules|communication] fix [high|medium|all] | upgrade'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
@@ -337,6 +337,8 @@ Spawn a **web-explorer** agent to fetch the current Claude Code documentation. T
 - Hook event names, types, and schemas — `code.claude.com/docs/en/hooks`
 - Agent frontmatter schema — `code.claude.com/docs/en/sub-agents`
 - Skill frontmatter schema — `code.claude.com/docs/en/skills`
+
+<!-- URLs fetched live by web-explorer at runtime; spot-checked 2026-03-30 — all three paths resolve. Graceful degradation: if any 404, the spawn prompt instructs navigation from code.claude.com homepage. -->
 
 With the fetched docs, validate the local config:
 

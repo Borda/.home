@@ -125,16 +125,17 @@ def tmp_data_dir(tmp_path):
 
 ```python
 @pytest.mark.parametrize(
-    "input,expected",
+    "values,expected",
     [
-        ([], 0),
-        ([1], 1),
-        ([1, 2, 3], 6),
-        ([-1, 1], 0),
+        ([0.0, 1.0, 1.0], [0.0, 0.5, 0.5]),  # basic normalization
+        ([2.0, 2.0], [0.5, 0.5]),  # uniform weights
+        ([0.0, 0.0, 0.0], [0.0, 0.0, 0.0]),  # all-zero → zero (not nan)
+        ([1.0], [1.0]),  # single element
     ],
 )
-def test_sum(input, expected):
-    assert my_sum(input) == expected
+def test_normalize(values, expected):
+    result = normalize(values)
+    assert result == pytest.approx(expected, abs=1e-6)
 ```
 
 ## Error Path Testing

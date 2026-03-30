@@ -71,7 +71,7 @@ Run `/sync` after editing any agent, skill, hook, or `settings.json` in this rep
 | **perf-optimizer**     | Performance engineering                       | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision                                       |
 | **ci-guardian**        | CI/CD reliability                             | GitHub Actions, reusable workflows, trusted publishing, flaky test detection                                     |
 | **data-steward**       | Data lifecycle — acquisition and ML pipelines | API completeness, dataset versioning, split validation, leakage detection, data contracts                        |
-| **doc-scribe**         | Documentation                                 | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, changelog                                       |
+| **doc-scribe**         | Documentation                                 | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, API references                                  |
 | **web-explorer**       | Web and docs research                         | API version comparison, migration guides, PyPI tracking, ecosystem compat                                        |
 | **self-mentor**        | Config quality reviewer                       | Agent/skill auditing, duplication detection, cross-ref validation, line budgets                                  |
 
@@ -94,22 +94,24 @@ Key relationships:
 
 ### Reference table
 
-| Skill          | Command                                                 | What It Does                                                                                                                                                                                             |
-| -------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**     | `/review [file\|PR#] [--reply]`                         | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                |
-| **analyse**    | `/analyse <N\|health\|ecosystem> [--reply]`             | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                               |
-| **brainstorm** | `/brainstorm <idea>`                                    | Interactive design-first spec: clarifying questions → 2–3 approaches → spec → self-mentor review → approval gate                                                                                         |
-| **develop**    | `/develop feature\|fix\|refactor\|plan\|debug <goal>`   | TDD-first feature dev, reproduce-first bug fixing, test-first refactor, scope analysis (`plan`), or investigation-first debugging (`debug`)                                                              |
-| **resolve**    | `/resolve <PR#\|comment>`                               | Resolve PR merge conflicts or apply review comments via Codex                                                                                                                                            |
-| **calibrate**  | `/calibrate [target] [fast\|full] [apply]`              | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                  |
-| **audit**      | `/audit [scope] fix [high\|medium\|all] \| upgrade`     | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                |
-| **release**    | `/release <mode> [range]`                               | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                 |
-| **research**   | `/research <topic> \| plan [path]`                      | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                              |
-| **optimize**   | `/optimize plan\|campaign\|resume\|perf <goal\|target>` | Four modes: `plan` = config wizard → `program.md`; `campaign` = metric-driven iteration loop; `resume` = continue after crash/stop; `perf` = profiling deep-dive; `--team` and `--colab` (GPU) supported |
-| **manage**     | `/manage <op> <type>`                                   | Create, rename, or delete agents/skills with cross-ref propagation and routing calibration                                                                                                               |
-| **sync**       | `/sync [apply]`                                         | Drift-detect and sync project `.claude/` → home `~/.claude/`                                                                                                                                             |
-| **codex**      | `/codex <task> [target]`                                | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                            |
-| **distill**    | `/distill`                                              | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                        |
+| Skill           | Command                                                 | What It Does                                                                                                                                                                                             |
+| --------------- | ------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **review**      | `/review [file\|PR#] [--reply]`                         | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                |
+| **analyse**     | `/analyse <N\|health\|ecosystem> [--reply]`             | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                               |
+| **brainstorm**  | `/brainstorm <idea>`                                    | Interactive design-first spec: clarifying questions → 2–3 approaches → spec → self-mentor review → approval gate                                                                                         |
+| **develop**     | `/develop feature\|fix\|refactor\|plan\|debug <goal>`   | TDD-first feature dev, reproduce-first bug fixing, test-first refactor, scope analysis (`plan`), or investigation-first debugging (`debug`)                                                              |
+| **resolve**     | `/resolve <PR#\|URL> [report] \| report \| <comment>`   | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                        |
+| **calibrate**   | `/calibrate [target] [fast\|full] [apply]`              | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                  |
+| **audit**       | `/audit [scope] fix [high\|medium\|all] \| upgrade`     | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                |
+| **release**     | `/release <mode> [range]`                               | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                 |
+| **research**    | `/research <topic> \| plan [path]`                      | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                              |
+| **optimize**    | `/optimize plan\|campaign\|resume\|perf <goal\|target>` | Four modes: `plan` = config wizard → `program.md`; `campaign` = metric-driven iteration loop; `resume` = continue after crash/stop; `perf` = profiling deep-dive; `--team` and `--colab` (GPU) supported |
+| **manage**      | `/manage <op> <type>`                                   | Create, update, delete agents/skills/rules; manage `settings.json` permissions (`add perm`/`remove perm`); auto type-detection and cross-ref propagation                                                 |
+| **sync**        | `/sync [apply]`                                         | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                               |
+| **codex**       | `/codex <task> [target]`                                | Delegate mechanical coding tasks to Codex CLI                                                                                                                                                            |
+| **investigate** | `/investigate <symptom>`                                | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                          |
+| **session**     | `/session [resume\|archive\|summary]`                   | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                          |
+| **distill**     | `/distill`                                              | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                        |
 
 ### Orchestration flow by skill
 
@@ -313,9 +315,36 @@ Each mode enforces a validation gate *before* writing implementation code:
 <summary><strong>`/resolve` — Resolve a PR end-to-end</strong></summary>
 
 ```bash
-/resolve 42                                              # full PR: conflict check → semantic resolution → review comments
-/resolve https://github.com/org/repo/pull/42
-/resolve "rename foo to bar throughout the auth module"  # single-comment fast path
+/resolve 42                                              # pr mode: live GitHub comments → conflict check → semantic resolution → action items
+/resolve https://github.com/org/repo/pull/42             # same as above, URL form
+/resolve report                                          # report mode: latest /review findings as action items; no GitHub re-fetch
+/resolve 42 report                                       # pr + report mode: GitHub comments + /review findings, aggregated and deduplicated
+/resolve "rename foo to bar throughout the auth module"  # single-comment fast path (comment dispatch mode)
+```
+
+</details>
+
+<details>
+<summary><strong>`/investigate` — Systematic failure diagnosis</strong></summary>
+
+```bash
+/investigate "hooks not firing on Save"
+/investigate "codex exec exits 127 on this machine"
+/investigate "CI fails but passes locally"
+/investigate "/calibrate times out every run"
+/investigate "uv run pytest can't find conftest.py"
+```
+
+</details>
+
+<details>
+<summary><strong>`/session` — Session parking lot</strong></summary>
+
+```bash
+/session            # auto-parks current diverging ideas and open questions
+/session resume     # show all pending parked items
+/session archive    # close all pending items
+/session summary    # digest of what happened this session
 ```
 
 </details>

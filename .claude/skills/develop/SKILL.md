@@ -120,7 +120,7 @@ Mandatory after the quality stack completes. Gracefully degrades if Codex is una
 
 Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the changes.
 
-## Additional steps not in shared file:
+## Codex pre-pass: additional inline steps (steps 1–2 are in the shared file)
 
 3. **Validate**: if Codex made changes, re-run the quality stack on affected files only:
    ```bash

@@ -1,3 +1,5 @@
+<!-- Step 1 in SKILL.md dispatches to this mode file. Steps here continue from Step 2. -->
+
 ## Mode: rules
 
 > **Codex integration: disabled.** Problem generation and scoring are Claude-only for this mode. Rule adherence tests the behavior of a Claude agent with `.claude/rules/` loaded — Codex has no insight into Claude Code's rule-loading mechanism, path-scoping, or frontmatter parsing, making its problems and scores unreliable here.
@@ -53,7 +55,7 @@ Read `.claude/skills/calibrate/templates/rules-pipeline-prompt.md`. For each rul
 
 **Issue all spawns in a single response** — rule files are independent and run concurrently.
 
-Run dir: `.claude/calibrate/runs/<TIMESTAMP>/rules/<RULE_BASENAME>/`
+Run dir: `_calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/`
 
 Each pipeline subagent handles all five phases internally (problem generation → target runs → dedicated scorer subagents → aggregate → self-mentor proposals) and returns ONLY a compact JSON envelope.
 
@@ -85,6 +87,6 @@ Mark "Calibrate rules" completed.
 - `outcome-gap` (adherence ≥ 0.80 but outcome < 0.80) → directive is vague at the behavioral level; add a concrete example or constraint → re-run
 - Trigger recall < 0.95 → `paths:` glob may not match the file types where the rule should apply; adjust the glob pattern
 - Trigger precision < 0.95 → `paths:` glob is too broad; tighten the pattern to avoid false loads
-- Persistent failures after rewording → consider splitting the rule into more focused directives
+- Persistent failures after rewording → consider splitting the rule into more focused directives. Max 3 re-run cycles; if the rule is still non-calibrated after the third, surface the persistent failures to the user for manual review.
 
-Proposals written to: `.claude/calibrate/runs/<TIMESTAMP>/rules/<RULE_BASENAME>/proposal.md`
+Proposals written to: `_calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/proposal.md`

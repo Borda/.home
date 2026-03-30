@@ -1,7 +1,7 @@
 ---
 name: optimize
-description: Performance orchestrator with four modes. `plan` = interactive wizard → writes `program.md` config. `campaign` = sustained metric-improvement loop with atomic commits, auto-rollback, and experiment logging; accepts a `program.md` file. `resume` = continue a crashed or stopped campaign. `perf` = single-pass profiling deep-dive (baseline → perf-optimizer → verify → report). Supports --team and --colab in plan/campaign/resume.
-argument-hint: plan <goal> [out.md] | campaign <goal|file.md> | resume [file.md] | perf <target> [--team] [--colab]
+description: Performance orchestrator with four modes. `plan` = interactive wizard → writes `program.md` config. `campaign` = sustained metric-improvement loop with atomic commits, auto-rollback, and experiment logging; accepts a `program.md` file. `resume` = continue a crashed or stopped campaign. `perf` = single-pass profiling deep-dive (baseline → perf-optimizer → verify → report). Supports --team, --colab, and --codex in plan/campaign/resume.
+argument-hint: plan <goal> [out.md] | campaign <goal|file.md> | resume [file.md] | perf <target> [--team] [--colab] [--codex]
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
 ---
@@ -26,6 +26,7 @@ Four complementary modes under one skill. `plan` mode runs an interactive wizard
 
 - `--team` flag (plan/campaign/resume only) — parallel strategy exploration: 2–3 teammates each own a different optimization axis
 - `--colab` flag (plan/campaign/resume only) — route metric verification through a Colab MCP GPU runtime
+- `--codex` flag (plan/campaign/resume only) — offload ideation to Codex: each iteration, Codex proposes and implements an optimization as a fallback when the Claude specialist agent's change is reverted or a no-op; Claude orchestrates the loop, compares metric results, and keeps the winner; gracefully degrades to Claude-only if `codex` is not installed
 
 </inputs>
 
@@ -41,6 +42,7 @@ VERIFY_TIMEOUT_SEC:         120 (local), 300 (--colab)
 SUMMARY_INTERVAL:           10 iterations
 DIMINISHING_RETURNS_WINDOW: 5 iterations < 0.5% each → warn user and suggest stopping
 STATE_DIR:                  .claude/state/optimize/
+CODEX_IDEATION_TIMEOUT_SEC:  300 (timeout for codex exec ideation call per iteration)
 ```
 
 **Agent strategy mapping** (`agent_strategy` in config → ideation agent to spawn):

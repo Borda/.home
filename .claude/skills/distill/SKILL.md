@@ -219,7 +219,7 @@ Thresholds:
 
 Produce a structured proposal table. Do not apply anything yet — report first.
 
-```
+````
 ## Lessons Distillation Proposals
 
 ### Summary
@@ -271,7 +271,7 @@ ______________________________________________________________________
 
 ### Too Narrow (N) — keep in memory
 - L5: [lesson] → one-off, not generalizable
-```
+````
 
 **Step L4: Apply (with confirmation)**
 

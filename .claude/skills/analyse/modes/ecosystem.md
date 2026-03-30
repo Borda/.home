@@ -33,9 +33,10 @@ Produce:
 - [create migration guide / add deprecation warning / notify maintainers directly]
 ```
 
-Write the full report to `tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md` using the
+Run `mkdir -p _analyses/ecosystem` then write the full report to
+`_analyses/ecosystem/output-analyse-ecosystem-$(date +%Y-%m-%d).md` using the
 Write tool — **do not print the full analysis to terminal**.
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md`
 — use the **Ecosystem Impact Summary** template. Replace `[skill-specific path]` with
-`tasks/output-analyse-ecosystem-$(date +%Y-%m-%d).md`.
+`_analyses/ecosystem/output-analyse-ecosystem-$(date +%Y-%m-%d).md`.

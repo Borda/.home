@@ -138,6 +138,7 @@ Run all checks before touching code. Fail fast with a clear message if any fail:
 3. **Metric command produces numeric output**: run `metric_cmd` once; parse stdout for a float. If no float found: show the output and stop.
 4. **Guard command passes**: run `guard_cmd` once; must exit 0. If it fails: show the output and stop.
 5. **`--colab` check** (if flag present): verify Colab MCP tools are available by checking for `mcp__colab-mcp__runtime_execute_code`. If unavailable, print setup instructions (see Colab MCP section) and stop.
+6. **`--codex` check** (if flag present): verify `which codex` returns a path (`command -v codex`). If unavailable: print "⚠ codex not found — proceeding without Codex ideation (Claude-only mode)" and clear the `--codex` flag for this run. Graceful degradation — not a hard stop.
 
 ### Step C3: Select ideation agent
 
@@ -187,13 +188,16 @@ For each iteration `i` from 1 to `max_iterations`:
 
 #### Phase 1 — Review
 
-Build context for the ideation agent:
+Build context for the ideation agent and write it to a file — do NOT accumulate this inline in the main context:
 
-- `git log --oneline -10` (recent commits)
-- Last 10 lines of `experiments.jsonl` (prior experiment results)
-- `git diff --stat HEAD~5 HEAD` (scope of recent changes)
+```bash
+# Collect signals
+git log --oneline -10 > .claude/state/optimize/<run-id>/context-<i>.md
+tail -10 .claude/state/optimize/<run-id>/experiments.jsonl >> .claude/state/optimize/<run-id>/context-<i>.md
+git diff --stat HEAD~5 HEAD >> .claude/state/optimize/<run-id>/context-<i>.md
+```
 
-Summarize into a compact context block: goal, current metric vs baseline, delta trend, recently modified files, previous agent actions and outcomes.
+Prepend a header block to `context-<i>.md` with: goal, current metric vs baseline, delta trend (last 5 kept deltas), and the iteration number. The ideation agent in Phase 2 reads this file directly — the content is never echoed back to the main context.
 
 #### Phase 2 — Ideate
 
@@ -202,11 +206,10 @@ Spawn the selected specialist agent with this prompt (adapt as needed):
 ```
 Goal: <goal>
 Current metric: <metric_cmd key> = <current value> (baseline: <baseline>, direction: <higher|lower>)
-Experiment history (last 10):
-<jsonl summary>
+Experiment history: read `.claude/state/optimize/<run-id>/context-<i>.md` for the full context block.
 Scope files (read and modify only these): <scope_files>
 
-Read the scope files. Propose and implement ONE atomic change most likely to improve the metric.
+Read `context-<i>.md` and the scope files. Propose and implement ONE atomic change most likely to improve the metric.
 The change must not break <guard_cmd>.
 Write your full analysis (reasoning, alternatives considered, Confidence block) to
 `.claude/state/optimize/<run-id>/ideation-<i>.md` using the Write tool.
@@ -219,6 +222,26 @@ For `--colab` runs: the ideation agent (especially `ai-researcher`) may call `mc
 <!-- MCP tool call — invoked via MCP protocol, not Bash; requires colab-mcp server enabled in settings.local.json -->
 
 If the Agent tool is unavailable (nested subagent context), implement the change inline and construct the JSON result manually.
+
+#### Phase 2b — Codex ideation fallback (`--codex` only)
+
+Run Phase 2b **only when `--codex` is active** AND the Claude specialist's result from Phase 2 was reverted (Phase 7 outcome: `reverted`) or a no-op (Phase 3 outcome: `no-op`). Claude-first, Codex as fallback — if Claude's change is kept, Codex is skipped for this iteration.
+
+When Phase 2b runs, `git revert` has already restored the working tree to the pre-Phase-2 state. Run Codex ideation on the clean tree:
+
+```bash
+CODEX_OUT=".claude/state/optimize/<run-id>/codex-ideation-<i>.md"
+timeout <CODEX_IDEATION_TIMEOUT_SEC> codex exec \
+  "Goal: <goal>. Current metric: <metric_key>=<current_value> (baseline: <baseline>, direction: <higher|lower>). Scope files: <scope_files>. Read context from .claude/state/optimize/<run-id>/context-<i>.md. Propose and implement ONE atomic optimization change most likely to improve the metric without breaking <guard_cmd>. Write your full reasoning to $CODEX_OUT." \
+  --sandbox workspace-write 2>/dev/null
+EXIT=$?
+```
+
+- If `EXIT != 0` or no files changed: append `status: codex-no-op` to JSONL with `ideation_source: "codex"`, continue loop
+- If files changed: proceed through Phases 3–7 exactly as for a Claude ideation — commit, verify metric, run guard, decide keep/revert
+- Set `"ideation_source": "codex"` in the Phase 8 JSONL record
+
+**Stuck escalation with `--codex`**: when Phase 9 detects `STUCK_THRESHOLD` consecutive discards and `--codex` is active, reverse the ordering for the next 3 iterations — Codex ideates first (Phase 2b runs before the Claude specialist), Claude gets the fallback turn. This gives a genuinely different model's perspective when Claude's specialist is blocked.
 
 #### Phase 3 — Verify files changed
 
@@ -281,9 +304,12 @@ Append one JSONL record to `experiments.jsonl`:
   "agent": "<agent type>",
   "confidence": 0.0,
   "timestamp": "<ISO>",
-  "files": []
+  "files": [],
+  "ideation_source": "claude"
 }
 ```
+
+`ideation_source` is `"claude"` when the Claude specialist agent proposed the change, `"codex"` when Phase 2b (Codex fallback) proposed it.
 
 Update `state.json`: `iteration = i`, `status = running`.
 
@@ -293,6 +319,7 @@ Update `state.json`: `iteration = i`, `status = running`.
 - **Stuck detection**: if last `STUCK_THRESHOLD` entries all have `status: reverted|no-op|hook-blocked`, trigger escalation (see `<constants>` in SKILL.md). Log escalation action.
 - **Diminishing returns**: if last `DIMINISHING_RETURNS_WINDOW` kept entries each improved < 0.5%, print a warning and suggest stopping. Do not auto-stop — let the user decide.
 - **Early stop**: if `target` is set in the program file (or config), stop when the metric crosses it (`direction: higher` → metric ≥ target; `direction: lower` → metric ≤ target). Mark `state.json` `status: goal-achieved`.
+- **Context compaction** (every SUMMARY_INTERVAL iterations): write a full iteration summary table to `.claude/state/optimize/<run-id>/progress-<i>.md` and actively discard verbose per-iteration details from working memory. Retain in working memory only: current metric value, iteration count, JSONL file path, and `best_commit`. This prevents linear context growth in long campaigns — full history is always recoverable from `experiments.jsonl` and `ideation-<i>.md` files on disk.
 
 ### Step C6: Results report
 
@@ -309,6 +336,8 @@ Write full report to `_outputs/$(date +%Y)/$(date +%m)/output-optimize-campaign-
 **Baseline**: <metric> = <baseline value>
 **Best**: <metric> = <best value> (<delta>% improvement)
 **Best commit**: <sha>
+**Codex ideation**: <N> iterations tried (when --codex active; omit line if --codex not used)
+**Codex wins**: <N> Codex proposals kept vs <N> Claude proposals kept
 
 ### Experiment History
 | # | Metric | Delta | Status | Description | Agent | Confidence |
@@ -401,16 +430,24 @@ Call TaskUpdate(in_progress) when starting; TaskUpdate(completed) when done.
 ```
 
 4. Each teammate runs their iterations independently and reports results.
+
 5. **Consolidation**: after all teammates complete (or reach `TeammateIdle`), spawn a single `general-purpose` consolidator agent. Provide it the file paths of all teammate output files (`$RUN_DIR/teammate-<axis>.md` for each axis). Prompt:
+
    ```
    Read the teammate output files at the following paths: <paths>.
    Synthesize findings into a single consolidated report: per-axis summary, metric improvements, best commits, and recommended cherry-pick order.
    Write the full consolidated report to `$RUN_DIR/consolidated.md` using the Write tool.
    Return ONLY: {"status":"done","axes_summarized":<N>,"file":"$RUN_DIR/consolidated.md"}
    ```
+
    Read `$RUN_DIR/consolidated.md` for the cherry-pick plan before proceeding.
+
+   **Context discipline**: the lead MUST NOT inline-read teammate output files directly — the consolidator agent owns reading `teammate-<axis>.md` files and synthesizing them. The lead's context receives only the compact JSON envelope from the consolidator and then reads `consolidated.md` for the cherry-pick plan. This prevents the lead's context from growing by O(axes × iterations).
+
 6. Lead cherry-picks the winning commits from each axis into the main branch, tests for compatibility, runs `guard_cmd`.
+
 7. Lead measures combined metric, resolves conflicts if needed, writes the Step C6 report with per-axis breakdown and combined result.
+
 8. Shutdown teammates.
 
 **Note on CLAUDE.md §8**: team mode uses in-process teammates that send `TeammateIdle` notifications on completion — the file-activity polling protocol does not apply; `TeammateIdle` is the liveness signal.

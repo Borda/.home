@@ -1,7 +1,7 @@
 ---
 name: resolve
-description: "OSS maintainer fast-close workflow for GitHub PRs. Three phases: (1) PR intelligence — reads the full thread, linked issues, and PR body to synthesize contribution motivation and classify every comment into action items; (2) conflict resolution — checks out the PR branch (fork-aware via gh pr checkout), merges BASE into it, and resolves conflicts semantically using the contributor's intent as the priority lens; (3) implements each action item as a separate attributed commit via Codex, then pushes back to the contributor's fork. Also accepts bare comment text for single-comment dispatch."
-argument-hint: <PR number or URL> | <review comment text>
+description: "OSS maintainer fast-close workflow for GitHub PRs. Three phases: (1) PR intelligence — reads the full thread, linked issues, and PR body to synthesize contribution motivation and classify every comment into action items; (2) conflict resolution — checks out the PR branch (fork-aware via gh pr checkout), merges BASE into it, and resolves conflicts semantically using the contributor's intent as the priority lens; (3) implements each action item as a separate attributed commit via Codex, then pushes back to the contributor's fork. Supports three source modes: pr (live GitHub comments only), report (latest /review report findings as action items, no GitHub re-fetch), and pr + report (both sources aggregated and deduplicated in one pass). Also accepts bare comment text for single-comment dispatch."
+argument-hint: <PR number or URL> [report] | report | <review comment text>
 disable-model-invocation: true
 allowed-tools: Read, Edit, Bash, TaskCreate, TaskUpdate, Agent
 ---
@@ -25,8 +25,10 @@ When given bare comment text, skip straight to Codex dispatch (Step 12).
 <inputs>
 
 - **$ARGUMENTS**: one of:
-  - Omitted → **review-handoff mode**: auto-detect PR from the most recent `tasks/output-review-*.md` file
-  - A PR number (e.g. `42`) or GitHub PR URL → **PR mode**
+  - Omitted → **review-handoff mode**: auto-detect PR from the most recent `_outputs/*/*/output-review-*.md` file
+  - A PR number (e.g. `42`) or GitHub PR URL → **pr mode**
+  - `report` (bare word) → **report mode**: use latest review report findings as action items; no GitHub re-fetch
+  - `42 report` or `<URL> report` → **pr + report mode**: aggregate live GitHub comments + review report findings, deduplicated in one pass
   - Bare review comment text → **comment dispatch mode** (jumps to Step 12)
 
 </inputs>
@@ -94,8 +96,25 @@ If no PR number is extractable (review was run on a local path, not a PR), print
 
 Parse $ARGUMENTS:
 
-- If it is a number or matches a GitHub PR URL pattern → **PR mode** (continue from Step 2)
-- Otherwise → **comment dispatch mode** (jump to Step 11)
+- If it matches `<number> report` or `<URL> report` (number/URL followed by the word `report`) → **pr + report mode**: strip `report` suffix, set PR# from the remaining token; also find the latest review report using `ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`; if no report found print a warning but continue in pr mode
+- If it equals the bare word `report` → **report mode**: find the latest review report using `ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`; if no report found stop with: "No review report found in \_outputs/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
+- If it is a number or matches a GitHub PR URL pattern → **pr mode** (continue from Step 2)
+- Otherwise → **comment dispatch mode** (jump to Step 12)
+
+### Sources block
+
+Print immediately after mode is resolved, before any GitHub API calls:
+
+```
+## Resolve — sources
+
+Mode    : <pr | report | pr + report>
+PR      : #<N>  (or "n/a — working on current branch" when report mode found no PR#)
+GitHub  : fetching live comments · reviews · inline code comments  (or "not fetched" in report mode)
+Report  : <path to report file>  (or "not used" in pr mode / "not found — run /review first" if missing)
+
+Proceeding…
+```
 
 ## Step 2: Create task
 
@@ -108,6 +127,38 @@ TaskCreate(
 ```
 
 Mark it `in_progress` immediately.
+
+## Step 3-R (report mode): Report intelligence
+
+*Skip to Step 3 (PR intelligence) when in pr mode or pr + report mode.*
+
+When mode == **report**:
+
+Read the review report file. Parse structured findings from each `###` section header (`### [blocking] Critical`, `### Architecture & Quality`, `### Test Coverage Gaps`, `### Performance Concerns`, `### Documentation Gaps`, `### Static Analysis`, `### API Design`, `### Codex Co-Review`). Skip `### OSS Checks`, `### Recommended Next Steps`, `### Review Confidence`, and `### Issue Root Cause Alignment`.
+
+Map each finding bullet to the action item schema:
+
+| Severity in report       | `type`                                 |
+| ------------------------ | -------------------------------------- |
+| CRITICAL or `[blocking]` | `[req]`                                |
+| HIGH                     | `[req]`                                |
+| MEDIUM                   | `[suggest]`                            |
+| LOW                      | `[suggest]` (omit if total items > 10) |
+
+- `author`: the section owner agent (e.g., `sw-engineer` for Architecture, `qa-specialist` for Test Coverage)
+- `file` / `line`: extract from `file:line` notation in the finding bullet; leave blank if absent
+- `full_comment_text`: the full finding bullet text
+- All items carry the tag `[from-review]` as a prefix to `type` (e.g., `[from-review][req]`, `[from-review][suggest]`)
+
+If PR# was found in the report header (`## Code Review: PR #<N>` or similar):
+
+- Set `$ARGUMENTS = <N>` and proceed to Step 4 (checkout); skip Steps 3 (PR intelligence) and 3b entirely
+- After checkout, skip directly to Step 8 with the report-derived action item list
+
+If no PR# was found in the header:
+
+- Skip Steps 3 and 4 entirely; work on the current branch as-is
+- Skip directly to Step 8 with the report-derived action item list
 
 ## Step 3: PR intelligence
 
@@ -159,13 +210,14 @@ This motivation summary is the **priority lens for conflict resolution** in Step
 
 Read every comment, review, and inline code comment. Classify each:
 
-| Code         | Meaning                                                                                        |
-| ------------ | ---------------------------------------------------------------------------------------------- |
-| `[req]`      | Change **required** before merge — requested by a reviewer with write access or the maintainer |
-| `[suggest]`  | Improvement suggested — nice-to-have, non-blocking                                             |
-| `[question]` | Open question that needs an answer before deciding what code to write                          |
-| `[done]`     | A subsequent commit or reply already addressed this — skip                                     |
-| `[info]`     | Praise, acknowledgement, emoji-only — skip                                                     |
+| Code            | Meaning                                                                                        |
+| --------------- | ---------------------------------------------------------------------------------------------- |
+| `[req]`         | Change **required** before merge — requested by a reviewer with write access or the maintainer |
+| `[suggest]`     | Improvement suggested — nice-to-have, non-blocking                                             |
+| `[question]`    | Open question that needs an answer before deciding what code to write                          |
+| `[done]`        | A subsequent commit or reply already addressed this — skip                                     |
+| `[info]`        | Praise, acknowledgement, emoji-only — skip                                                     |
+| `[self-review]` | Finding from the `/review` report — not a GitHub commenter; author = agent name                |
 
 Build `ACTION_ITEMS`: `[{id, type, author, summary, file, line, full_comment_text}]`
 
@@ -184,6 +236,27 @@ Print the action item table:
 > **Guard**: if `[req]` items > 15, print the full list and use `AskUserQuestion` to ask which subset to implement, listing up to 4 grouped options drawn from the items table (mark the first/smallest group as "(Recommended)"), before continuing.
 
 Answer any `[question]` items that can be resolved from reading the code — if the answer is clear, reclassify to `[req]` or `[suggest]`; if it requires maintainer judgement, surface and pause. A question answered by the **contributor** (not the maintainer) is not automatically closed — if the contributor's answer reveals a known limitation or deferred work (e.g., "currently per-process, Redis is a follow-up"), keep it as `[question]` and surface it for the maintainer to explicitly accept or reject before proceeding.
+
+### 3c: Merge report findings (pr + report mode only)
+
+*Skip when in pr mode.*
+
+When mode == **pr + report**:
+
+Find and read the latest review report (`ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`). Parse structured findings using the same logic as Step 3-R (report mode) above.
+
+**Deduplication**:
+
+- For each report finding, check if a GitHub action item already targets the same `file:line`:
+  - **Match found** → drop the report item; annotate the GitHub item's summary with `(also flagged by /review)`
+  - **Semantic match** (same file, no exact line, similar description) → drop the report item; same annotation
+  - **No match** → append the report finding to the action item list as a `[from-review]` item
+
+**Result**: a single merged `ACTION_ITEMS` list. GitHub-sourced items appear first (maintaining `[req]`/`[suggest]` order), followed by surviving `[from-review]` items. Print a merge summary before the action item table:
+
+```
+Report merged: <N> findings from /review · <M> deduplicated against GitHub comments · <K> added as [from-review] items
+```
 
 ## Step 4: Checkout PR branch
 
@@ -290,13 +363,13 @@ d. **Stage**:
 git add <file>
 ```
 
-e. **Complete the merge**:
+After all conflicted files have been resolved and staged, **complete the merge once**:
 
 ```bash
 git merge --continue --no-edit
 ```
 
-Print interim conflict report:
+Print conflict report:
 
 ```
 ### Conflict Resolution
@@ -363,18 +436,16 @@ Spawn both agents in parallel:
 ```
 Agent(linting-expert): "Review all files changed in the current branch since origin/<BASE_REF>. List every lint/type violation. Apply inline fixes for any that are auto-fixable. Write your full findings to $RUN_DIR/linting-expert-step9.md using the Write tool, then return ONLY a compact JSON envelope: {fixed: N, remaining: N, files: [...]}."
 
-Agent(qa-specialist): "Review all files changed in the current branch since origin/<BASE_REF> for correctness, edge cases, and regressions. Flag any blocking issues (bugs, broken contracts, missing test coverage for the changed logic). Write your full findings to $RUN_DIR/qa-specialist-step9.md using the Write tool, then return ONLY a compact JSON envelope: {blocking: N, warnings: N, issues: [...]}."
+Agent(qa-specialist, maxTurns: 15): "Review all files changed in the current branch since origin/<BASE_REF> for correctness, edge cases, and regressions. Flag any blocking issues (bugs, broken contracts, missing test coverage for the changed logic). Write your full findings to $RUN_DIR/qa-specialist-step9.md using the Write tool, then return ONLY a compact JSON envelope: {blocking: N, warnings: N, issues: [...]}."
 ```
 
 ```bash
-# Health monitoring (CLAUDE.md §8)
+# Health monitoring — passive: Claude awaits agent responses; no blocking poll needed.
+# If an agent does not return within ~15 min, surface partial results from the run dir.
 LAUNCH_AT=$(date +%s)
 RESOLVE_CHECK="/tmp/resolve-check-$LAUNCH_AT"
 touch "$RESOLVE_CHECK"
-# Poll every 5 min; hard cutoff at 15 min of no new file activity
-sleep 300
 NEW=$(find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f 2>/dev/null | wc -l | tr -d ' ')
-touch "$RESOLVE_CHECK"
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -eq 0 ] && [ "$ELAPSED" -ge 15 ]; then
   echo "⏱ resolve agents timed out after ${ELAPSED}min — surfacing partial results"
@@ -524,18 +595,18 @@ Spawn both agents in parallel:
 ```
 Agent(linting-expert): "Review all files changed in HEAD (git diff HEAD~N..HEAD where N = number of commits just made). List every lint/type violation. Apply inline fixes for any that are auto-fixable. Write your full findings to $RUN_DIR/linting-expert-step12c.md using the Write tool, then return ONLY a compact JSON envelope: {fixed: N, remaining: N, files: [...]}."
 
-Agent(qa-specialist): "Review all files changed in the most recent commits for correctness, edge cases, and regressions. Flag any blocking issues. Write your full findings to $RUN_DIR/qa-specialist-step12c.md using the Write tool, then return ONLY a compact JSON envelope: {blocking: N, warnings: N, issues: [...]}."
+Agent(qa-specialist, maxTurns: 15): "Review all files changed in the most recent commits for correctness, edge cases, and regressions. Flag any blocking issues. Write your full findings to $RUN_DIR/qa-specialist-step12c.md using the Write tool, then return ONLY a compact JSON envelope: {blocking: N, warnings: N, issues: [...]}."
 ```
 
 ```bash
-# Health monitoring (CLAUDE.md §8)
+# Health monitoring — same pattern as Step 9 (intentional: each step's monitoring is
+# self-contained to preserve step independence; duplication is by design).
+# Passive: Claude awaits agent responses; no blocking poll needed.
+# If an agent does not return within ~15 min, surface partial results from the run dir.
 LAUNCH_AT=$(date +%s)
 RESOLVE_CHECK="/tmp/resolve-check-$LAUNCH_AT"
 touch "$RESOLVE_CHECK"
-# Poll every 5 min; hard cutoff at 15 min of no new file activity
-sleep 300
 NEW=$(find "$RUN_DIR" -newer "$RESOLVE_CHECK" -type f 2>/dev/null | wc -l | tr -d ' ')
-touch "$RESOLVE_CHECK"
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -eq 0 ] && [ "$ELAPSED" -ge 15 ]; then
   echo "⏱ resolve agents timed out after ${ELAPSED}min — surfacing partial results"
@@ -584,7 +655,11 @@ Mark the task `completed`, then print:
 - **5-iteration cap** on the Step 12 Codex review loop overrides the global 3-iteration default — skill-declared bounds take precedence (CLAUDE.md §3 "Safety breaks for loops")
 - **`codex exec` timeout**: allow up to 2 minutes per call; background health monitoring (CLAUDE.md §8) does not apply because Codex runs sequentially, not as a spawned background agent
 - **Worktree cleanup safety net**: `SessionEnd` hook runs `git worktree prune` — catches any orphaned worktrees from prior sessions
-- **Review → resolve handoff**: `/review <PR#>` writes its consolidated findings to `tasks/output-review-<date>.md`. `/resolve` (no arguments) reads the most recent file from this path, extracts the PR number, and proceeds with the normal PR mode workflow — fetching live comments and implementing them. This means the review report serves as the PR number lookup, not as the action item list (the live GitHub comments are re-fetched). The review output file persists across turns because the review skill always writes it; no additional output is needed.
+- **Review → resolve handoff**: `/review <PR#>` writes its consolidated findings to `_outputs/YYYY/MM/output-review-YYYY-MM-DD.md`. `/resolve` (no arguments) reads the most recent file from this path, extracts the PR number, and proceeds in **pr mode** — fetching live GitHub comments and implementing them. The review report serves as the PR number lookup only; the action item list comes from live GitHub comments. The review output file persists across turns.
+- **`report` mode**: use when you want to implement the `/review` agent findings directly, without going back to GitHub. Action items are derived from the report's structured sections; CRITICAL/HIGH become `[req]`, MEDIUM become `[suggest]`. If the report header contains a PR number, the PR branch is checked out first; otherwise the current branch is used. No GitHub API calls are made.
+- **`pr + report` mode**: use for a comprehensive one-pass resolve — live GitHub reviewer comments are the primary source; `/review` report findings are merged in and deduplicated. Items that appear in both sources are resolved once (GitHub comment version kept, annotated with "also flagged by /review"). Surviving report-only findings are appended as `[from-review]` items. This avoids running two separate resolve loops.
+- **`[from-review]` items**: commit messages for these items should attribute the finding to the agent, not a GitHub commenter: `[resolve #<id>] /review finding by <agent-name> (report: <report-path>):` — this distinguishes automated findings from human reviewer requests in git history.
+- **Sources block**: always printed after mode resolution and before any GitHub API calls — gives the user a clear "abort if wrong source" moment with zero cost.
 - Follow-up chains:
   - After push → `gh pr review <PR#> --approve` if satisfied; for substantial maintainer changes, comment on the PR explaining what was done and why — don't silently push to a contributor's fork
   - For `[question]` items left unanswered → post a PR comment with the rationale before merging; gives the contributor context and closes the thread

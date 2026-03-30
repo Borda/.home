@@ -63,7 +63,7 @@ Each selector receives this prompt (substitute `<ROSTER>`, `<TASK_PROMPT>`, `<PR
 >
 > Then end your reply with exactly one line: `Wrote: <PROBLEM_ID>`
 
-**Context discipline**: each selector writes to disk and returns a single-line acknowledgment. The pipeline reads from disk in Phase 4.
+**Context discipline**: subagents write to disk and return a single-line acknowledgment. The pipeline agent must NOT accumulate their full analyses in its context — scorers read from disk in Phase 3. Receiving only `Wrote: <PROBLEM_ID>` per agent is correct and expected.
 
 **Phase timeout**: create a checkpoint before spawning (`touch /tmp/calibrate-routing-<TIMESTAMP>`). After issuing all spawns, every 5 min run `find _calibrations/<TIMESTAMP>/routing/ -newer /tmp/calibrate-routing-<TIMESTAMP> -name "selection-*.md" | wc -l` to count newly written files. If progress is evident (new files appearing), grant one +5-min extension. Hard cutoff: 15 min of no new files → mark remaining problems as `{"selected":null,"timed_out":true}` with ⏱ in the report.
 
