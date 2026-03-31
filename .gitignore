@@ -14,6 +14,7 @@ tasks/
 
 # Skill run artifacts and temp outputs (ephemeral, TTL-managed)
 docs/
+_brainstorming/
 _calibrations/
 _resolutions/
 _audits/
@@ -24,6 +25,9 @@ _outputs/
 
 # Agent auto-memory (machine-local, not source)
 .claude/agent-memory/
+
+# Local Claude overrides (not synced to ~/.claude/)
+CLAUDE.local.md
 
 # JetBrains IDEs
 .idea/

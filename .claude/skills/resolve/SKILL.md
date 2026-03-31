@@ -471,7 +471,23 @@ git commit -m "lint: auto-fix violations after resolve cycle"
 
 ## Step 10: Push
 
+*Skip this step entirely when in report mode with no PR# (variables `$FORK_REMOTE`, `$HEAD_REF`, `$BASE_REF` were never set — there is no fork branch to push to; the workflow ends at Step 11).*
+
 ```bash
+# Ensure fork remote is present (gh pr checkout may not have added it for all setups)
+if ! git remote get-url "$FORK_REMOTE" &>/dev/null; then
+  REPO_NAME=$(git remote get-url origin | sed 's|.*/||' | sed 's|\.git$||')
+  git remote add "$FORK_REMOTE" "https://github.com/$FORK_REMOTE/$REPO_NAME.git"
+  echo "→ Added remote $FORK_REMOTE → https://github.com/$FORK_REMOTE/$REPO_NAME.git"
+fi
+
+# Configure tracking if not already set
+git branch --set-upstream-to="$FORK_REMOTE/$HEAD_REF" 2>/dev/null || true
+
+# Count commits ready to push and announce — user must approve the toolbar permission prompt
+PUSH_COUNT=$(git rev-list "$FORK_REMOTE/$HEAD_REF..HEAD" --count 2>/dev/null || git rev-list "origin/$BASE_REF..HEAD" --count)
+echo "→ $PUSH_COUNT commits ready to push to $FORK_REMOTE/$HEAD_REF — approve the git push request in the toolbar ↑ to complete"
+
 git push
 # gh pr checkout configured tracking to the fork branch — git push targets it automatically
 ```

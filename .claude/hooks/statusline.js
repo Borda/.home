@@ -11,7 +11,7 @@
 //     <model>  <project-dir>  <billing>  <context-bar pct%>  [📨 N when queue > 0]
 //
 //   Line 2 — runtime activity (always shown, "none" when idle):
-//     🕵 N agent(s) (<type> [×N], …)  │  🤖 <codex-type> [×N]  │  🔧 <tools>
+//     🕵 N <type> [×N], …  │  🤖 <codex-type> [×N]  │  🔧 <tools>
 //     codex:* subagents are excluded from 🕵 and shown in 🤖 by short name
 //
 // LINE 1 DETAILS
@@ -196,7 +196,7 @@ process.stdin.on("end", () => {
             const colored = isGray ? `\x1b[2m${label}\x1b[0m` : `${ansiColor}${label}\x1b[0m`;
             return count > 1 ? `${colored} ×${count}` : colored;
           });
-        agentsPart = `\x1b[35m🕵 ${agents.length} agent${agents.length > 1 ? "s" : ""}\x1b[0m (${items.join(", ")})`;
+        agentsPart = `\x1b[35m🕵 ${agents.length}\x1b[0m ${items.join(", ")}`;
       } else {
         agentsPart = `\x1b[35m🕵\x1b[0m \x1b[2mnone\x1b[0m`;
       }

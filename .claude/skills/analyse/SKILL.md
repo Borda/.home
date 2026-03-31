@@ -4,6 +4,7 @@ description: Analyze GitHub issues, Pull Requests (PRs), Discussions, and repo h
 argument-hint: <N|health|ecosystem> [--reply]
 allowed-tools: Read, Bash, Write, Agent
 context: fork
+model: opus
 ---
 
 <objective>

@@ -7,18 +7,19 @@ description: Artifact directory layout, naming convention, TTL policy, and clean
 All runtime artifacts live at the **project root** in `_<skill>/` directories, not inside `.claude/`. The underscore prefix sorts them together and signals "generated output, not source config".
 
 ```
-_calibrations/          ← /calibrate skill runs
+_brainstorming/          ← /brainstorm spec files
+_calibrations/           ← /calibrate skill runs
 _resolutions/            ← /resolve lint+QA gate runs
-_audits/              ← /audit skill runs
-_reviews/             ← /review skill runs
-_optimizations/           ← /optimize skill runs (perf + campaign modes)
-_developments/            ← /develop review-cycle runs
+_audits/                 ← /audit skill runs
+_reviews/                ← /review skill runs
+_optimizations/          ← /optimize skill runs (perf + campaign modes)
+_developments/           ← /develop review-cycle runs
 _outputs/                ← quality-gates long output (cross-cutting)
   YYYY/MM/
-tasks/_plans/        ← todo_*.md, plan_*.md (tracked)
+tasks/_plans/            ← todo_*.md, plan_*.md (tracked)
   active/
   closed/
-tasks/_working/      ← lessons.md, diary, guides (tracked)
+tasks/_working/          ← lessons.md, diary, guides (tracked)
 ```
 
 All `_<skill>/` and `_outputs/` dirs are gitignored — they are ephemeral and TTL-managed.
@@ -41,6 +42,7 @@ A completed run always contains `result.jsonl`. Incomplete runs (crashed, timed 
 | Location                         | TTL     | Condition                                      |
 | -------------------------------- | ------- | ---------------------------------------------- |
 | `_<skill>/YYYY-MM-DDTHH-MM-SSZ/` | 30 days | only dirs containing `result.jsonl`            |
+| `_brainstorming/`                | 30 days | keyed on file mtime (flat spec files)          |
 | `_outputs/`                      | 30 days | keyed on file mtime                            |
 | `tasks/_plans/`                  | manual  | move to `closed/` when done; never auto-delete |
 | `tasks/_working/`                | manual  | human-maintained                               |
@@ -56,8 +58,8 @@ find _calibrations _resolutions _audits _reviews _optimizations _developments \
   -maxdepth 2 -name "result.jsonl" -mtime +30 2>/dev/null \
   | xargs -r dirname | xargs -r rm -rf
 
-# Delete stale temp outputs older than 30 days
-find _outputs -type f -mtime +30 2>/dev/null | xargs -r rm -f
+# Delete stale brainstorm specs and temp outputs older than 30 days
+find _brainstorming _outputs -type f -mtime +30 2>/dev/null | xargs -r rm -f
 
 # Prune empty year/month dirs in _outputs
 find _outputs -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs -r rmdir
@@ -68,6 +70,7 @@ find _outputs -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs -r rmdi
 The deterministic `_*/` paths allow precise allow rules:
 
 ```text
+"Bash(mkdir -p _brainstorming/*)",
 "Bash(mkdir -p _calibrations/*)",
 "Bash(mkdir -p _resolutions/*)",
 "Bash(mkdir -p _audits/*)",
@@ -75,6 +78,7 @@ The deterministic `_*/` paths allow precise allow rules:
 "Bash(mkdir -p _optimizations/*)",
 "Bash(mkdir -p _developments/*)",
 "Bash(mkdir -p _outputs/*/*)",
+"Bash(find _brainstorming*)",
 "Bash(find _calibrations*)",
 "Bash(find _resolutions*)",
 "Bash(find _audits*)",

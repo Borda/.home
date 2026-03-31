@@ -1,7 +1,7 @@
 ---
 name: brainstorm
-description: Interactive design-first skill for turning fuzzy ideas into approved specs. Asks clarifying questions one at a time, proposes 2–3 approaches with trade-offs, writes a structured spec to docs/specs/, runs a self-mentor review for gaps and ambiguity, then gates on explicit user approval before any implementation begins.
-argument-hint: <fuzzy idea or feature goal>
+description: Interactive design-first skill for turning fuzzy ideas into approved specs. Asks clarifying questions one at a time, proposes 2–3 approaches with trade-offs, writes a structured spec to _brainstorming/, runs a self-mentor review for gaps and ambiguity, then gates on explicit user approval before any implementation begins.
+argument-hint: <fuzzy idea or feature goal> | breakdown <spec-file>
 disable-model-invocation: true
 allowed-tools: Read, Write, Glob, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 ---
@@ -19,8 +19,12 @@ Turn an unformed idea into a concrete, approved spec before any code is written.
 Examples:
 
 - `/brainstorm add a caching layer to the pipeline`
+
 - `/brainstorm redesign how agents hand off to each other`
+
 - `/brainstorm I want users to be able to export results as CSV`
+
+- **`breakdown <spec-file>`** — breakdown mode: read an already-approved spec (must be a path to a `_brainstorming/*.md` file), ask for clarification on blocking questions before generating the plan, then produce a structured, ordered action plan with discrete tasks each tagged with a ready-to-run invocation. Skips Steps 1–6 entirely.
 
 </inputs>
 
@@ -73,7 +77,7 @@ After presenting, call `AskUserQuestion` with the lettered options so the user c
 
 ## Step 4: Write spec
 
-Write to `docs/specs/YYYY-MM-DD-<slug>.md` using the Write tool (creates the directory if absent):
+Write to `_brainstorming/YYYY-MM-DD-<slug>.md` using the Write tool (creates the directory if absent):
 
 Use this structure:
 
@@ -110,7 +114,7 @@ Before spawning, pre-compute the output path:
 Spawn **self-mentor** with a spec-focused prompt scoped to spec quality only — not a full config audit (inject the pre-computed `$OUTPUT_PATH` into the prompt in place of `<output-path>`):
 
 ```
-Read docs/specs/<spec-file>. Audit for spec quality only:
+Read _brainstorming/<spec-file>. Audit for spec quality only:
 - Completeness: are all five sections present and non-empty?
 - Ambiguity: any section vague enough that two implementers would build different things?
 - Scope creep: does the Proposed design exceed the stated Goal?
@@ -135,8 +139,60 @@ Show the spec path and a one-paragraph summary of the spec. Then call `AskUserQu
 
 On approval suggest the natural next step based on what the spec targets:
 
-- **Spec targets `.claude/` config** (an agent, skill, or rule described in `agents/`, `skills/`, or `rules/`): suggest `/manage update <name> docs/specs/<file>` to apply the spec inline, or `/manage create <type> <name> "description"` for a new entity.
-- **Spec targets application code or other non-config changes**: suggest `/develop plan docs/specs/<file>` to break this into an implementation plan.
+- **Spec targets `.claude/` config** (an agent, skill, or rule described in `agents/`, `skills/`, or `rules/`): suggest `/manage update <name> _brainstorming/<file>` to apply the spec inline, or `/manage create <type> <name> "description"` for a new entity.
+- **Spec targets application code, system setup, or mixed changes**: suggest `/brainstorm breakdown _brainstorming/<file>` to generate a structured action plan with per-task skill/command tags. Use `/develop plan _brainstorming/<file>` only if the spec is purely a code implementation task with no setup or config steps.
+
+## Mode: Breakdown
+
+Triggered when `$ARGUMENTS` starts with `breakdown ` followed by a file path.
+
+Read the spec file at the given path. Then:
+
+### Step B1: Scan for blocking open questions
+
+Read the spec's "Open questions" section. For each question, determine whether it is **blocking** (no recommended option stated and the answer is genuinely unknown — two implementers would make different assumptions) or **non-blocking** (spec already states a recommended option or the answer is inferable from context).
+
+For each blocking question found: call `AskUserQuestion` with the question as a multiple-choice prompt — one question at a time, in order — before proceeding to Step B2. Non-blocking questions must not trigger a question; list them in the plan table footnote instead.
+
+### Step B2: Generate the action plan
+
+1. Parse the spec into discrete action items from the "Proposed design" and "Success criteria" sections
+2. For each action item, classify and tag with the recommended downstream skill or command, and write a ready-to-run invocation string — not just a label:
+   - `.claude/` config change (agent/skill/rule) → full `/manage create <type> <name> "description"` or `/manage update <name> <spec-file>` string
+   - System install or shell setup → full shell command (e.g., `python3 -m venv ~/tools/my-venv && pip install package`)
+   - Application code change → full `/develop feature "<goal>"` or `/develop fix "<symptom>"` string
+   - Documentation → full `/develop feature "<doc goal>" --mode doc` string
+   - Verification/testing → full `/develop feature "<test goal>"` string or manual check command
+3. Output an ordered task table:
+
+```
+## Action Plan: <spec title>
+
+Spec: <file path>
+
+| # | Task | Invocation |
+|---|------|------------|
+| 1 | Install venv | `bash` — `python3 -m venv ~/tools/my-venv && pip install package` |
+| 2 | Add `.mcp.json` entry | `/manage update .mcp.json "add my-server config"` |
+| … | … | … |
+
+### Non-blocking open questions (resolve during implementation)
+- [Any non-blocking open questions from the spec, or "None" if absent]
+```
+
+### Step B3: Post-plan prompt
+
+After presenting the plan table, call `AskUserQuestion` with:
+
+- (a) Start task 1 now ★ recommended
+- (b) Copy plan and pass to another agent
+- (c) Revise spec first
+
+On **(a)**: proceed immediately with the invocation string from task 1 — run the bash command, invoke the skill, or call the tool as specified.
+On **(b)**: output the full plan table as a clean markdown block (no prose wrapper) suitable for pasting into another agent's prompt, then stop.
+On **(c)**: stop and tell the user to revise the spec and re-run `/brainstorm breakdown <spec>`.
+
+End with a `## Confidence` block per CLAUDE.md output standards.
 
 </workflow>
 
@@ -145,7 +201,7 @@ On approval suggest the natural next step based on what the spec targets:
 - **No code at any point** — this skill produces a spec document only; implementation is out of scope
 - **`disable-model-invocation: true`** — the skill is conversational; the parent model drives all steps turn by turn
 - **self-mentor scope in Step 5** — the spawn prompt must constrain scope to spec quality explicitly; do not let it audit `.claude/` config files
-- **docs/specs/ directory** — created if absent; spec filenames use `YYYY-MM-DD-<kebab-slug>.md` format
-- **Follow-up**: on spec approval → if targeting `.claude/` config (agent/skill/rule): `/manage update <name> <spec-file>` (type auto-detected) or `/manage create <type> <name> "desc"`; otherwise: `/develop plan <spec-file>` for task decomposition, then `/develop feature` to implement
+- **\_brainstorming/ directory** — created if absent; spec filenames use `YYYY-MM-DD-<kebab-slug>.md` format
+- **Follow-up**: on spec approval → if targeting `.claude/` config (agent/skill/rule): `/manage update <name> <spec-file>` (type auto-detected) or `/manage create <type> <name> "desc"`; for mixed or system-level specs: `/brainstorm breakdown _brainstorming/<file>` to generate a per-task action plan; for pure code implementation: `/develop plan <spec-file>` then `/develop feature`
 
 </notes>

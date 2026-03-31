@@ -4,6 +4,7 @@ description: Research State of the Art (SOTA) literature for an Artificial Intel
 argument-hint: <topic> | plan [path-to-output.md] | --team
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch, TaskCreate, TaskUpdate
 context: fork
+model: opus
 ---
 
 <objective>

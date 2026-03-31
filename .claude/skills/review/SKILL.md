@@ -4,6 +4,7 @@ description: Multi-agent code review covering architecture, tests, performance, 
 argument-hint: '[file, directory, or PR number] [--reply]'
 allowed-tools: Read, Write, Bash, Grep, Agent, TaskCreate, TaskUpdate
 context: fork
+model: opus
 ---
 
 <objective>
@@ -40,15 +41,15 @@ If `$ARGUMENTS` contains `--reply`, strip it from the arguments and set `REPLY_M
 
 ```bash
 # If $ARGUMENTS is a PR number — run all four in parallel:
-gh pr diff $ARGUMENTS --name-only   # files changed in PR
-gh pr view $ARGUMENTS               # PR description and metadata
-gh pr checks $ARGUMENTS             # CI status — don't review if CI is red
-gh pr view $ARGUMENTS --json reviews,labels,milestone
+gh pr diff $ARGUMENTS --name-only   # files changed in PR                    # timeout: 6000
+gh pr view $ARGUMENTS               # PR description and metadata             # timeout: 6000
+gh pr checks $ARGUMENTS             # CI status — don't review if CI is red  # timeout: 15000
+gh pr view $ARGUMENTS --json reviews,labels,milestone                         # timeout: 6000
 
 # If $ARGUMENTS is a path: use it directly
 
 # If no argument: find recently changed files
-git diff --name-only HEAD~1 HEAD
+git diff --name-only HEAD~1 HEAD  # timeout: 3000
 ```
 
 If Continuous Integration (CI) is red, report that without full review.

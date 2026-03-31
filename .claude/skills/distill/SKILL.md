@@ -31,6 +31,13 @@ Use the Glob tool to enumerate agents (pattern `agents/*.md`, path `.claude/`) a
 
 For each agent/skill found, extract: name, description, tools, purpose.
 
+```bash
+# Check if OpenSpace MCP is installed and active
+[ -f ~/.claude/openspace/skills.db ] && echo "OpenSpace active" || echo "OpenSpace not installed — graduation check will be skipped"
+```
+
+Store the result conceptually (active vs not) for use in Step 2.
+
 ## Step 2: Analyze work patterns
 
 **If `$ARGUMENTS` is `prune`**: skip Steps 2–5 entirely and go to "Mode: Memory Pruning" below.
@@ -57,6 +64,16 @@ git log --oneline -100 | awk '{print $2}' | sort | uniq -c | sort -rn | head -15
 Then use the Read tool on `tasks/todo.md` and `tasks/lessons.md` (if they exist) for task history and conversation hints.
 
 If `$ARGUMENTS` was provided, use it as additional context for the pattern analysis.
+
+### OpenSpace evolution drift (if active)
+
+If the Step 1 check showed OpenSpace active, run:
+
+```bash
+diff -rq ~/.claude/skills/ .claude/skills/ 2>/dev/null | grep "^Files" | sed 's|Files ~/.claude/skills/||;s|\.claude/skills/||' | head -20
+```
+
+Each line names a skill file that differs between the home dir (where OpenSpace writes evolved versions) and the project dir (source of truth). Collect these as "graduated candidates" for the Step 5 report. If no differences, note "No drift — project and home skills are in sync."
 
 ### Frequency Heuristics
 
@@ -123,6 +140,10 @@ Anti-pattern checklist — reject the candidate if any apply:
 
 ### No Action Needed
 [pattern]: already handled by [existing agent/skill]
+
+### OpenSpace Graduation Candidates (N skills drifted from project)
+- `<skill-name>`: evolved by OpenSpace — review diff, then `cp -r ~/.claude/skills/<name> .claude/skills/<name>` + git commit to graduate; or discard if unwanted
+[If OpenSpace not installed: skip this section entirely]
 
 ## Confidence
 **Score**: [0.N]
@@ -330,5 +351,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - Suggestion accepted for new agent/skill → `/manage create` to scaffold and register it
   - Suggestion to enhance existing → edit the agent/skill directly, then `/sync`
   - `lessons` proposals applied → `/sync apply` to propagate; `/audit rules` to verify new rule files are structurally sound
+
+- **OpenSpace integration**: when OpenSpace MCP is active (`~/.claude/openspace/skills.db` exists), distill detects evolved skill variants by diffing `~/.claude/skills/` against `.claude/skills/`. Graduation = manual `cp -r ~/.claude/skills/<name> .claude/skills/<name>` + git commit; discard evolved variants that don't meet quality bar. See `docs/specs/2026-03-31-openspace-mcp-integration.md` for the full graduation flow.
 
 </notes>
