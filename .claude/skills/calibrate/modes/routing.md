@@ -12,7 +12,7 @@ Thresholds (from SKILL.md constants): `ROUTING_ACCURACY_THRESHOLD=0.90`, `ROUTIN
 
 Mark "Calibrate routing" in_progress. Read `.claude/skills/calibrate/templates/routing-pipeline-prompt.md`. Substitute `<N>` (5 for fast, 10 for full), `<TIMESTAMP>`, `<MODE>`. Spawn a **single** `general-purpose` pipeline subagent with the substituted template as its prompt — it handles all phases internally. Proceed to Step 3 after spawning.
 
-Run dir: `_calibrations/<TIMESTAMP>/routing/`
+Run dir: `.reports/calibrate/<TIMESTAMP>/routing/`
 
 ### Report format (Step 3 output)
 
@@ -34,4 +34,4 @@ Flag routing accuracy < 0.90 or hard accuracy < 0.80 with ⚠. Print confused pa
 
 Routing accuracy < 0.90 or hard accuracy < 0.80 → update descriptions for confused pairs → `/calibrate routing` to verify improvement. Max 3 re-run cycles; if accuracy is still below threshold after the third, surface the persistent confusion pairs to the user for manual review.
 
-Proposals written to: `_calibrations/<TIMESTAMP>/routing/report.md` — Proposals section has targeted wording suggestions per confused pair.
+Proposals written to: `.reports/calibrate/<TIMESTAMP>/routing/report.md` — Proposals section has targeted wording suggestions per confused pair.

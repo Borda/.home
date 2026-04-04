@@ -2,7 +2,7 @@
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
 argument-hint: '{all|agents|skills|routing|communication|<name>} [fast|full] [ab] [apply]'
-allowed-tools: Read, Write, Edit, Bash, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Edit, Bash, Agent, Glob, TaskCreate, TaskUpdate
 effort: high
 ---
 
@@ -124,7 +124,7 @@ Each mode file defines `<TARGET>`, `<DOMAIN>`, any N overrides, and extra instru
 
 ## Step 3: Collect results and print combined report
 
-**Health monitoring** — apply the protocol from CLAUDE.md §8. Run dir for liveness checks: `_calibrations/<TIMESTAMP>/<TARGET>/`. Constants below tighten the global defaults for this skill:
+**Health monitoring** — apply the protocol from CLAUDE.md §8. Run dir for liveness checks: `.reports/calibrate/<TIMESTAMP>/<TARGET>/`. Constants below tighten the global defaults for this skill:
 
 ```bash
 # Initialise checkpoints after all pipeline spawns
@@ -132,7 +132,7 @@ LAUNCH_AT=$(date +%s)
 for TARGET in <target-list>; do touch /tmp/calibrate-check-$TARGET; done
 
 # Every HEALTH_CHECK_INTERVAL_MIN (5 min): check each still-running pipeline
-NEW=$(find _calibrations/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')  # tr -d strips leading spaces from wc -l on macOS
+NEW=$(find .reports/calibrate/<TIMESTAMP>/$TARGET/ -newer /tmp/calibrate-check-$TARGET -type f 2>/dev/null | wc -l | tr -d ' ')  # tr -d strips leading spaces from wc -l on macOS
 touch /tmp/calibrate-check-$TARGET
 ELAPSED=$(( ($(date +%s) - LAUNCH_AT) / 60 ))
 if [ "$NEW" -gt 0 ]; then
@@ -140,7 +140,7 @@ if [ "$NEW" -gt 0 ]; then
 elif [ "$ELAPSED" -ge "$PIPELINE_TIMEOUT_MIN" ]; then
   echo "⏱ $TARGET TIMED OUT (hard limit)"
 elif [ "$ELAPSED" -ge "$HEALTH_CHECK_INTERVAL_MIN" ]; then
-  OUTPUT_FILE="_calibrations/<TIMESTAMP>/$TARGET/pipeline.jsonl"
+  OUTPUT_FILE=".reports/calibrate/<TIMESTAMP>/$TARGET/pipeline.jsonl"
   if tail -20 "$OUTPUT_FILE" 2>/dev/null | grep -qi 'delay\|wait\|slow'; then
     echo "⏸ $TARGET: extension granted (+5 min)"
   else
@@ -186,7 +186,7 @@ If `apply` was **not** set, print:
 
 ```
 → Review proposals above, then run `/calibrate <targets> [fast|full] apply` to apply them.
-→ Proposals saved to: _calibrations/<TIMESTAMP>/<TARGET>/proposal.md
+→ Proposals saved to: .reports/calibrate/<TIMESTAMP>/<TARGET>/proposal.md
 ```
 
 If `apply` **was** set (benchmark + auto-apply mode), print `→ Auto-applying proposals now…` and proceed to Step 6.
@@ -197,7 +197,7 @@ Targets with verdict `calibrated` and no proposed changes get a single line: `�
 
 Append each target's result line to `.claude/logs/calibrations.jsonl` using native tools (no Bash needed):
 
-1. Use Glob (pattern `*/result.jsonl`, path `_calibrations/<TIMESTAMP>/`) to find all result files
+1. Use Glob (pattern `*/result.jsonl`, path `.reports/calibrate/<TIMESTAMP>/`) to find all result files
 2. Read each result file with the Read tool
 3. Read `.claude/logs/calibrations.jsonl` (if it exists; use empty string if missing)
 4. Append the new lines and Write the combined content back to `.claude/logs/calibrations.jsonl`
@@ -226,15 +226,15 @@ Mark "Apply findings" in_progress.
 - Pure apply mode (only `apply`, no `fast`/`full`): find the most recent run:
 
 ```bash
-LATEST=$(ls -td _calibrations/*/ 2>/dev/null | head -1)
+LATEST=$(ls -td .reports/calibrate/*/ 2>/dev/null | head -1)
 TIMESTAMP=$(basename "$LATEST")
 ```
 
-For each target in the target list, check whether `_calibrations/<TIMESTAMP>/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
+For each target in the target list, check whether `.reports/calibrate/<TIMESTAMP>/<target>/proposal.md` exists. Collect the set of targets that have a proposal (`found`) and those that don't (`missing`).
 
 Print `⚠ No proposal found for <target> — run /calibrate <target> [fast|full] first` for each missing target.
 
-**Print the run's report before applying**: for each found target, read and print `_calibrations/<TIMESTAMP>/<target>/report.md` verbatim so the user sees the benchmark basis before any file is changed.
+**Print the run's report before applying**: for each found target, read and print `.reports/calibrate/<TIMESTAMP>/<target>/report.md` verbatim so the user sees the benchmark basis before any file is changed.
 
 **Spawn one `general-purpose` subagent per found target. Issue ALL spawns in a single response — no waiting between spawns.**
 

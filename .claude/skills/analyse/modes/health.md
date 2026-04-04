@@ -68,10 +68,10 @@ _(Repeat for each group. If no duplicate groups found: "No obvious duplicates de
 3. [third]
 ```
 
-Run `mkdir -p _analyses/health` then write the full report to
-`_analyses/health/output-analyse-health-$(date +%Y-%m-%d).md` using the Write
+Run `mkdir -p .reports/analyse/health` then write the full report to
+`.reports/analyse/health/output-analyse-health-$(date +%Y-%m-%d).md` using the Write
 tool — **do not print the full analysis to terminal**.
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md`
 — use the **Repo Health Summary** template. Replace `[skill-specific path]` with
-`_analyses/health/output-analyse-health-$(date +%Y-%m-%d).md`.
+`.reports/analyse/health/output-analyse-health-$(date +%Y-%m-%d).md`.

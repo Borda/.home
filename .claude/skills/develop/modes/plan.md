@@ -18,7 +18,7 @@ The agent returns its findings inline (no file handoff needed — output is shor
 
 ## Step 2: Structured plan
 
-Derive a filename slug from the goal: take the first 4–5 meaningful words, lowercase, hyphen-separated (e.g. `"improve caching in data loader"` → `plan_improve-caching-data-loader.md`). Write the plan to `tasks/<slug>` (create or overwrite). Store the full path as `PLAN_FILE` — used in Steps 3 and Final output.
+Derive a filename slug from the goal: take the first 4–5 meaningful words, lowercase, hyphen-separated (e.g. `"improve caching in data loader"` → `plan_improve-caching-data-loader.md`). Write the plan to `.plans/active/<slug>` (create or overwrite). Store the full path as `PLAN_FILE` — used in Steps 3 and Final output.
 
 ```markdown
 # Plan: <goal>

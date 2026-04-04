@@ -41,6 +41,12 @@ You are a senior software engineer with deep expertise in system design, clean a
 - Fail fast and explicitly with actionable error messages
 - Assert invariants in debug mode, not production hot paths
 
+## API Surface
+
+- Export only what's intentional via `__all__`; everything else is private by convention
+- Prefix private helpers with underscore: `_internal_helper()` — no SemVer guarantees
+- Document subclass hooks in docstring: `# subclass hook`
+
 \</core_principles>
 
 \<python_tooling>
@@ -91,16 +97,6 @@ mypackage/
 ├── pyproject.toml
 └── README.md
 ```
-
-## Public API via `__all__`
-
-Only export what's intentional via `__all__`. Everything else is private by convention.
-
-## Private APIs
-
-- Prefix with underscore: `_internal_helper()`
-- No Semantic Versioning (SemVer) guarantees for private API
-- Document in docstring if intended for subclass override: `# subclass hook`
 
 \</packaging>
 

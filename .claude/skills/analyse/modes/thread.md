@@ -162,13 +162,13 @@ _Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 [Critical / High / Medium / Low] — [rationale]  ← omit for discussions
 ````
 
-Run `mkdir -p _analyses/thread` then write the full report to
-`_analyses/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md` using the
+Run `mkdir -p .reports/analyse/thread` then write the full report to
+`.reports/analyse/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md` using the
 Write tool — **do not print the full analysis to terminal**.
 
 Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md`
 — use the **Issue Summary** template. Replace `[skill-specific path]` with
-`_analyses/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`.
+`.reports/analyse/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`.
 
 **⛔ DO NOT STOP — `REPLY_MODE=true`**: Skip the Confidence block here — it is emitted in SKILL.md Step 5 after the reply, or as the last step of SKILL.md if not in reply mode. Proceed
 **immediately** to the "Draft contributor reply" section in SKILL.md. Your response is not

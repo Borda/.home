@@ -69,7 +69,7 @@ old_obj = deprecated_instance(new_obj, deprecated_in="X.Y", remove_in="Z.W")
 
 ## Python Version Policy
 
-- Python 3.9 reached EOL Oct 2025 — minimum for new projects is 3.10 (Python 3.10 reaches EOL Oct 2026 — review this line then)
+- Python 3.10 reaches EOL Oct 2026 — minimum for new projects is **3.11** (Python 3.11 reaches EOL Oct 2027; check [endoflife.date/python](https://endoflife.date/python) for current schedule)
 - **Before writing any Python code**: read `pyproject.toml` (or `setup.cfg`/`setup.py`) to find `requires-python`; use only syntax/APIs available in that minimum version
 - Version-gated features — **read pyproject.toml first if any of these are requested**:
   - `match` statement (3.10+)
@@ -78,7 +78,7 @@ old_obj = deprecated_instance(new_obj, deprecated_in="X.Y", remove_in="Z.W")
   - `tomllib` (3.11+) — use `tomli` backport if requires-python < 3.11
   - `ExceptionGroup` (3.11+)
   - `Self` type (3.11+)
-- Use `target-version = "py310"` in ruff/mypy configs for new projects
+- Use `target-version = "py311"` in ruff/mypy configs for new projects
 
 ## Library API Awareness
 
@@ -87,7 +87,7 @@ Claude's training data has a fixed cutoff — any library released or substantia
 **Before using any third-party library feature**:
 
 1. Check the installed version: `python3 -c "import <pkg>; print(<pkg>.__version__)"` or `pip show <pkg>`
-2. Compare against what Claude was trained on: Claude's cutoff is ~August 2025; any library with active development after that may have new or changed APIs
+2. Compare against what Claude was trained on: Claude's training cutoff is noted in the system context; any library with active development after that date may have new or changed APIs
 3. If the installed version is newer than Claude's training snapshot: read the library's CHANGELOG or online docs first; `python3 -c "import <pkg>; help(<pkg>)"` is a fallback for offline inspection
 4. Use the API that matches the **installed** version — do not assume Claude's training knowledge is current
 

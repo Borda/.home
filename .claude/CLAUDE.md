@@ -18,7 +18,7 @@
 
 ### 3. Self-Improvement Loop
 
-- After ANY correction: update `tasks/lessons.md` with a preventative rule
+- After ANY correction: update `.notes/lessons.md` with a preventative rule
 - Write rules that prevent the same mistake; ruthlessly iterate until mistake rate drops
 - Review memory and lessons at session start
 
@@ -81,9 +81,9 @@ Teams are always user-invoked:
 
 ### File-based tracking
 
-1. Plan in `tasks/todo_<name>.md`; check in before starting
+1. Plan in `.plans/active/todo_<name>.md`; check in before starting
 2. On approval → TaskCreate for each phase; mark complete as you go
-3. Document results in `tasks/results_<name>.md`; capture lessons → see §3 Self-Improvement Loop
+3. Document results in `.plans/closed/results_<name>.md`; capture lessons → see §3 Self-Improvement Loop
 
 ### Session-start hygiene
 

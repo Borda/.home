@@ -14,7 +14,7 @@ Implement software changes with disciplined, test-driven workflows. The mode det
 - **feature**: TDD-first — validate demo → implement → review+fix loop (max 3 cycles) → doc → quality stack + review
 - **fix**: reproduce-first — validate reproduction → apply minimal fix → review+fix loop (max 3 cycles) → quality stack + review
 - **refactor**: test-first — validate coverage audit → characterization tests → refactor → review+fix loop (max 3 cycles) → quality stack + review
-- **plan**: analysis-only — classify + scope → write structured plan to `tasks/todo.md` → exit (no code)
+- **plan**: analysis-only — classify + scope → write structured plan to `.plans/active/` → exit (no code)
 - **debug**: investigate-first — evidence gathering → pattern analysis → hypothesis gate → regression test → minimal fix → review loop
 
 Each mode includes two layers of built-in review before the shared quality stack:
@@ -152,7 +152,7 @@ Maximum 3 cycles. Applied after the quality stack.
 
 - Fix critical/high findings from Cycle 1
 - Re-run quality stack on modified files only
-- Set up a run directory for file-based handoff: `RUN_DIR="_developments/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"`
+- Set up a run directory for file-based handoff: `RUN_DIR=".developments/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"`
 - For each agent type in `agents_with_findings`: spawn that agent directly (not `/review`) with a focused prompt scoped to modified files + prior findings. Each agent prompt must end with: "Write your full findings to `$RUN_DIR/<agent-name>.md` using the Write tool. Return ONLY a compact JSON envelope: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.N,\"summary\":\"<agent-name>: N critical, N high\"}`"
   ```bash
   # Health monitoring (CLAUDE.md §8): create checkpoint after spawns

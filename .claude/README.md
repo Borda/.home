@@ -219,7 +219,7 @@ idea mode:
   Step 1: context scan (Read README, Grep keywords)
   Step 2: AskUserQuestion (clarify, one at a time, max 10)
   Step 3: build tree loop (seed 3–5 branches → deepen/close/merge/add, max 10 ops)
-  Step 4: Write tree doc → _brainstorming/YYYY-MM-DD-<slug>.md (Status: tree)
+  Step 4: Write tree doc → .plans/blueprint/YYYY-MM-DD-<slug>.md (Status: tree)
   Step 5: self-mentor (tree quality audit — coverage, closure quality, open threads)
   Step 6: AskUserQuestion (approval gate) → suggest /brainstorm breakdown <tree>
 
@@ -349,7 +349,7 @@ per-config-file: self-mentor (reads file, writes findings to /tmp/audit-<ts>/<fi
 
 Each mode enforces a validation gate *before* writing implementation code:
 
-- `plan` — scope analysis; produces structured plan in `tasks/plan_<slug>.md`
+- `plan` — scope analysis; produces structured plan in `.plans/active/plan_<slug>.md`
 - `feature` — TDD demo validation before writing code
 - `fix` — reproduction test before touching anything
 - `refactor` — coverage audit before changing structure
@@ -407,20 +407,20 @@ Each mode enforces a validation gate *before* writing implementation code:
 
 ### Reference table
 
-| Rule file               | Applies to                        | What it governs                                                                                                   |
-| ----------------------- | --------------------------------- | ----------------------------------------------------------------------------------------------------------------- |
-| `artifact-lifecycle.md` | `.claude/**`                      | Canonical `_<skill>/` artifact layout, run-dir naming, TTL policy, SessionEnd cleanup hook, settings.json entries |
-| `ci-workflows.md`       | `.github/workflows/**/*.yml`      | Semantic version tags preferred over SHA pins; Python matrix ≥3.10; fail-fast rules                               |
-| `claude-config.md`      | `.claude/**`                      | Checklist for editing `.claude/` files: cross-refs, MEMORY.md roster, README, sync                                |
-| `communication.md`      | (global)                          | Re: anchor format, progress narration, tone, output routing, and terminal color conventions                       |
-| `external-data.md`      | (global)                          | Pagination and completeness rules for REST, GraphQL, and the `gh` CLI — never work on partial result sets         |
-| `git-commit.md`         | (global)                          | Commit message format, push safety (explicit confirmation required), branch safety                                |
-| `hooks-js.md`           | `.claude/hooks/*.js`              | Hook writing standards: state files, age-out patterns, tool activity tracking                                     |
-| `pre-commit-config.md`  | `.pre-commit-config.yaml`         | Version pinning rules, hook ordering, CI integration via pre-commit.ci                                            |
-| `python-code.md`        | `**/*.py`                         | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP    |
-| `quality-gates.md`      | (global)                          | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                              |
-| `release-notes.md`      | `CHANGELOG.md`, `PUBLIC-NOTES.md` | Release note structure, SemVer decision criteria, deprecation notice format                                       |
-| `testing.md`            | `tests/**/*.py`, `**/test_*.py`   | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                           |
+| Rule file               | Applies to                        | What it governs                                                                                                    |
+| ----------------------- | --------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| `artifact-lifecycle.md` | `.claude/**`                      | Canonical dot-prefixed artifact layout, run-dir naming, TTL policy, SessionEnd cleanup hook, settings.json entries |
+| `ci-workflows.md`       | `.github/workflows/**/*.yml`      | Semantic version tags preferred over SHA pins; Python matrix ≥3.10; fail-fast rules                                |
+| `claude-config.md`      | `.claude/**`                      | Checklist for editing `.claude/` files: cross-refs, MEMORY.md roster, README, sync                                 |
+| `communication.md`      | (global)                          | Re: anchor format, progress narration, tone, output routing, and terminal color conventions                        |
+| `external-data.md`      | (global)                          | Pagination and completeness rules for REST, GraphQL, and the `gh` CLI — never work on partial result sets          |
+| `git-commit.md`         | (global)                          | Commit message format, push safety (explicit confirmation required), branch safety                                 |
+| `hooks-js.md`           | `.claude/hooks/*.js`              | Hook writing standards: state files, age-out patterns, tool activity tracking                                      |
+| `pre-commit-config.md`  | `.pre-commit-config.yaml`         | Version pinning rules, hook ordering, CI integration via pre-commit.ci                                             |
+| `python-code.md`        | `**/*.py`                         | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP     |
+| `quality-gates.md`      | (global)                          | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                               |
+| `release-notes.md`      | `CHANGELOG.md`, `PUBLIC-NOTES.md` | Release note structure, SemVer decision criteria, deprecation notice format                                        |
+| `testing.md`            | `tests/**/*.py`, `**/test_*.py`   | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                            |
 
 ### How rules are auto-loaded
 
@@ -470,7 +470,7 @@ Example: editing `tests/test_transforms.py` auto-loads `testing.md` (matches `te
 **RUN_DIR convention:**
 
 - Ephemeral (per-run): `/tmp/<skill>-<timestamp>/` — created once before any spawns
-- Persistent (final reports): `tasks/`
+- Persistent (final reports): `.temp/`
 
 **Reference implementations:** `/calibrate` is canonical; `/audit` Step 3 (`self-mentor` per file → consolidator); `/review` Steps 3–6.
 
@@ -650,19 +650,20 @@ Skills check availability at runtime: `claude plugin list 2>/dev/null | grep -q 
 
 ## 📂 Artifact Layout
 
-Runtime artifacts live at the project root in `_<skill>/` dirs — separate from versioned config in `.claude/`. The `_` prefix sorts them together and signals "generated output, not source".
+Runtime artifacts live at the project root in dot-prefixed dirs — separate from versioned config in `.claude/`. The dot-prefix signals "generated output, not source".
 
 ```
-_calibrations/       ← /calibrate benchmark runs
-_resolutions/        ← /resolve lint+QA gate outputs
-_audits/             ← /audit analysis runs
-_reviews/            ← /review multi-agent outputs
-_optimizations/      ← /optimize skill runs (perf + campaign modes)
-_developments/       ← /develop review-cycle handoffs
-_outputs/                ← long output from any skill (quality-gates rule)
-  YYYY/MM/
-tasks/_plans/        ← active and closed plans (tracked)
-tasks/_working/      ← lessons, diary, guides (tracked)
+.plans/blueprint/        ← /brainstorm spec and tree files
+.plans/active/           ← todo_*.md, plan_*.md
+.plans/closed/           ← completed plans
+.notes/                  ← lessons.md, diary, guides
+.reports/calibrate/      ← /calibrate benchmark runs
+.reports/resolve/        ← /resolve lint+QA gate outputs
+.reports/audit/          ← /audit analysis runs
+.reports/review/         ← /review multi-agent outputs
+.experiments/            ← /optimize skill runs (perf + campaign modes)
+.developments/           ← /develop review-cycle handoffs
+.temp/                   ← long output from any skill (quality-gates rule)
 ```
 
-Each skill creates a timestamped run dir: `_<skill>/YYYY-MM-DDTHH-MM-SSZ/`. Completed runs contain `result.jsonl`; the `SessionEnd` hook deletes completed runs older than 30 days automatically. Incomplete runs (crashed/timed-out) are kept for debugging. All `_*/` dirs are gitignored — see `.claude/rules/artifact-lifecycle.md` for TTL policy and full details.
+Each skill creates a timestamped run dir: `.reports/<skill>/YYYY-MM-DDTHH-MM-SSZ/`. Completed runs contain `result.jsonl`; the `SessionEnd` hook deletes completed runs older than 30 days automatically. Incomplete runs (crashed/timed-out) are kept for debugging. All dot-prefixed dirs are gitignored — see `.claude/rules/artifact-lifecycle.md` for TTL policy and full details.

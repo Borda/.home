@@ -111,9 +111,18 @@ process.stdin.on("end", () => {
     }
 
     if (result.status !== 0) {
-      const out = [result.stdout, result.stderr].filter(Boolean).join("\n").trim();
-      if (!out) process.exit(0); // no hooks apply to this file type — silent pass
-      process.stderr.write(out);
+      const raw = [result.stdout, result.stderr].filter(Boolean).join("\n");
+      if (!raw.trim()) process.exit(0); // no hooks apply to this file type — silent pass
+      // Strip dot-padded "Passed"/"Skipped" lines — only show failures and their sub-lines.
+      // This prevents the narrow Claude Code blocking pane from wrapping hundreds of passing
+      // hook lines and obscuring the actual failure.
+      const filtered = raw
+        .split("\n")
+        .filter((line) => !/(Passed|Skipped)\s*$/.test(line))
+        .join("\n")
+        .trim();
+      if (!filtered) process.exit(0);
+      process.stderr.write(filtered);
       process.exit(2);
     }
 

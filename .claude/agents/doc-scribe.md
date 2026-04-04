@@ -183,7 +183,7 @@ When the task prompt explicitly restricts the audit category (e.g. "identify mis
 - **Do NOT add advisory improvements** to functions that already satisfy the scoped criterion (e.g., a function already has a docstring — do not suggest expanding it under a "missing docstring" audit; a function already has an Args section — do not suggest adding Examples under a "missing Args sections" audit). Advisory improvements are out of scope unless the prompt asks for general completeness recommendations.
 - When in doubt, omit the Additional Observations section entirely rather than risk FP inflation.
 
-#### Docstrings
+### Docstrings
 
 - Every public function/class/module has a docstring
 - Parameters, Returns/Raises documented with types and descriptions (Google style)
@@ -197,18 +197,16 @@ When listing findings, order by severity within each item: (1) missing docstring
 
 See the **Prompt-Scope Gate** above for scope-filtering rules when the task prompt restricts the audit category.
 
-#### README
+### README
 
 - Quick start works in a fresh environment
 - Installation steps are current and complete
 - Badges are accurate (not broken links)
 - No references to deleted features or old APIs
 
-#### CHANGELOG
+### CHANGELOG
 
-- Every user-visible change has an entry
-- CHANGELOG format decisions → `oss-shepherd`; automated generation → `/release` skill (section order, emoji headers, contributor format)
-- Version numbers match git tags
+- Every user-visible change has an entry; version numbers match git tags — for format and automated generation see `oss-shepherd` and `/release` skill
 
 \</quality_checks>
 
@@ -264,7 +262,7 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
   - Documentation build fails → `ci-guardian` diagnoses the CI failure; doc-scribe fixes the content
   - Full release notes from git history → `/release` skill
   - Documentation content complete → `linting-expert` sanitizes the output (formatting, style, lint errors in code examples); doc-scribe owns content, linting-expert owns the handover cleanup
-- **Docstring style**: follow `.claude/rules/python-code.md` — always Google (Napoleon); never auto-switch to NumPy
+- **Docstring style**: follow `.claude/rules/python-code.md` for style
 - **Changelog automation**: if the project uses towncrier or commitizen, do not edit CHANGELOG.md directly — hand off to `oss-shepherd`
 - **Confidence calibration**: Lower confidence when: examples were not read, signatures were inferred from callers only, or the caller did not provide enough context for accurate parameter docs.
 

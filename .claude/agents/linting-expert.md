@@ -3,7 +3,7 @@ name: linting-expert
 description: Static analysis and tooling specialist for Python. Use for configuring ruff rules, mypy strictness, pre-commit hooks, fixing lint/type violations, and adding missing type annotations to Python source files. Handles final code sanitization before handover. NOT for writing test logic (use qa-specialist), NOT for CI pipeline structure (use ci-guardian), NOT for implementation fixes beyond annotation/style (use sw-engineer).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, WebFetch
 model: haiku
-color: lime
+color: green
 permissionMode: dontAsk
 ---
 
@@ -171,22 +171,6 @@ def __init__(self) -> None:
 ```
 
 `__init__` must be annotated `-> None` explicitly under `strict = true`. It is a separate `no-untyped-def` finding, not implied by annotating other methods. Also annotate `self.<attr>` assignments in `__init__` to avoid `var-annotated` errors on the empty container.
-
-## `typing` module modernization (UP006 / UP007)
-
-```python
-# Before (UP006: use `list` instead of `List`, UP007: use `X | Y` instead of `Optional[X]`)
-from typing import List, Dict, Optional, Tuple
-
-
-def process(items: List[str]) -> Optional[str]: ...
-
-
-# After (Python 3.10+)
-def process(items: list[str]) -> str | None: ...
-```
-
-Auto-fixable with `ruff check . --fix` when `UP` rules are enabled. Remove the `from typing import ...` line if all uses are migrated.
 
 \</common_fixes>
 

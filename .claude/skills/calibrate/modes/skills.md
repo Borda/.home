@@ -39,7 +39,7 @@ Each subagent receives the pipeline template from `.claude/skills/calibrate/temp
 
 Other orchestration-heavy skills remain excluded: `resolve`, `manage`, `develop`, `research`, `brainstorm`. Their outputs are too context-dependent or long-horizon for synthetic ground truth without significant test infrastructure.
 
-Run dir per skill: `_calibrations/<TIMESTAMP>/<TARGET>/` (strip `/` from target name for the dir, e.g. `audit` or `review`)
+Run dir per skill: `.reports/calibrate/<TIMESTAMP>/<TARGET>/` (strip `/` from target name for the dir, e.g. `audit` or `review`)
 
 ### Future Candidates
 
@@ -56,7 +56,7 @@ Modes evaluated for calibration but deferred due to significant barriers. `/audi
 | `/release-audit`     | Requires controlled repo state (version tags, CHANGELOG, CI status)                       | Release fixture infrastructure exists   |
 | `/develop-plan`      | Output is somewhat subjective; no clear ground-truth checklist beyond section presence    | Structured plan schema is formalized    |
 | `/distill-review`    | Reads real agent/skill files; synthetic roster possible but overlaps `/audit` calibration | Distinct synthetic scenarios identified |
-| `/distill-lessons`   | Reads real `tasks/lessons.md`; needs realistic synthetic lesson corpus                    | Lesson corpus fixtures exist            |
+| `/distill-lessons`   | Reads real `.notes/lessons.md`; needs realistic synthetic lesson corpus                   | Lesson corpus fixtures exist            |
 | `/optimize-perf`     | Requires running real profiling tools against real code                                   | Profiling sandbox environment exists    |
 
 **Excluded** (inherently non-calibratable — documented to avoid recurring evaluation):

@@ -6,7 +6,7 @@ maxTurns: 60
 model: opus
 effort: high
 memory: project
-color: violet
+color: purple
 ---
 
 <role>
@@ -259,7 +259,7 @@ When reporting clean attribution (no issues found):
   | Issue requires tracing a second-order citation (paper A cites paper B which introduced the technique)                                             | Apply fetch penalty (-0.05 to -0.10)                                                 |
   | Issue requires a third-order or post-2025 chain                                                                                                   | Low confidence (\<0.75); recommend WebSearch                                         |
 
-  Examples of first-order papers that do NOT require fetching: Mixup (Zhang 2018), BERT (Devlin 2019), SimCSE (Gao 2021), kNN-LM (Khandelwal 2020), CutMix (Yun 2019), CLIP (Radford 2021), BYOL, DDIM, InfoNCE (van den Oord 2018). When the issue also has a text-confirmation (the excerpt itself shows the problem), apply zero fetch penalty regardless of whether you recall the prior paper perfectly.
+  First-order papers that do NOT require fetching include widely known works such as BERT and CLIP. When the issue also has a text-confirmation (the excerpt itself shows the problem), apply zero fetch penalty regardless of whether you recall the prior paper perfectly.
 
 - **Over-flagging in well-attributed work**: if a paper's abstract correctly cites its prior art and all methods trace to the correct originating authors, report this positively. Do not treat "nothing wrong found" as an incomplete analysis — it is a valid and informative result. Rate severity honestly: a missing secondary reference (e.g., a follow-on paper that extended the original method) is LOW severity; only method misattribution or contribution omission from the abstract rises to MEDIUM or HIGH.
 

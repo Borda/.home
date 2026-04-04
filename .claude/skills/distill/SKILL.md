@@ -19,7 +19,7 @@ Analyze how Claude Code is being used in this project and surface concrete impro
   - Omitted — analyze the project's existing patterns and agents to generate suggestions proactively.
   - `review` — review the existing agent/skill roster for quality and gaps without suggesting new additions.
   - `prune` — evaluate the project memory file for stale, redundant, or verbose entries and apply a trimmed version.
-  - `lessons` — read `tasks/lessons.md` and memory feedback files, then distill recurring patterns into proposed rule files, agent instruction updates, and skill workflow changes.
+  - `lessons` — read `.notes/lessons.md` and memory feedback files, then distill recurring patterns into proposed rule files, agent instruction updates, and skill workflow changes.
   - Description of a recurring task — use the description as context when generating suggestions (e.g. "I keep doing X manually").
 
 </inputs>
@@ -62,7 +62,7 @@ git log --name-only --pretty="" -30 | sort | uniq -c | sort -rn | head -20
 git log --oneline -100 | awk '{print $2}' | sort | uniq -c | sort -rn | head -15
 ```
 
-Then use the Read tool on `tasks/todo.md` and `tasks/lessons.md` (if they exist) for task history and conversation hints.
+Then use the Read tool on `.plans/active/todo.md` and `.notes/lessons.md` (if they exist) for task history and conversation hints.
 
 If `$ARGUMENTS` was provided, use it as additional context for the pattern analysis.
 
@@ -161,8 +161,6 @@ Locate, evaluate, and trim the project memory file.
 
 <!-- Note: this slug derivation is also used in audit/SKILL.md Check 11. If the auto-memory path convention changes, update both files. -->
 
-<!-- Same slug derivation pattern used in skills/audit/SKILL.md -->
-
 ```bash
 PROJECT="$(git rev-parse --show-toplevel)"
 MEMORY_FILE="$HOME/.claude/projects/$(echo "$PROJECT" | sed 's|[/.]|-|g')/memory/MEMORY.md"
@@ -202,8 +200,8 @@ Read accumulated lessons and feedback, then identify patterns that should be pro
 Find and read all source material in parallel:
 
 ```bash
-# tasks/lessons.md (if it exists)
-[ -f tasks/lessons.md ] && echo "found" || echo "not found"
+# .notes/lessons.md (if it exists)
+[ -f .notes/lessons.md ] && echo "found" || echo "not found"
 
 # Memory feedback files
 PROJECT="$(git rev-parse --show-toplevel)"
@@ -248,7 +246,7 @@ Produce a structured proposal table. Do not apply anything yet — report first.
 ## Lessons Distillation Proposals
 
 ### Summary
-- Source files read: N (tasks/lessons.md + N feedback files)
+- Source files read: N (.notes/lessons.md + N feedback files)
 - Total lessons: N
 - Clusters: N domains
 

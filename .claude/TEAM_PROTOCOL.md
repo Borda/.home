@@ -150,7 +150,7 @@ Report security findings as `P0` (auth bypass, injection, secrets in code) or `P
 
 When a teammate completes an analysis task (review, audit, research):
 
-- Write full findings to `tasks/<skill>-<teammate-name>-<date>.md` using the Write tool
+- Write full findings to `.temp/<skill>-<teammate-name>-<date>.md` using the Write tool
 - Send lead a summary message: `DONE <task-id> | findings=N sev=C/H/M | → <file-path>`
 - Lead reads the file only when consolidating the final report — not for every task completion
 

@@ -10,7 +10,7 @@ Triggered by `judge` or `judge <file.md>`.
 
 1. Explicit argument: `/optimize judge path/to/plan.md`
 2. Auto-detect: `program.md` at project root
-3. Latest state: scan `_optimizations/state/*/state.json` for most recent with `status: running` and non-null `program_file` field
+3. Latest state: scan `.experiments/state/*/state.json` for most recent with `status: running` and non-null `program_file` field
 4. If nothing found: stop with error:
    ```
    No program.md found. Run /optimize plan <goal> first, or provide a path: /optimize judge <path.md>
@@ -53,7 +53,7 @@ Check each of the 11 items below. Produce a findings list with severity. Each fi
 Pre-compute the run directory before spawning:
 
 ```bash
-RUN_DIR="_optimizations/judge-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR=".experiments/judge-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"
 ```
 
@@ -153,7 +153,7 @@ note: codex plugin not installed — skipping adversarial review (Claude-only ju
 BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')
 ```
 
-**Write full report** to `_outputs/$(date +%Y)/$(date +%m)/output-optimize-judge-$BRANCH-$(date +%Y-%m-%d).md`:
+**Write full report** to `.temp/output-optimize-judge-$BRANCH-$(date +%Y-%m-%d).md`:
 
 ```markdown
 ## Judge Report: <campaign_title>
@@ -221,7 +221,7 @@ Findings:     <N> critical · <N> high · <N> medium · <N> low
 Protocol gaps: <N>
 Dry-run:      metric=<value> guard=pass|fail  (or "skipped — --no-dry-run")
 Codex:        reviewed | skipped
-→ saved to _outputs/YYYY/MM/output-optimize-judge-<branch>-<date>.md
+→ saved to .temp/output-optimize-judge-<branch>-<date>.md
 ---
 Next: /optimize campaign <path>                        [APPROVED]
 Next: fix protocol, re-run /optimize judge <path>      [NEEDS-REVISION or BLOCKED]
@@ -229,8 +229,8 @@ Next: fix protocol, re-run /optimize judge <path>      [NEEDS-REVISION or BLOCKE
 
 ## Notes
 
-- Judge is read-only — it never modifies code, commits, or writes to `_optimizations/state/`
-- The `_optimizations/judge-<timestamp>/` run directory stores the methodology review agent's full output for later reference
+- Judge is read-only — it never modifies code, commits, or writes to `.experiments/state/`
+- The `.experiments/judge-<timestamp>/` run directory stores the methodology review agent's full output for later reference
 - Dry-run commands execute on the current machine — use `--no-dry-run` for cross-machine workflows
 - Verdict is deterministic (finding counts + methodology_rating); it is not inferred from prose
 - Re-run judge after editing `program.md` to confirm fixes resolved the flagged items

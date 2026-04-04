@@ -56,9 +56,11 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 - Phase 5: final report (Step 11) → mark in_progress, then completed before output
 - On loop retry or scope change → create a new task; do not reuse the completed task
 
-Surface progress to the user at natural milestones: after system-wide checks ("✓ Checks 1-11 complete, N findings so far — spawning per-file audits"), after agent reports ("Agent reports received — N medium, N low findings"), and before each fix batch ("Fixing N medium findings in parallel").
+Surface progress to the user at natural milestones: after system-wide checks ("✓ Checks 1-21 complete, N findings so far — spawning per-file audits"), after agent reports ("Agent reports received — N medium, N low findings"), and before each fix batch ("Fixing N medium findings in parallel").
 
 ## Pre-flight checks
+
+**Context budget**: the full audit (12+ agents, 14+ skills, 12 system checks) runs close to context limits. Strict file-based handoff is mandatory — every sub-agent writes its full output to a file and returns only a compact JSON envelope. Any sub-agent that echoes findings back to context will cause compaction before the audit completes.
 
 ```bash
 RED='\033[1;31m'; YEL='\033[1;33m'; GRN='\033[0;32m'; NC='\033[0m'
@@ -127,7 +129,7 @@ Record the full file list — this becomes the audit scope for Steps 3–4. Cros
 Set up the run directory once before spawning any agents:
 
 ```bash
-RUN_DIR="_audits/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR=".reports/audit/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"
 echo "Run dir: $RUN_DIR"
 ```
@@ -141,6 +143,8 @@ Spawn one **self-mentor** agent per file (or batch into groups of up to 10 for e
 > "Write your FULL findings (all severity levels, Confidence block) to `<RUN_DIR>/<file-basename>.md` using the Write tool — where `<file-basename>` is the filename only (e.g. `oss-shepherd.md`, `audit-SKILL.md`). Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"<RUN_DIR>/<file-basename>.md\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"confidence\":0.N,\"summary\":\"<filename>: N critical, N high, N medium, N low\"}`"
 
 Replace `<RUN_DIR>` with the actual directory path and `<file-basename>` with just the filename.
+
+**Critical context discipline**: do NOT include any other text, tool output summaries, or findings in the response body — only the JSON envelope on the final line. All content goes to the file.
 
 > The template file is canonical for the per-file audit criteria. The disk inventory and RUN_DIR path injected here are runtime values added to each agent spawn.
 
@@ -160,6 +164,11 @@ Every `$MONITOR_INTERVAL` seconds, run `find $RUN_DIR -newer "$AUDIT_CHECKPOINT"
 Beyond per-file analysis, run cross-file checks that self-mentor cannot do alone:
 
 Run the following checks. For file-listing steps use Glob; for content-search steps use Grep. Bash is only needed for the pipeline comparisons and the `printf`/`jq` blocks below.
+
+**Context discipline for Step 4**: write all check findings to `$RUN_DIR/system-checks.md` (using the Write tool after all checks complete), not to the main conversation context. Keep only a one-line status per check in context:
+
+- `✓ Check N — <one-line result>` (pass)
+- `⚠ Check N — N findings` (issues)
 
 **Check 1 — Inventory drift (MEMORY.md vs disk)**
 Use Glob (`agents/*.md`, path `.claude/`) to list agent files; extract basenames and sort, then write to `/tmp/agents_disk.txt` via Bash:
@@ -452,13 +461,91 @@ Using model reasoning, cross-reference each extracted color name against the `CO
 
 Note: `COLOR_MAP` may intentionally include extra entries (future-proofing); flag only the agent-declared-but-missing case as actionable.
 
-**Check 11 — Memory health (MEMORY.md noise accumulation)**
+**Check 11 — RTK hook alignment**
+
+Verify that the prefix list in `.claude/hooks/rtk-rewrite.js` (`RTK_PREFIXES` array) is consistent with the commands the installed RTK binary actually supports. A hook entry that references a command RTK does not support will silently rewrite a valid call into a failing one.
+
+Skip this check if RTK is not installed (`rtk --version` fails) or if `.claude/hooks/rtk-rewrite.js` does not exist.
+
+```bash
+YEL='\033[1;33m'; RED='\033[1;31m'; GRN='\033[0;32m'; CYN='\033[0;36m'; NC='\033[0m'
+printf "=== Check 11: RTK hook alignment ===\n"
+
+# Verify prerequisites
+if ! command -v rtk &>/dev/null; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 11 — rtk not installed\n"
+elif [ ! -f ".claude/hooks/rtk-rewrite.js" ]; then
+  printf "${YEL}⚠ SKIPPED${NC}: Check 11 — .claude/hooks/rtk-rewrite.js not found\n"
+else
+  # Step 1: collect RTK-supported subcommands from --help output
+  RTK_HELP=$(rtk --help 2>&1)
+
+  # Step 2: extract RTK_PREFIXES array from the hook file
+  HOOK_PREFIXES=$(node -e "
+    const fs = require('fs');
+    const src = fs.readFileSync('.claude/hooks/rtk-rewrite.js', 'utf8');
+    const m = src.match(/RTK_PREFIXES\s*=\s*\[([^\]]*)\]/s);
+    if (!m) { process.exit(1); }
+    const entries = m[1].match(/'[^']+'/g) || [];
+    entries.forEach(e => console.log(e.replace(/'/g, '')));
+  " 2>/dev/null)
+
+  if [ -z "$HOOK_PREFIXES" ]; then
+    printf "${YEL}⚠ SKIPPED${NC}: Check 11 — could not parse RTK_PREFIXES from hook file\n"
+  else
+    INVALID=0
+    while IFS= read -r prefix; do
+      [ -z "$prefix" ] && continue
+      # A prefix is valid if it appears as a subcommand in rtk --help output
+      if ! echo "$RTK_HELP" | grep -qw "$prefix"; then
+        printf "${RED}! INVALID hook prefix${NC}: '%s' — not a recognized RTK subcommand (would silently rewrite to a failing call)\n" "$prefix"
+        INVALID=$((INVALID + 1))
+      fi
+    done <<< "$HOOK_PREFIXES"
+
+    # Report filterable RTK subcommands absent from the hook prefix list
+    # Meta/utility commands that are never rewritten: gain, discover, proxy, init, version
+    META_CMDS="gain discover proxy init version help"
+    MISSING=0
+    while IFS= read -r rtk_cmd; do
+      [ -z "$rtk_cmd" ] && continue
+      # Skip meta/utility commands
+      is_meta=0
+      for meta in $META_CMDS; do
+        [ "$rtk_cmd" = "$meta" ] && is_meta=1 && break
+      done
+      [ "$is_meta" -eq 1 ] && continue
+      # Flag if this filterable command is not in the hook prefix list
+      if ! echo "$HOOK_PREFIXES" | grep -qw "$rtk_cmd"; then
+        printf "${YEL}⚠ MISSING hook prefix${NC}: '%s' — RTK supports filtering this command but the hook does not list it\n" "$rtk_cmd"
+        MISSING=$((MISSING + 1))
+      fi
+    done < <(echo "$RTK_HELP" | grep -oE '^\s{2,4}[a-z][a-z0-9_-]+' | tr -d ' ' | sort -u)
+
+    if [ "$INVALID" -eq 0 ] && [ "$MISSING" -eq 0 ]; then
+      printf "${GRN}✓ OK${NC}: Check 11 — RTK hook prefixes aligned with installed RTK version\n"
+    fi
+  fi
+fi
+```
+
+Using model reasoning, review any invalid or missing prefixes flagged above:
+
+- Hook prefix NOT in RTK's supported commands → **high** (the hook silently rewrites a valid call to `rtk <unsupported-cmd>`, which fails at runtime with no warning; each invalid prefix = one high finding)
+- Filterable RTK command absent from hook prefix list → **medium** (users invoking that command directly bypass RTK's token filtering; no breakage, but savings are lost)
+- Meta/utility commands (`gain`, `discover`, `proxy`, `init`) absent from the hook list → **not a finding** (these are intentionally never rewritten)
+
+**Severity**: invalid prefix entries = **high**; missing filterable commands = **medium**. Fix for invalid: remove the entry from `RTK_PREFIXES` in `.claude/hooks/rtk-rewrite.js`. Fix for missing: add the command to `RTK_PREFIXES` and verify RTK's filter for that command produces correct output before adding.
+
+**Report only** — never auto-fix; modifying `RTK_PREFIXES` changes hook behavior for all subsequent commands and must be verified manually.
+
+**Check 12 — Memory health (MEMORY.md noise accumulation)**
 
 MEMORY.md has a 200-line truncation limit. Noise accumulates silently over time — duplicate rules, stale version pins, and absorbed feedback files all erode the budget without adding information. Run three sub-checks:
 
-**11a — Duplicate with CLAUDE.md**: Read both MEMORY.md and CLAUDE.md. For each section in MEMORY.md, check whether the same rule or directive exists verbatim or near-verbatim in CLAUDE.md. Flag duplicates as **low** — one source of truth is enough; the MEMORY.md copy adds context-window cost with no benefit.
+**12a — Duplicate with CLAUDE.md**: Read both MEMORY.md and CLAUDE.md. For each section in MEMORY.md, check whether the same rule or directive exists verbatim or near-verbatim in CLAUDE.md. Flag duplicates as **low** — one source of truth is enough; the MEMORY.md copy adds context-window cost with no benefit.
 
-**11b — Stale version pins**: Scan MEMORY.md for lines containing pinned semver values (e.g. `v0.15.2`, `v1.19.1`) or "as of [month year]" staleness markers. Flag each as **low** — pinned versions age within weeks; the actionable rule (e.g. "always run `pre-commit autoupdate`") should survive, the specific version should not.
+**12b — Stale version pins**: Scan MEMORY.md for lines containing pinned semver values (e.g. `v0.15.2`, `v1.19.1`) or "as of [month year]" staleness markers. Flag each as **low** — pinned versions age within weeks; the actionable rule (e.g. "always run `pre-commit autoupdate`") should survive, the specific version should not.
 
 ```bash
 # Find lines with semver pins or "as of" staleness markers in MEMORY.md
@@ -467,24 +554,24 @@ MEMORY_FILE="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|[/.
 if [ -f "$MEMORY_FILE" ]; then
   grep -nE '(v[0-9]+\.[0-9]+\.[0-9]+|as of [A-Z][a-z]+ 20[0-9]{2})' "$MEMORY_FILE" || echo "no stale pins found"
 else
-  printf "${YEL}⚠ SKIPPED${NC}: Check 11b — MEMORY.md not found at derived path: %s\n" "$MEMORY_FILE"
+  printf "${YEL}⚠ SKIPPED${NC}: Check 12b — MEMORY.md not found at derived path: %s\n" "$MEMORY_FILE"
 fi
 ```
 
-**11c — Absorbed feedback files**: List all `feedback_*.md` files in the memory directory. For each, read its content and check whether the rule it documents is already present in MEMORY.md or in the relevant agent/skill file. If yes, flag as **low** (delete the feedback file — the lesson is absorbed).
+**12c — Absorbed feedback files**: List all `feedback_*.md` files in the memory directory. For each, read its content and check whether the rule it documents is already present in MEMORY.md or in the relevant agent/skill file. If yes, flag as **low** (delete the feedback file — the lesson is absorbed).
 
 ```bash
 MEMORY_DIR="$HOME/.claude/projects/$(git rev-parse --show-toplevel | sed 's|[/.]|-|g')/memory"
 if [ -d "$MEMORY_DIR" ]; then
   ls "$MEMORY_DIR"/feedback_*.md 2>/dev/null || echo "no feedback files"
 else
-  printf "${YEL}⚠ SKIPPED${NC}: Check 11c — memory dir not found: %s\n" "$MEMORY_DIR"
+  printf "${YEL}⚠ SKIPPED${NC}: Check 12c — memory dir not found: %s\n" "$MEMORY_DIR"
 fi
 ```
 
 All three sub-checks produce only **low** findings — auto-fixed under `/audit fix all`; reported only under `/audit fix` or lower. Fix action: remove the duplicate section, drop the version pin (keep the surrounding rule), delete the absorbed feedback file.
 
-**Check 12 — Agent description routing alignment**
+**Check 13 — Agent description routing alignment**
 
 Three sub-checks, all using model reasoning over extracted agent descriptions. These are **report-only** — never auto-fix; descriptions are semantic and require human judgment.
 
@@ -501,15 +588,15 @@ done
 
 Apply model reasoning to the collected descriptions:
 
-**12a — Overlap analysis**: For each pair of agents, assess domain overlap. Flag pairs where a reasonable orchestrator could confuse which agent to pick — i.e., given a task in the overlap zone, the descriptions alone do not disambiguate. Each ambiguous pair → **medium** finding.
+**13a — Overlap analysis**: For each pair of agents, assess domain overlap. Flag pairs where a reasonable orchestrator could confuse which agent to pick — i.e., given a task in the overlap zone, the descriptions alone do not disambiguate. Each ambiguous pair → **medium** finding.
 
-**12b — NOT-for clause coverage**: For each high-overlap pair found in 12a, check whether at least one agent in the pair has a "NOT for" / "not for" / exclusion clause in its description that references the other or its domain. Missing disambiguation → **medium**.
+**13b — NOT-for clause coverage**: For each high-overlap pair found in 13a, check whether at least one agent in the pair has a "NOT for" / "not for" / exclusion clause in its description that references the other or its domain. Missing disambiguation → **medium**.
 
-**12c — Trigger phrase specificity**: For each agent, check whether the description's first clause states an exclusive domain not shared with any other agent. A vague opener that doesn't immediately distinguish this agent from its nearest neighbor → **low**.
+**13c — Trigger phrase specificity**: For each agent, check whether the description's first clause states an exclusive domain not shared with any other agent. A vague opener that doesn't immediately distinguish this agent from its nearest neighbor → **low**.
 
-Severity: 12a/12b = **medium**; 12c = **low**. Fix reference: run `/calibrate routing` to verify whether description overlap translates to actual routing confusion, then refine descriptions accordingly.
+Severity: 13a/13b = **medium**; 13c = **low**. Fix reference: run `/calibrate routing` to verify whether description overlap translates to actual routing confusion, then refine descriptions accordingly.
 
-**Check 13 — codex plugin integration check**
+**Check 14 — codex plugin integration check**
 
 Skip if codex (openai-codex) plugin is not installed.
 
@@ -517,13 +604,13 @@ Skip if codex (openai-codex) plugin is not installed.
 RED='\033[1;31m'; GRN='\033[0;32m'; YEL='\033[1;33m'; NC='\033[0m'
 CODEX_LINE=$(claude plugin list 2>/dev/null | grep 'codex@openai-codex')
 if [ -z "$CODEX_LINE" ]; then
-  printf "${YEL}⚠ SKIPPED${NC}: Check 13 — codex (openai-codex) plugin not installed\n"
+  printf "${YEL}⚠ SKIPPED${NC}: Check 14 — codex (openai-codex) plugin not installed\n"
 elif echo "$CODEX_LINE" | grep -q 'disabled'; then
-  printf "${YEL}⚠ WARN${NC}: Check 13 — codex (openai-codex) plugin installed but DISABLED\n"
+  printf "${YEL}⚠ WARN${NC}: Check 14 — codex (openai-codex) plugin installed but DISABLED\n"
   printf "  Fix: run \`claude plugin enable codex@openai-codex\` then \`/reload-plugins\`\n"
   printf "  Impact: codex:review, codex:adversarial-review, and codex:codex-rescue are unavailable\n"
 else
-  printf "${GRN}✓ OK${NC}: Check 13 — codex (openai-codex) plugin present and enabled\n"
+  printf "${GRN}✓ OK${NC}: Check 14 — codex (openai-codex) plugin present and enabled\n"
   printf "  Behavioral verification: run \`/calibrate skills\` to confirm codex:codex-rescue dispatches correctly.\n"
 fi
 ```
@@ -533,11 +620,11 @@ fi
 - Plugin present but dispatches fail → **high** (verify with `/calibrate skills`)
 - Plugin present and enabled → logged as `✓ OK`, no finding
 
-**Check 14 — Rules integrity and efficiency**
+**Check 15 — Rules integrity and efficiency**
 
 Four sub-checks covering `.claude/rules/`. Skip if `rules/` directory does not exist or is empty.
 
-**14a — Inventory vs MEMORY.md**: Glob `.claude/rules/*.md`; extract basenames (strip `.md`). Read the "Agents & Skills Location" section of MEMORY.md; locate the `Rules (N):` line. Compare the disk list against the MEMORY.md roster:
+**15a — Inventory vs MEMORY.md**: Glob `.claude/rules/*.md`; extract basenames (strip `.md`). Read the "Agents & Skills Location" section of MEMORY.md; locate the `Rules (N):` line. Compare the disk list against the MEMORY.md roster:
 
 ```bash
 ls .claude/rules/*.md 2>/dev/null | xargs -I{} basename {} .md | sort
@@ -545,7 +632,7 @@ ls .claude/rules/*.md 2>/dev/null | xargs -I{} basename {} .md | sort
 
 Rules on disk but absent from MEMORY.md roster → **medium** (rule invisible to future agents reading the roster). Rules in MEMORY.md roster but absent on disk → **medium** (stale entry).
 
-**14b — Frontmatter completeness**: For each rule file, read its YAML frontmatter and verify:
+**15b — Frontmatter completeness**: For each rule file, read its YAML frontmatter and verify:
 
 - `description:` field is present and non-empty → missing → **high** (Claude Code cannot identify the rule's purpose without it)
 - If `paths:` is present, it must be a non-empty list of non-empty glob strings → malformed → **high** (rule may silently never load)
@@ -557,7 +644,7 @@ for f in .claude/rules/*.md; do
 done
 ```
 
-**14c — Redundancy check (efficiency)**: For each rule file, identify its 2–3 most specific directive phrases — single-line rules, not headings (e.g. `"Never switch to NumPy style"`, `"never git add -A"`). Grep those phrases verbatim in `.claude/CLAUDE.md` and `.claude/agents/*.md`. If the exact phrase exists in ≥2 locations outside the rule file itself → **medium** (distillation incomplete; single source of truth violated).
+**15c — Redundancy check (efficiency)**: For each rule file, identify its 2–3 most specific directive phrases — single-line rules, not headings (e.g. `"Never switch to NumPy style"`, `"never git add -A"`). Grep those phrases verbatim in `.claude/CLAUDE.md` and `.claude/agents/*.md`. If the exact phrase exists in ≥2 locations outside the rule file itself → **medium** (distillation incomplete; single source of truth violated).
 
 ```bash
 # Example: check if a key directive is still duplicated in agents
@@ -567,16 +654,16 @@ grep -l "never git add" .claude/agents/*.md .claude/CLAUDE.md 2>/dev/null
 
 Report each duplicated phrase with its source files. Fix action: remove the copy outside the rule file and replace with a reference (`Follow .claude/rules/<name>.md`).
 
-**14d — Cross-reference integrity**: Grep agent files, skill files, and CLAUDE.md for references to `.claude/rules/<name>.md` patterns. For each referenced filename, verify it exists on disk → missing file → **high** (broken reference; agent will follow stale instruction).
+**15d — Cross-reference integrity**: Grep agent files, skill files, and CLAUDE.md for references to `.claude/rules/<name>.md` patterns. For each referenced filename, verify it exists on disk → missing file → **high** (broken reference; agent will follow stale instruction).
 
 ```bash
 grep -rh '\.claude/rules/[a-z_-]*\.md' .claude/agents/ .claude/skills/ .claude/CLAUDE.md 2>/dev/null \
   | grep -o 'rules/[a-z_-]*\.md' | sort -u
 ```
 
-Severity: 14b = **high**; 14a/14c/14d = **medium**. 14c findings are report-only (human judgment on which copy to remove); 14a/14b/14d are auto-fixable at `fix medium` and above.
+Severity: 15b = **high**; 15a/15c/15d = **medium**. 15c findings are report-only (human judgment on which copy to remove); 15a/15b/15d are auto-fixable at `fix medium` and above.
 
-**Check 15 — Cross-file content duplication (>40% consecutive step overlap)**
+**Check 16 — Cross-file content duplication (>40% consecutive step overlap)**
 
 Flag any skill or agent whose workflow steps contain a **consecutive run** of ≥40% duplicated steps in another file. Consecutive duplication is the structural signal — scattered similarity is expected overlap between related tools; a consecutive block means one file is literally repeating another's workflow, creating silent drift risk.
 
@@ -615,7 +702,7 @@ Report format per finding:
 
 **Fix guidance** (emit in report): options are (a) trim the duplicated file to just its unique steps and add an explicit hand-off, (b) extract shared steps into a `_shared/` partial, or (c) delete one file if the other fully subsumes it.
 
-**Check 16 — File length (context budget risk)**
+**Check 17 — File length (context budget risk)**
 
 Flag config files that exceed line-count thresholds. Oversized files increase per-spawn context cost and are harder to maintain — every agent loaded with an overgrown config pays that cost on every invocation.
 
@@ -648,7 +735,7 @@ done
 
 **Report only** — never auto-fix; trimming requires human judgment on what to cut.
 
-**Check 17 — Bash command misuse / native tool substitution**
+**Check 18 — Bash command misuse / native tool substitution**
 
 Scan all `.claude/` config files (agents, skills, rules) for inline Bash commands that could be replaced with native Claude tools. Native tools (Read, Grep, Glob, Write, Edit) are always available without `settings.json` approval, are auditable, and preferred over shell equivalents per CLAUDE.md §Pre-Authorized Operations.
 
@@ -656,7 +743,7 @@ Use Grep to find candidate patterns across all config files:
 
 ```bash
 YEL='\033[1;33m'; GRN='\033[0;32m'; CYN='\033[0;36m'; NC='\033[0m'
-printf "=== Check 17: Bash misuse candidates ===\n"
+printf "=== Check 18: Bash misuse candidates ===\n"
 # cat → Read tool
 grep -rn '\bcat \|`cat ' .claude/agents/ .claude/skills/ .claude/rules/ 2>/dev/null \
   | grep -v '^Binary' | grep -v '# ' \
@@ -677,7 +764,7 @@ grep -rn 'echo .* >\|tee ' .claude/agents/ .claude/skills/ .claude/rules/ 2>/dev
 grep -rn '\bsed \b\|\bawk \b' .claude/agents/ .claude/skills/ .claude/rules/ 2>/dev/null \
   | grep -v '^Binary' | grep -v '# .*Edit tool\|Use Edit\|awk.*{print\|awk.*BEGIN' \
   && printf "  ${CYN}hint${NC}: replace sed/awk text-substitution with Edit tool\n" || true
-printf "${GRN}✓${NC}: Check 17 scan complete\n"
+printf "${GRN}✓${NC}: Check 18 scan complete\n"
 ```
 
 After the Bash scan, apply model reasoning to each match: exclude cases where the shell command is genuinely necessary (e.g., `awk` for numeric aggregation, `find` in a pipeline with `xargs`, `grep -c` for counting). Flag only instances where the native tool is a direct drop-in replacement.
@@ -696,18 +783,18 @@ Substitution table for findings:
 
 **Report only** — never auto-fix; some Bash invocations in example/illustration code blocks are intentional and should be preserved.
 
-**Check 18 — Stale settings.json allow entries**
+**Check 19 — Stale settings.json allow entries**
 
 Cross-check every allow entry in `.claude/settings.json` against actual usage across all `.claude/` files. An allow entry with no corresponding usage anywhere in agents, skills, rules, hooks, or CLAUDE.md is a stale permission — it expands the attack surface without providing value.
 
 ```bash
 YEL='\033[1;33m'; GRN='\033[0;32m'; NC='\033[0m'
 if [ "${JQ_AVAILABLE:-false}" = "false" ] || ! command -v jq &>/dev/null; then
-  printf "${YEL}⚠ SKIPPED${NC}: Check 18 — jq not available\n"
+  printf "${YEL}⚠ SKIPPED${NC}: Check 19 — jq not available\n"
 elif [ ! -f ".claude/settings.json" ]; then
-  printf "${YEL}⚠ SKIPPED${NC}: Check 18 — .claude/settings.json not found\n"
+  printf "${YEL}⚠ SKIPPED${NC}: Check 19 — .claude/settings.json not found\n"
 else
-  printf "=== Check 18: Stale allow entries ===\n"
+  printf "=== Check 19: Stale allow entries ===\n"
   jq -r '.permissions.allow[]' .claude/settings.json 2>/dev/null | while IFS= read -r entry; do
     # Extract the command name from entries like "Bash(git status)" → "git status"
     cmd=$(echo "$entry" | sed 's/^[A-Za-z]*(\(.*\))$/\1/' | sed 's/^"\(.*\)"$/\1/')
@@ -717,15 +804,15 @@ else
       printf "${YEL}⚠ STALE allow${NC}: %s — no usage found in .claude/ files\n" "$entry"
     fi
   done
-  printf "${GRN}✓${NC}: Check 18 scan complete\n"
+  printf "${GRN}✓${NC}: Check 19 scan complete\n"
 fi
 ```
 
 **Severity**: **low** per stale entry (no functional impact, but expands permission surface unnecessarily). Fix: remove the stale entry from `settings.json` (report only — `settings.json` is never auto-edited per audit policy).
 
-**Important**: some allow entries intentionally grant broad patterns (e.g., `Bash(mkdir -p _audits/*)`) that do not appear verbatim in config files — they are exercised at runtime. Flag only entries whose command fragment appears nowhere in any `.claude/` file; entries where a partial substring match exists are not stale.
+**Important**: some allow entries intentionally grant broad patterns (e.g., `Bash(mkdir -p .reports/audit/*)`) that do not appear verbatim in config files — they are exercised at runtime. Flag only entries whose command fragment appears nowhere in any `.claude/` file; entries where a partial substring match exists are not stale.
 
-**Check 19 — Calibration coverage gap**
+**Check 20 — Calibration coverage gap**
 
 Every skill mode with deterministic, structured output is a candidate for calibration testing via `/calibrate skills`. This check detects two conditions: (a) unregistered calibratable modes that could be added to the domain table, and (b) stale domain table entries pointing to targets that no longer exist on disk.
 
@@ -753,13 +840,13 @@ For each skill/mode NOT in the domain table and NOT in the `### Future Candidate
 
 → Unregistered mode matching all three signals: **low** (recommendation to add to `calibrate/modes/skills.md` domain table)
 
-**Check 20 — Markdown heading hierarchy continuity**
+**Check 21 — Markdown heading hierarchy continuity**
 
 Detect heading level jumps greater than 1 (e.g. `##` followed directly by `####`, skipping `###`) across all agent files, skill SKILL.md files, and rule files. Skipped heading levels break screen-reader navigation and indicate structural drift from the intended document outline.
 
 ````bash
 GRN='\033[0;32m'; YEL='\033[1;33m'; NC='\033[0m'
-printf "=== Check 20: Heading hierarchy continuity ===\n"
+printf "=== Check 21: Heading hierarchy continuity ===\n"
 violations=0
 for f in .claude/agents/*.md .claude/skills/*/SKILL.md .claude/rules/*.md; do
   [ -f "$f" ] || continue
@@ -780,13 +867,15 @@ for f in .claude/agents/*.md .claude/skills/*/SKILL.md .claude/rules/*.md; do
   ' "$f" || violations=$((violations + 1))
 done
 if [ "$violations" -eq 0 ]; then
-  printf "${GRN}✓${NC}: Check 20 — no heading hierarchy violations found\n"
+  printf "${GRN}✓${NC}: Check 21 — no heading hierarchy violations found\n"
 fi
 ````
 
 **Severity**: **medium** — heading jumps impair navigation and often signal a heading was accidentally promoted or demoted during editing. Fix: insert the missing intermediate heading level, or demote/promote the offending heading to restore continuity.
 
 **Report only** — never auto-fix; heading restructuring requires human judgment on which level is correct.
+
+After all checks complete: collect all `⚠` lines, write the full details to `$RUN_DIR/system-checks.md`, and include only the summary table in the conversation context.
 
 ## Step 5: Aggregate and classify findings
 
@@ -813,7 +902,7 @@ Output a structured audit report before fixing anything:
 - Agents audited: N
 - Skills audited: N
 - Rules audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, memory health, agent routing alignment, codex plugin integration check, rules integrity, cross-file content duplication, file length, Bash misuse / native tool substitution, stale allow entries, calibration coverage gap, heading hierarchy continuity
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, RTK hook alignment, memory health, agent routing alignment, codex plugin integration check, rules integrity, cross-file content duplication, file length, Bash misuse / native tool substitution, stale allow entries, calibration coverage gap, heading hierarchy continuity
 
 ### Findings by Severity
 
@@ -966,6 +1055,15 @@ If any critical or high issues are known from a recent `/audit` run, or the gate
 
 Run the **Claude Code docs freshness** check from Step 4 of the main audit workflow: spawn web-explorer, validate current config against latest docs, apply genuine-value filter, produce the Upgrade Proposals table. Cap at 5 total (max 3 capability, any number of config).
 
+**RTK hook alignment** — also run Check 11 from the main audit workflow (inline, no subagent needed):
+
+- If `rtk` is not installed or `.claude/hooks/rtk-rewrite.js` does not exist: skip silently.
+- Otherwise: run `rtk --help`, extract `RTK_PREFIXES` from the hook, compare, and add any findings as **config proposals** in the table:
+  - Invalid prefix (not a valid RTK subcommand) → config proposal: remove from `RTK_PREFIXES`; severity **high**
+  - Filterable RTK command absent from hook → config proposal: add to `RTK_PREFIXES`; severity **medium**
+
+Include these alongside docs-based proposals in the same Upgrade Proposals table.
+
 If no proposals pass the filter: print "✓ No upgrade proposals — current setup is current." and stop.
 
 ### Phase 3: Apply config proposals
@@ -1057,10 +1155,10 @@ Propose `/sync apply` to the user after upgrade completes — do not auto-execut
   - Audit found structural issues → review flagged files manually before syncing
   - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop refactor` for a targeted cleanup pass
   - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration
-  - Audit Check 12 found description overlap → `/calibrate routing` to verify behavioral routing impact; update descriptions for confused pairs based on the routing report
+  - Audit Check 13 found description overlap → `/calibrate routing` to verify behavioral routing impact; update descriptions for confused pairs based on the routing report
   - Audit surfaced upgrade proposals → `/audit upgrade` to apply with correctness checks and calibrate A/B evidence for capability changes
   - `/audit upgrade` reverted a capability change → run `/calibrate <agent> full` for deeper signal (N=10 vs N=3 used in upgrade mode)
-  - Audit Check 19 found unregistered calibratable mode → update `calibrate/modes/skills.md` domain table and run `/calibrate skills` to verify the new target works
-  - Audit Check 19 found stale domain table entry → remove it from `calibrate/modes/skills.md`
+  - Audit Check 20 found unregistered calibratable mode → update `calibrate/modes/skills.md` domain table and run `/calibrate skills` to verify the new target works
+  - Audit Check 20 found stale domain table entry → remove it from `calibrate/modes/skills.md`
 
 </notes>

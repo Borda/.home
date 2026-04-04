@@ -9,7 +9,8 @@
 // HOW IT WORKS
 //   1. Parse stdin JSON for hook_event_name and team_name
 //   2. TeammateIdle: validate team_name is safe (basename check), then read
-//      .claude/tasks/<team_name>/*.json from the current workspace
+//      .claude/_tasks/<team_name>/*.json from the current workspace
+//      (Claude Code stores agent-team task files there — not a project artifact dir)
 //   3. Filter task files to those with status === "pending"
 //   4. Pending tasks found: write task list to stderr and exit 2 — Claude Code
 //      surfaces the message to the teammate, redirecting it back to claim a task
@@ -21,11 +22,10 @@
 //   TeammateIdle
 //     Fires when a teammate finishes its current task and has nothing to do.
 //     Checks for pending tasks in the shared task list for the current team
-//     (.claude/tasks/<team>/*.json under the current workspace). If any pending
-//     tasks exist, writes a
-//     redirect message to stderr and exits 2 — Claude Code interprets exit 2
-//     as "feedback for the teammate", re-activating it with the message as
-//     context so it can claim and complete the next task.
+//     (.claude/_tasks/<team>/*.json — Claude Code's internal agent-teams state dir).
+//     If any pending tasks exist, writes a redirect message to stderr and exits 2 —
+//     Claude Code interprets exit 2 as "feedback for the teammate", re-activating it
+//     with the message as context so it can claim and complete the next task.
 //     If no pending tasks are found (or the task directory is absent), exits 0
 //     and the teammate idles normally.
 //
@@ -61,10 +61,10 @@ process.stdin.on("end", () => {
       // Look for pending tasks in the shared task list — redirect if any exist
       try {
         if (typeof team_name !== "string" || path.basename(team_name) !== team_name) process.exit(0);
-        // Task files live at <workspace>/.claude/tasks/<team>/ when teams use file-based tracking.
+        // Task files live at <workspace>/.claude/_tasks/<team>/ when teams use file-based tracking.
         // If the directory is absent (e.g., in-memory teams), readdirSync throws and the
         // catch block silently lets the teammate go idle — no redirect occurs.
-        const tasksDir = path.join(process.cwd(), ".claude", "tasks", team_name);
+        const tasksDir = path.join(process.cwd(), ".claude", "_tasks", team_name);
         const taskFiles = fs.readdirSync(tasksDir).filter((f) => f.endsWith(".json"));
         const pendingTasks = taskFiles
           .map((f) => {

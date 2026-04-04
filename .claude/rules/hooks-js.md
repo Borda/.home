@@ -32,7 +32,7 @@ Subsection order: `PURPOSE` → `HOW IT WORKS` → `EXIT CODES` (add others like
 - **Always exit 0 on unexpected errors** — hooks must never crash or block Claude due to a bug in the hook itself
 - **Exit 2 to surface feedback** — Claude Code shows exit-2 output to Claude, which then acts on it
 - **Exit 2 only when Claude caused the condition and can fix it** (e.g. a file it wrote failed linting). Use exit 0 for all environmental conditions: missing tools, missing config files, unexpected input formats.
-- Exit 1 is not used; treat it the same as exit 2 for pre-commit compatibility
+- Exit 1 is not used; Claude Code maps it to exit 2 behavior (these hooks are not wired to git pre-commit)
 
 ## Implementation Pattern
 
@@ -65,5 +65,5 @@ When a `PreToolUse` hook needs to approve or block a tool call, use `hookSpecifi
 ```
 
 - `permissionDecision`: `"allow"` or `"block"` — use `"block"` to prevent the tool call
-- **Deprecated**: top-level `"decision"` and `"reason"` fields — these still work but will be removed; migrate to `hookSpecificOutput`
+- **Deprecated**: top-level `"decision"` and `"reason"` fields — these still work but may be removed in a future Claude Code release; check release notes for removal timeline; migrate to `hookSpecificOutput`
 - Most hooks do not need to emit a decision at all — only emit when the hook is specifically acting as a gatekeeper (e.g. blocking destructive commands)

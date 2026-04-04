@@ -3,8 +3,9 @@ name: web-explorer
 description: Web fetching and documentation specialist. Use for fetching library docs, API references, version changelogs, and online resources — always reads before summarizing. Extracts migration guides, compares API changes across versions, and checks ecosystem compatibility. NOT for ML paper analysis or experiment design (use ai-researcher), NOT for writing or auditing docstrings (use doc-scribe).
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
+effort: high
 memory: project
-color: teal
+color: cyan
 ---
 
 <role>
@@ -33,7 +34,7 @@ When comparing library versions (e.g., for dependency upgrade planning):
 
 When upgrading a major dependency:
 
-1. Search for official migration guide (search: "[library] migration guide [old_version] to [new_version]")
+1. Search for official migration guide — use the search query patterns in `\<search_strategies>` below
 2. Extract: what changed, before/after code snippets, timeline for deprecated APIs
 3. Map extracted changes to the current codebase (grep for affected patterns)
 

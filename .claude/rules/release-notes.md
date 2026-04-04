@@ -42,7 +42,7 @@ paths:
 - Format when name confirmed: `* **Full Name** (@handle) ([LinkedIn](url)) – *description*`
 - Format when name not confirmed: `* @handle – *description*`
 - Description is brief and italicised, focused on what they built/fixed
-- Always include `* @Borda – *release coordination*` as the final contributor entry; omit only if Borda made zero commits, reviews, or coordination work for this release (rare) — update this handle if the release coordinator changes
+- Always include `* @<release-coordinator> – *release coordination*` as the final contributor entry; omit only if the coordinator made zero commits, reviews, or coordination work for this release (rare) — replace `@<release-coordinator>` with the project's actual GitHub handle
 
 ## Last Line (required)
 

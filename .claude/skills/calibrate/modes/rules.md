@@ -55,7 +55,7 @@ Read `.claude/skills/calibrate/templates/rules-pipeline-prompt.md`. For each rul
 
 **Issue all spawns in a single response** — rule files are independent and run concurrently.
 
-Run dir: `_calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/`
+Run dir: `.reports/calibrate/<TIMESTAMP>/rules/<RULE_BASENAME>/`
 
 Each pipeline subagent handles all five phases internally (problem generation → target runs → dedicated scorer subagents → aggregate → self-mentor proposals) and returns ONLY a compact JSON envelope.
 
@@ -89,4 +89,4 @@ Mark "Calibrate rules" completed.
 - Trigger precision < 0.95 → `paths:` glob is too broad; tighten the pattern to avoid false loads
 - Persistent failures after rewording → consider splitting the rule into more focused directives. Max 3 re-run cycles; if the rule is still non-calibrated after the third, surface the persistent failures to the user for manual review.
 
-Proposals written to: `_calibrations/<TIMESTAMP>/rules/<RULE_BASENAME>/proposal.md`
+Proposals written to: `.reports/calibrate/<TIMESTAMP>/rules/<RULE_BASENAME>/proposal.md`

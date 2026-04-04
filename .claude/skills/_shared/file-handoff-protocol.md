@@ -34,7 +34,7 @@ Include any additional task-specific keys (e.g. `"papers":5` for research, `"ver
 ## RUN_DIR convention
 
 - **Ephemeral** (per-run): `/tmp/<skill>-<timestamp>/` — created once before any spawns: `mkdir -p /tmp/<skill>-$(date +%s)`
-- **Persistent** (reports): `tasks/` — for final consolidated reports that survive the session
+- **Persistent** (reports): `.temp/` — for final consolidated reports that survive the session
 
 ## Orchestrator contract
 

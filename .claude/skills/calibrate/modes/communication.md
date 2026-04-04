@@ -43,7 +43,7 @@ Mark "Calibrate communication" in_progress. Use the standard pipeline template f
 
 **Phase 2 batching**: instruct the pipeline to spawn Phase 2 target agents in **batches of 3** (not all at once), collecting acknowledgments between batches. Each self-mentor response is ~1–4KB of prompt + response context; batching prevents accumulation of all N problem inputs in the pipeline's context simultaneously. Add to the pipeline prompt: "Spawn Phase 2 agents in batches of 3 — await all acknowledgments in a batch before spawning the next. Maximum batches: ceil(N/3) — for fast (N=3) that is 1 batch; for full (N=5) that is 2 batches."
 
-Run dir: `_calibrations/<TIMESTAMP>/self-mentor/` (relative to project root)
+Run dir: `.reports/calibrate/<TIMESTAMP>/self-mentor/` (relative to project root)
 
 ### Active instruction — token optimization (additional scoring measure)
 

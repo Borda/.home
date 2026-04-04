@@ -95,7 +95,7 @@ Set up the run directory (shared by Codex and all agent spawns in Step 3):
 
 ```bash
 TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-RUN_DIR="_reviews/$TIMESTAMP"
+RUN_DIR=".reports/review/$TIMESTAMP"
 mkdir -p "$RUN_DIR"
 ```
 
@@ -226,7 +226,7 @@ Before constructing the output path, extract the current branch and date compone
 
 Spawn a **sw-engineer** consolidator agent with this prompt:
 
-> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `_outputs/$YYYY/$MM/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=_outputs/$YYYY/$MM/output-review-$BRANCH-$DATE.md`"
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
 
 Main context receives only the one-liner verdict. Proceed with that summary for terminal output.
 
@@ -300,7 +300,7 @@ Main context receives only the one-liner verdict. Proceed with that summary for 
 
 After parsing confidence scores: if any agent scored < 0.7, prepend **⚠ LOW CONFIDENCE** to that agent's findings section and explicitly state the gap. Do not silently drop uncertain findings — flag them so the reviewer can decide whether to investigate further.
 
-Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **PR Summary** template with the **Extended Fields (review only)** addendum. Replace `[entity-line]` with `Review — [target]` and replace `[skill-specific path]` with `_outputs/$YYYY/$MM/output-review-$BRANCH-$DATE.md`.
+Read the compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use the **PR Summary** template with the **Extended Fields (review only)** addendum. Replace `[entity-line]` with `Review — [target]` and replace `[skill-specific path]` with `.temp/output-review-$BRANCH-$DATE.md`.
 
 ## Step 7: Delegate implementation follow-up (optional)
 
@@ -333,7 +333,7 @@ Spawn the **oss-shepherd** agent with:
 
 - The review output file path from Step 6
 - The PR number and contributor handle (if known from Step 1)
-- Prompt: "Read the review report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items bundled as a single 'Minor:' line; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose. Write your full output to `_outputs/$(date +%Y)/$(date +%m)/output-reply-<PR#>-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `overall=N_issues blocking=N | inline=N_rows | → _outputs/<YYYY>/<MM>/output-reply-<PR#>-<date>.md`"
+- Prompt: "Read the review report at `<path>`. Produce the standard two-part contributor reply per your `<voice>` block: (1) overall PR comment in GitHub Markdown (full MD: headers, bullets, code blocks, `> blockquotes`, links) — one prose paragraph per blocking/high issue; items also in the inline table get one clause only, not a full paragraph; nit/low items bundled as a single 'Minor:' line; decisive close; (2) inline comments table with columns `| Importance | Confidence | File | Line | Comment |` — Importance and Confidence as the two leftmost columns; ordered high → medium → low, then most confident first within each tier; nit/low items omitted from the table entirely. Use all blocking and high findings. No column-width line-wrapping in prose. Write your full output to `.temp/output-reply-<PR#>-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a one-line summary: `overall=N_issues blocking=N | inline=N_rows | → .temp/output-reply-<PR#>-<date>.md`"
 
 Print compact terminal summary:
 
@@ -341,7 +341,7 @@ Print compact terminal summary:
   Overall comment  — N issues (M blocking, K minor)
   Inline comments  — N rows
 
-  Reply:  _outputs/<YYYY>/<MM>/output-reply-<PR#>-<date>.md
+  Reply:  .temp/output-reply-<PR#>-<date>.md
 ```
 
 End your response with a `## Confidence` block per CLAUDE.md output standards. For static analysis of complete, self-contained code (no missing imports needed to reason about the findings), a baseline confidence of 0.88+ is appropriate; reserve scores below 0.80 for cases where runtime behaviour, external dependencies, or execution traces are genuinely needed to validate a finding. This is always the very last thing, whether or not `--reply` was used.

@@ -32,4 +32,4 @@ Each subagent receives the pipeline template from `.claude/skills/calibrate/temp
 - `<MODE>` = `fast` or `full`
 - `<AB_MODE>` = `true` or `false` — whether to run A/B variant scoring against a `general-purpose` baseline (see pipeline-prompt.md Phase 2b)
 
-Run dir per agent: `_calibrations/<TIMESTAMP>/<TARGET>/`
+Run dir per agent: `.reports/calibrate/<TIMESTAMP>/<TARGET>/`

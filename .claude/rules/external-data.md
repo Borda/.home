@@ -2,8 +2,6 @@
 description: Pagination and completeness rules for external APIs and the gh CLI — never work on partial result sets
 ---
 
-# External Data & API Completeness
-
 ## Core Principle
 
 **Never work on a partial result set.** Paginated APIs return a subset by default — always explicitly request the full dataset before drawing conclusions, counting, filtering, or ranking.

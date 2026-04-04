@@ -67,6 +67,15 @@
             "type": "command"
           }
         ]
+      },
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/rtk-rewrite.js",
+            "type": "command"
+          }
+        ],
+        "matcher": "Bash"
       }
     ],
     "SessionEnd": [
@@ -82,7 +91,7 @@
         "hooks": [
           {
             "async": true,
-            "command": "find _calibrations _resolutions _audits _reviews _optimizations _developments -maxdepth 2 -name 'result.jsonl' -mtime +30 2>/dev/null | xargs dirname | xargs rm -rf; find _brainstorming _analyse _outputs -type f -mtime +30 2>/dev/null | xargs rm -f; find _outputs -mindepth 1 -maxdepth 2 -type d -empty 2>/dev/null | xargs rmdir",
+            "command": "find .reports/calibrate .reports/resolve .reports/audit .reports/review .experiments .developments -maxdepth 2 -name 'result.jsonl' -mtime +30 2>/dev/null | xargs dirname | xargs rm -rf; find .plans/blueprint .cache .temp -type f -mtime +30 2>/dev/null | xargs rm -f",
             "type": "command"
           }
         ]
@@ -202,7 +211,10 @@
       "Glob(./**)",
       "Grep(./**)",
       "Read(/tmp/**)",
-      "Write(_calibrations/**)",
+      "Write(.plans/**)",
+      "Write(.notes/**)",
+      "Write(.reports/**)",
+      "Write(.temp/**)",
       "WebSearch",
       "Bash(curl:*)",
       "Bash(echo:*)",
@@ -296,22 +308,26 @@
       "Bash(basename:*)",
       "Bash(dirname:*)",
       "Bash(node --check:*)",
-      "Bash(find _analyse*)",
-      "Bash(find _calibrations*)",
-      "Bash(find _resolutions*)",
-      "Bash(find _audits*)",
-      "Bash(find _reviews*)",
-      "Bash(find _optimizations*)",
-      "Bash(find _developments*)",
-      "Bash(find _outputs*)",
-      "Bash(mkdir -p _analyse/*)",
-      "Bash(mkdir -p _calibrations/*)",
-      "Bash(mkdir -p _resolutions/*)",
-      "Bash(mkdir -p _audits/*)",
-      "Bash(mkdir -p _reviews/*)",
-      "Bash(mkdir -p _optimizations/*)",
-      "Bash(mkdir -p _developments/*)",
-      "Bash(mkdir -p _outputs/*/*)",
+      "Bash(find .cache*)",
+      "Bash(find .experiments*)",
+      "Bash(find .developments*)",
+      "Bash(find .notes*)",
+      "Bash(find .plans*)",
+      "Bash(find .reports*)",
+      "Bash(find .temp*)",
+      "Bash(mkdir -p .cache/*)",
+      "Bash(mkdir -p .notes/)",
+      "Bash(mkdir -p .plans/active/)",
+      "Bash(mkdir -p .plans/blueprint/)",
+      "Bash(mkdir -p .plans/closed/)",
+      "Bash(mkdir -p .reports/calibrate/*)",
+      "Bash(mkdir -p .reports/resolve/*)",
+      "Bash(mkdir -p .reports/audit/*)",
+      "Bash(mkdir -p .reports/review/*)",
+      "Bash(mkdir -p .reports/analyse/*)",
+      "Bash(mkdir -p .experiments/*)",
+      "Bash(mkdir -p .developments/*)",
+      "Bash(mkdir -p .temp/)",
       "Bash(claude:*)",
       "Bash(node:*)",
       "Bash(python3:*)",
@@ -334,7 +350,8 @@
       "WebFetch(domain:hr.linkedin.com)",
       "WebFetch(domain:scholar.google.com)",
       "Skill(sync)",
-      "Skill(calibrate)"
+      "Skill(calibrate)",
+      "Bash(cd:*)"
     ],
     "deny": [
       "Bash(git branch -D:*)",

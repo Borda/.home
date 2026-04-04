@@ -326,21 +326,9 @@ Tone: developer talking to developer — peer-to-peer, polite, warm, constructiv
 
 Use contractions. Short sentences. State opinions directly.
 
-**Apology for late reaction is optional** — include it only when the silence was long enough that the reporter deserves an acknowledgement. Threshold: measure time since the last activity on the thread (last comment, or open date if none).
+**Apology for late reaction is optional** — measure time since last activity (last comment or open date): skip if < 1 week; judgment call at 1–3 weeks (omit for active threads); include if ≥ 4 weeks.
 
-- **< 1 week** — skip entirely; jumping straight to substance feels more natural
-- **1–3 weeks** — judgment call; skip for actively-discussed threads, include for threads that went quiet
-- **≥ 4 weeks** — include; the gap is long enough that omitting it feels abrupt
-
-When included, vary the phrasing so bulk triage doesn't feel robotic:
-
-- "apologies for not getting back to you sooner"
-- "apologies for the delayed follow-up"
-- "apologies for not closing this out sooner"
-- "apologies for letting this PR sit without review"
-- "apologies for the slow response"
-- "apologies for not circling back on this"
-- "apologies for the very long delay here"
+When included, vary the phrasing: "apologies for not getting back sooner" / "apologies for the delayed follow-up" / "apologies for the slow response" / "apologies for letting this PR sit without review".
 
 **`[blocking]`/`[suggestion]`/`[nit]` annotation prefixes are for internal review reports only** — never in contributor-facing output. Severity is communicated through structure (ordering, scope line count) not labels.
 
@@ -414,13 +402,13 @@ Optional inserts between 4 and 5: tag bystanders (@mention others who reported t
 
 - **C. Superseded by architecture change** — Hi @user — apologies for the slow response. [OldThing] has been replaced by [NewThing] in vX.Y.Z with a rewritten [subsystem]. Please upgrade and use [NewAPI]. Closing — please reopen if you encounter issues on the current version.
 
-- **D. External / wrong repo** — Hi @user — apologies for the delayed response. This is specific to [ExternalThing], not the [ThisProject] library. Please file in [other-repo]. Closing here — feel free to reopen if you believe there's a library-side issue.
+- **D. External / wrong repo** — acknowledge, redirect to [other-repo], close with reopen offer if library-side issue surfaces.
 
-- **E. Self-resolved / stale** — Hi @user — apologies for not following up sooner. Glad you found the root cause — [brief summary]. vX.Y.Z improved [related validation]. Closing as self-resolved. Thanks @helper1 and @helper2 for confirming!
+- **E. Self-resolved / stale** — confirm root cause in one clause, note related improvement in vX.Y.Z, close as self-resolved, thank helpers by @mention.
 
-- **F. Keep open + relabel** — Hi @user — apologies for not responding sooner. [Acknowledge the problem is real.] vX.Y.Z [partial improvements]. Relabeling as enhancement — [what would need to change]. Contributions welcome!
+- **F. Keep open + relabel** — acknowledge the problem is real, note vX.Y.Z partial improvement, relabel as enhancement, invite contributions.
 
-- **G. Superseded PR** — Hi @user — apologies for letting this PR sit without review. vX.Y.Z introduced [replacement approach] (#NNN) which handles [the problem] properly — the entire [subsystem] was rewritten, so this PR is superseded. Thank you for the contribution!
+- **G. Superseded PR** — name the replacement approach (#NNN) and explain the subsystem was rewritten, thank the contributor by @handle.
 
 **Non-close replies** — intent-based structure:
 

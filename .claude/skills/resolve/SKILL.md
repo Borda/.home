@@ -25,7 +25,7 @@ When given bare comment text, skip straight to Codex dispatch (Step 12).
 <inputs>
 
 - **$ARGUMENTS**: one of:
-  - Omitted → **review-handoff mode**: auto-detect PR from the most recent `_outputs/*/*/output-review-*.md` file
+  - Omitted → **review-handoff mode**: auto-detect PR from the most recent `.temp/output-review-*.md` file
   - A PR number (e.g. `42`) or GitHub PR URL → **pr mode**
   - `report` (bare word) → **report mode**: use latest review report findings as action items; no GitHub re-fetch
   - `42 report` or `<URL> report` → **pr + report mode**: aggregate live GitHub comments + review report findings, deduplicated in one pass
@@ -98,10 +98,10 @@ If codex is missing: set `CODEX_AVAILABLE=false` and continue — Steps 3–7 (i
 If `$ARGUMENTS` is empty:
 
 ```bash
-# Find most recent review output (written by /review to _outputs/YYYY/MM/)
-REVIEW_FILE=$(ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1)
+# Find most recent review output (written by /review to .temp/)
+REVIEW_FILE=$(ls -t .temp/output-review-*.md 2>/dev/null | head -1)
 if [ -z "$REVIEW_FILE" ]; then
-  echo "No review output found in _outputs/ — run /review <PR#> first, or provide a PR number"
+  echo "No review output found in .temp/ — run /review <PR#> first, or provide a PR number"
   exit 1
 fi
 echo "→ Using: $REVIEW_FILE"
@@ -118,8 +118,8 @@ If no PR number is extractable (review was run on a local path, not a PR), print
 
 Parse $ARGUMENTS:
 
-- If it matches `<number> report` or `<URL> report` (number/URL followed by the word `report`) → **pr + report mode**: strip `report` suffix, set PR# from the remaining token; also find the latest review report using `ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`; if no report found print a warning but continue in pr mode
-- If it equals the bare word `report` → **report mode**: find the latest review report using `ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`; if no report found stop with: "No review report found in \_outputs/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
+- If it matches `<number> report` or `<URL> report` (number/URL followed by the word `report`) → **pr + report mode**: strip `report` suffix, set PR# from the remaining token; also find the latest review report using `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; if no report found print a warning but continue in pr mode
+- If it equals the bare word `report` → **report mode**: find the latest review report using `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; if no report found stop with: "No review report found in .temp/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
 - If it is a number or matches a GitHub PR URL pattern → **pr mode** (continue from Step 2)
 - Otherwise → **comment dispatch mode** (jump to Step 12)
 
@@ -265,7 +265,7 @@ Answer any `[question]` items that can be resolved from reading the code — if 
 
 When mode == **pr + report**:
 
-Find and read the latest review report (`ls -t _outputs/*/*/output-review-*.md 2>/dev/null | head -1`). Parse structured findings using the same logic as Step 3a (report mode) above.
+Find and read the latest review report (`ls -t .temp/output-review-*.md 2>/dev/null | head -1`). Parse structured findings using the same logic as Step 3a (report mode) above.
 
 **Deduplication**:
 
@@ -373,7 +373,7 @@ For each conflicted file (work in the current PR branch checkout):
 
 a. **Read** the file — examine `<<<<<<<`, `=======`, `>>>>>>>` markers and surrounding context
 
-b. **Determine resolution** using the contribution motivation (Step 3b in pr mode, Step 3a in report mode) and drift (Step 6b):
+b. **Determine resolution** using the contribution motivation (Step 3b) and drift (Step 6b):
 
 - Contributor's new functionality takes priority for files the PR owns (introduced or substantially rewrote)
 - Base's independent refactors and config updates are always preserved
@@ -435,7 +435,7 @@ If code changed → commit:
 ```bash
 # Stage tracked modifications + new files from Codex (never git add -A)
 git add $(git diff HEAD --name-only)
-git ls-files --others --exclude-standard | xargs -r git add --
+git ls-files --others --exclude-standard | xargs -r git add --  # note: permission matcher sees 'git ls-files' as first token
 git commit -m "$(cat <<'EOF'
 <imperative short summary of the change>
 
@@ -452,7 +452,7 @@ Record per-item: `committed <SHA>` or `skipped — <Codex reason>`.
 ## Step 9: Lint and QA gate
 
 ```bash
-RUN_DIR="_resolutions/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
+RUN_DIR=".reports/resolve/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
 ```
 
 Spawn both agents in parallel:
@@ -590,28 +590,24 @@ If no changes: skip the loop; set `CODEX_REVIEW_FINDINGS=""`.
 
 Otherwise:
 
-```bash
+```pseudocode
 for REVIEW_PASS in 1 2 3 4 5; do
 
-  # Orchestrator pseudocode — Skill() is a Claude Code tool call, not a bash command; CODEX_OUT captures the tool output conceptually
-  # Review phase
-  CODEX_OUT=$(Agent(subagent_type="codex:codex-rescue", prompt="Review the current working-tree changes. End your output with ISSUES_FOUND=<number> where <number> is the count of distinct issues found. Read-only: do not apply fixes.") 2>&1)
-  ISSUES_FOUND=$(echo "$CODEX_OUT" | grep -oE 'ISSUES_FOUND=[0-9]+' | tail -1 | cut -d= -f2)
-  ISSUES_FOUND=${ISSUES_FOUND:-0}
-  echo "$CODEX_OUT"
+  # Review phase — Agent() is a Claude Code tool call, not a shell command
+  CODEX_OUT = Agent(subagent_type="codex:codex-rescue",
+                    prompt="Review working-tree changes. End output with ISSUES_FOUND=N.")
+  ISSUES_FOUND = parse CODEX_OUT for ISSUES_FOUND=N (default 0)
 
-  if [ "$ISSUES_FOUND" -eq 0 ]; then
-    break
-  fi
+  if ISSUES_FOUND == 0: break
 
-  # Fix phase — apply each issue returned by the review above
-  Agent(subagent_type="codex:codex-rescue", prompt="Apply this fix to the codebase: <issue description>")
+  # Fix phase
+  Agent(subagent_type="codex:codex-rescue",
+        prompt="Apply this fix: <issue description from review>")
 
 done
 
-if [ "$REVIEW_PASS" -eq 5 ] && [ "$ISSUES_FOUND" -gt 0 ]; then
+if REVIEW_PASS == 5 and ISSUES_FOUND > 0:
   echo "⚠ Review loop hit 5-pass cap — $ISSUES_FOUND issues remain; surface to user"
-fi
 ```
 
 ### 12c: Lint and QA gate
@@ -619,7 +615,7 @@ fi
 If code was changed (dispatch or review loop produced commits):
 
 ```bash
-RUN_DIR="_resolutions/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
+RUN_DIR=".reports/resolve/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"
 ```
 
 Spawn both agents in parallel:

@@ -121,7 +121,7 @@ Triggered by `campaign <goal>` or `campaign <file.md>`.
 Generate a `run-id` = `$(date +%Y%m%d-%H%M%S)`. Create the run directory:
 
 ```
-_optimizations/state/<run-id>/
+.experiments/state/<run-id>/
   state.json         ← iteration count, best metric, status
   experiments.jsonl  ← one line per iteration
   diary.md           ← human-readable research diary (hypothesis → outcome → decision)
@@ -182,7 +182,7 @@ Update `state.json`: `best_metric = <baseline>`, `best_commit = <HEAD sha>`.
 
 Print: `Baseline: <metric_cmd key> = <value>`.
 
-Write initial diary header to `_optimizations/state/<run-id>/diary.md`:
+Write initial diary header to `.experiments/state/<run-id>/diary.md`:
 
 ```markdown
 # Research Diary — <goal>
@@ -232,9 +232,9 @@ Build context for the ideation agent and write it to a file — do NOT accumulat
 
 ```bash
 # Collect signals
-git log --oneline -10 > _optimizations/state/<run-id>/context-<i>.md
-tail -10 _optimizations/state/<run-id>/experiments.jsonl >> _optimizations/state/<run-id>/context-<i>.md
-git diff --stat HEAD~5 HEAD >> _optimizations/state/<run-id>/context-<i>.md
+git log --oneline -10 > .experiments/state/<run-id>/context-<i>.md
+tail -10 .experiments/state/<run-id>/experiments.jsonl >> .experiments/state/<run-id>/context-<i>.md
+git diff --stat HEAD~5 HEAD >> .experiments/state/<run-id>/context-<i>.md
 ```
 
 Prepend a header block to `context-<i>.md` with: goal, current metric vs baseline, delta trend (last 5 kept deltas), and the iteration number. The ideation agent in Phase 2 reads this file directly — the content is never echoed back to the main context.
@@ -246,13 +246,13 @@ Spawn the selected specialist agent with `maxTurns: 15` and this prompt (adapt a
 ```
 Goal: <goal>
 Current metric: <metric_cmd key> = <current value> (baseline: <baseline>, direction: <higher|lower>)
-Experiment history: read `_optimizations/state/<run-id>/context-<i>.md` for the full context block.
+Experiment history: read `.experiments/state/<run-id>/context-<i>.md` for the full context block.
 Scope files (read and modify only these): <scope_files>
 
 Read `context-<i>.md` and the scope files. Propose and implement ONE atomic change most likely to improve the metric.
 The change must not break <guard_cmd>.
 Write your full analysis (reasoning, alternatives considered, Confidence block) to
-`_optimizations/state/<run-id>/ideation-<i>.md` using the Write tool.
+`.experiments/state/<run-id>/ideation-<i>.md` using the Write tool.
 Return ONLY the JSON result line — nothing else after it:
 {"description":"...","files_modified":[...],"confidence":0.N}
 ```
@@ -285,7 +285,7 @@ Run Codex ideation:
 ```
 Agent(
   subagent_type="codex:codex-rescue",
-  prompt="Goal: <goal>. Current metric: <metric_key>=<current_value> (baseline: <baseline>, direction: <higher|lower>). Scope files: <scope_files>. Read context from _optimizations/state/<run-id>/context-<i>.md. Starting state: Claude's change was [kept|reverted|no-op]. [If kept: try to improve further from the current state. If reverted/no-op: propose a fresh approach.] Propose and implement ONE atomic optimization change most likely to improve the metric without breaking <guard_cmd>. Write your full reasoning to _optimizations/state/<run-id>/codex-ideation-<i>.md."
+  prompt="Goal: <goal>. Current metric: <metric_key>=<current_value> (baseline: <baseline>, direction: <higher|lower>). Scope files: <scope_files>. Read context from .experiments/state/<run-id>/context-<i>.md. Starting state: Claude's change was [kept|reverted|no-op]. [If kept: try to improve further from the current state. If reverted/no-op: propose a fresh approach.] Propose and implement ONE atomic optimization change most likely to improve the metric without breaking <guard_cmd>. Write your full reasoning to .experiments/state/<run-id>/codex-ideation-<i>.md."
 )
 ```
 
@@ -415,13 +415,13 @@ TaskUpdate C5 subject: `C5: Iter N/max — last: <status>, best: <best_metric>`
 - **Stuck detection**: if last `STUCK_THRESHOLD` entries all have `status: reverted|no-op|hook-blocked`, trigger escalation (see `<constants>` in SKILL.md). Log escalation action.
 - **Diminishing returns**: if last `DIMINISHING_RETURNS_WINDOW` kept entries each improved < 0.5%, print a warning and suggest stopping. Do not auto-stop — let the user decide.
 - **Early stop**: if `target` is set in the program file (or config), stop when the metric crosses it (`direction: higher` → metric ≥ target; `direction: lower` → metric ≤ target). Mark `state.json` `status: goal-achieved`.
-- **Context compaction** (every SUMMARY_INTERVAL iterations): write a full iteration summary table to `_optimizations/state/<run-id>/progress-<i>.md` and actively discard verbose per-iteration details from working memory. Retain in working memory only: current metric value, iteration count, JSONL file path, and `best_commit`. This prevents linear context growth in long campaigns — full history is always recoverable from `experiments.jsonl` and `ideation-<i>.md` files on disk.
+- **Context compaction** (every SUMMARY_INTERVAL iterations): write a full iteration summary table to `.experiments/state/<run-id>/progress-<i>.md` and actively discard verbose per-iteration details from working memory. Retain in working memory only: current metric value, iteration count, JSONL file path, and `best_commit`. This prevents linear context growth in long campaigns — full history is always recoverable from `experiments.jsonl` and `ideation-<i>.md` files on disk.
 
 ### Step C6: Results report
 
 Pre-compute the branch before writing: `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')`
 
-Write full report to `_outputs/$(date +%Y)/$(date +%m)/output-optimize-campaign-$BRANCH-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
+Write full report to `.temp/output-optimize-campaign-$BRANCH-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
 
 **Report structure:**
 
@@ -434,7 +434,7 @@ Write full report to `_outputs/$(date +%Y)/$(date +%m)/output-optimize-campaign-
 **Baseline**: <metric> = <baseline value>
 **Best**: <metric> = <best value> (<delta>% improvement)
 **Best commit**: <sha>
-**Diary**: "_optimizations/state/<run-id>/diary.md"
+**Diary**: ".experiments/state/<run-id>/diary.md"
 **Codex co-pilot**: active (ran every iteration) — <N> Codex passes run (omit line if --codex not used)
 **Codex wins**: <N> Codex proposals kept vs <N> Claude proposals kept
 
@@ -459,8 +459,8 @@ Iterations: <total>  Kept: <kept>  Reverted: <reverted>
 Baseline:   <metric_key> = <baseline>
 Best:       <metric_key> = <best> (<delta>% improvement, commit <sha>)
 Agent:      <agent type used>
-→ saved to _outputs/YYYY/MM/output-optimize-campaign-<date>.md
-→ diary: _optimizations/state/<run-id>/diary.md
+→ saved to .temp/output-optimize-campaign-<date>.md
+→ diary: .experiments/state/<run-id>/diary.md
 ---
 ```
 
@@ -478,7 +478,7 @@ Triggered by `resume` or `resume <file.md>`.
 
 **Locating the run**:
 
-- `resume` (no argument): scan all run dirs in `_optimizations/state/`, select the one with the latest `started_at` that has `status: running`.
+- `resume` (no argument): scan all run dirs in `.experiments/state/`, select the one with the latest `started_at` that has `status: running`.
 - `resume <file.md>`: resolve the path to absolute. Scan all run dirs, filter for those whose `state.json` has `"program_file"` matching that absolute path. Pick the one with the latest `started_at`. If no match: stop with a clear error.
 
 1. Read `state.json` from the located run dir.
@@ -507,7 +507,7 @@ ______________________________________________________________________
 3. Lead defines the run output directory and spawns 2–3 teammates (reasoning agents at `opus` per CLAUDE.md §Agent Teams), each assigned a different axis and a matching ideation agent type. Each teammate runs in an isolated worktree (`isolation: worktree`).
 
    ```bash
-   RUN_DIR="_optimizations/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+   RUN_DIR=".experiments/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
    mkdir -p "$RUN_DIR"
    ```
 

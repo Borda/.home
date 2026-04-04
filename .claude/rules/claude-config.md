@@ -48,16 +48,26 @@ Rules:
 - A timed-out fast operation is a signal to investigate; a frozen session is not
 - `timeout: 120000` (2 min) is only acceptable for test suites or builds, never for network calls
 
-## Worktree Commands
+## Directory Navigation Commands
 
-When running commands inside a git worktree, use **two separate Bash calls** rather than `cd /path && command`:
+Never combine directory navigation with a command in a single Bash call — always use **two separate Bash calls**:
 
 ```bash
-cd /path/to/worktree
+# ✓ correct — two calls; working directory persists between calls
+cd /path/to/dir
 uv run pytest tests/
+
+# ✗ wrong — all three forms below cause the same failure
+cd /path && uv run pytest tests/
+cd /path; uv run pytest tests/
+cd /path || uv run pytest tests/
 ```
 
-Required because Claude Code's permission matcher checks only the **first token** of a Bash command. Applies to `uv run`, `python`, `pytest`, `git`, etc. Alternative: spawn an agent with `isolation: "worktree"` — its CWD is the worktree root.
+**Why**: Claude Code's permission matcher checks only the **first token** of a Bash command. Any compound using `&&`, `;`, or `||` presents `cd` as the first token — which matches no allow entry — even when `Bash(uv run pytest:*)`, `Bash(python3:*)`, or similar rules are in the allow list. This applies to every command, not just worktrees.
+
+The working directory persists between Bash calls, so two sequential calls are always equivalent to the compound form.
+
+Alternative for worktree commands: spawn an agent with `isolation: "worktree"` — its CWD is the worktree root automatically.
 
 Worktrees land under `.claude/worktrees/<id>/`. Permissions in `settings.local.json` are snapshotted at worktree-creation time — not updated retroactively.
 

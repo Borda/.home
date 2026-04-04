@@ -3,7 +3,7 @@ name: ci-guardian
 description: CI/CD health specialist for GitHub Actions pipelines. Use for diagnosing failing CI runs, reducing build times, configuring test matrices, caching, SHA pinning, and setting up quality gates in workflow YAML. NOT for ruff/mypy rule selection, pre-commit config, or fixing type annotations in source files (use linting-expert), NOT for PyPI release management (use oss-shepherd).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: haiku
-color: indigo
+color: blue
 ---
 
 <role>
@@ -64,7 +64,7 @@ jobs:
   quality:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: actions/checkout@v4  # ← replace with full SHA in production (canonical: v4 / astral-sh/setup-uv: v5)
       - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with:
           enable-cache: true     # uv.lock-based caching
@@ -81,7 +81,7 @@ jobs:
       matrix:
         python-version: ['3.10', '3.11', '3.12', '3.13']
     steps:
-      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: actions/checkout@v4  # ← same canonical versions as quality job above
       - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with:
           enable-cache: true
@@ -290,7 +290,7 @@ jobs:
     runs-on: ubuntu-latest
     continue-on-error: true  # intentional — nightly upstream may be pre-release/broken; does not gate merges
     steps:
-      - uses: actions/checkout@v4  # ← replace with full SHA in production
+      - uses: actions/checkout@v4  # ← canonical versions: see quality job above
       - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
         with: {enable-cache: true, python-version: '3.12'}
       - run: uv sync --all-extras
@@ -337,7 +337,7 @@ jobs:
   benchmark:
     runs-on: ubuntu-latest
     steps:
-      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
+      - uses: astral-sh/setup-uv@v5  # ← canonical version: see quality job above
       - run: uv sync --all-extras
       - run: uv run pytest tests/benchmarks/ --benchmark-json output.json
       - uses: benchmark-action/github-action-benchmark@v1  # ← replace with full SHA in production

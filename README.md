@@ -13,6 +13,7 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 - [🤖 Claude Code](#-claude-code)
 - [🤖 Codex CLI](#-codex-cli)
 - [🤝 Claude + Codex Integration](#-claude--codex-integration)
+- [🪙 Token Savings (RTK)](#-token-savings-rtk)
 - [🔄 Config Sync](#-config-sync)
 
 </details>
@@ -43,7 +44,12 @@ npm install -g @anthropic-ai/claude-code && npm install -g @openai/codex
 # Activate config globally
 cp -r .claude/ ~/.claude/    # Claude Code agents, skills, hooks
 cp -r .codex/ ~/.codex/      # Codex CLI agents and profiles
+
+# Optional: install RTK for 60–99% token savings on CLI output
+# See the Token Savings section below for install instructions
 ```
+
+→ See [Token Savings (RTK)](#-token-savings-rtk) for install and details.
 
 ## 📦 What's Here
 
@@ -99,7 +105,7 @@ Skills are multi-agent workflows invoked via slash commands. Each skill composes
 | --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | **review**      | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts comment                                                                                                                                                                                                     |
 | **analyse**     | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                                                                                                                           |
-| **brainstorm**  | `/brainstorm <idea>` — clarifying questions → approaches → spec (saved to `_brainstorming/`) → self-mentor review → approval gate; `/brainstorm breakdown <spec>` — read approved spec → ordered task table with per-task skill/command tags                                                      |
+| **brainstorm**  | `/brainstorm <idea>` — clarifying questions → approaches → spec (saved to `.plans/blueprint/`) → self-mentor review → approval gate; `/brainstorm breakdown <spec>` — read approved spec → ordered task table with per-task skill/command tags                                                    |
 | **develop**     | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                                                                                                                        |
 | **resolve**     | OSS fast-close: conflicts + review comments via codex-plugin-cc; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                       |
 | **calibrate**   | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                                                                                          |
@@ -191,9 +197,9 @@ Skills chain naturally — the output of one becomes the input for the next.
 
 ```
 /brainstorm "integrate OpenSpace MCP for skill evolution"
-# clarifying questions → 2–3 approaches → spec saved to _brainstorming/ → self-mentor review → approval
+# clarifying questions → 2–3 approaches → spec saved to .plans/blueprint/ → self-mentor review → approval
 
-/brainstorm breakdown _brainstorming/2026-03-31-openspace-mcp-integration.md
+/brainstorm breakdown .plans/blueprint/2026-03-31-openspace-mcp-integration.md
 # reads spec → ordered task table with per-task skill/command tags:
 #   | 1 | Install OpenSpace venv         | bash                  |
 #   | 2 | Add .mcp.json config entry      | /manage update / Write |
@@ -250,10 +256,10 @@ Preferred flow for maintainers responding to external contributions:
 
 # or if you need the full deep review first:
 /review 42 --reply        # 7-agent + Codex co-review + draft overall comment + inline comments table
-                          # output: _outputs/YYYY/MM/output-reply-pr-42-<date>.md
+                          # output: .temp/output-reply-pr-42-dev-<date>.md
 
 # post when ready:
-gh pr comment 42 --body "$(cat _outputs/YYYY/MM/output-reply-pr-42-<date>.md)"
+gh pr comment 42 --body "$(cat .temp/output-reply-pr-42-dev-<date>.md)"
 ```
 
 Both `--reply` flags produce the same two-part oss-shepherd output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs.
@@ -398,6 +404,41 @@ Two optional MCP servers are defined in `.mcp.json` (synced to `~/.claude/.mcp.j
 | **colab-mcp** | GPU workloads via Google Colab (used by `/optimize campaign --colab`)                                                                     | add `"colab-mcp"` to `enabledMcpjsonServers` |
 
 → New-machine setup and full reference: [`.claude/README.md` → MCP Servers](.claude/README.md#-mcp-servers)
+
+## 🪙 Token Savings (RTK)
+
+RTK is an optional CLI proxy that compresses build, test, and git output before it reaches Claude — saving 60–99% of tokens on common operations with no change to your workflow.
+
+**Install** — see [rtk-ai/rtk](https://github.com/rtk-ai/rtk) for platform-specific instructions. Quick options:
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/rtk-ai/rtk/master/install.sh | sh  # Linux / macOS
+cargo install --git https://github.com/rtk-ai/rtk                                 # via Cargo
+```
+
+> ⚠️ There are two projects named `rtk` on crates.io — always install from `rtk-ai/rtk`, not `reachingforthejack/rtk` (Rust Type Kit). Verify with `rtk gain` after install.
+
+**Verify it's working:**
+
+```bash
+rtk gain            # shows actual token savings from this session
+rtk gain --history  # per-command savings history
+```
+
+**How it integrates with this config:**
+A pre-configured `PreToolUse` hook (`.claude/hooks/rtk-rewrite.js`) transparently rewrites supported CLI calls — `git status` becomes `rtk git status` — without needing duplicate entries in `settings.json`. The hook is a no-op when RTK is not installed, so the config stays portable across machines.
+
+| Category     | Commands                               | Typical Savings |
+| ------------ | -------------------------------------- | --------------- |
+| Tests        | vitest, playwright, cargo test, pytest | 90–99%          |
+| Build        | next, tsc, lint, prettier, ruff        | 70–87%          |
+| Git / GitHub | git, gh pr, gh run, gh issue           | 26–80%          |
+| Packages     | pnpm, npm, pip                         | 70–90%          |
+| Files        | ls, grep, find, diff                   | 60–75%          |
+
+**Scope**: RTK only compresses **Bash tool output** — shell commands like `git`, `cargo`, `pytest`, etc. It does not affect Claude Code's native tools (Read, Grep, Glob, Edit, Write), which run inside Claude's own engine and are already token-efficient by design.
+
+RTK is optional — removing it leaves all functionality intact.
 
 ## 🔄 Config Sync
 

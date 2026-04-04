@@ -1,6 +1,3 @@
-# Claude working scratchpad (plans, lessons, ephemeral artefacts)
-tasks/
-
 # Agent handover artifacts (ephemeral patch files)
 .codex/handover/
 
@@ -14,14 +11,15 @@ tasks/
 
 # Skill run artifacts and temp outputs (ephemeral, TTL-managed)
 docs/
-_brainstorming/
-_calibrations/
-_resolutions/
+.cache/
+.notes/
+.plans/
+.developments/
+.experiments/
+.reports/
+.temp/
 _audits/
-_reviews/
-_optimizations/
-_developments/
-_outputs/
+_analyse/
 
 # Agent auto-memory (machine-local, not source)
 .claude/agent-memory/

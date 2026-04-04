@@ -126,6 +126,7 @@ Each bash block must be self-contained (redeclare variables at the top).
 PROJECT="$(git rev-parse --show-toplevel)"
 HOME_EXPANDED="$HOME"
 HOME_CLAUDE="$HOME_EXPANDED/.claude"
+mkdir -p "$HOME_CLAUDE"
 cd "$PROJECT" && git ls-files .claude/ \
   | grep -vE 'settings\.json$|settings\.local\.json$' \
   | sed 's|^\.claude/||' \

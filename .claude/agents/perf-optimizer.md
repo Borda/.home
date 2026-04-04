@@ -169,14 +169,9 @@ for batch in loader:
 
 Profile Distributed Data Parallel (DDP) overhead by measuring all-reduce time; common bottlenecks:
 
-```python
-# 1. Gradient bucket too small → too many all-reduce calls
-#    Fix: model = DDP(model, bucket_cap_mb=25)  # default 25MB, increase for large models
-# 2. Uneven data distribution → fast workers wait for slow ones
-#    Fix: DistributedSampler(drop_last=True) to equalize batches
-# 3. SyncBatchNorm overhead in small-batch regime
-#    Fix: only use sync_batchnorm when batch_per_gpu < 16
-```
+- Gradient bucket too small → too many all-reduce calls: `DDP(model, bucket_cap_mb=25)` (increase for large models)
+- Uneven data distribution → fast workers wait for slow: `DistributedSampler(drop_last=True)` equalizes batches
+- SyncBatchNorm overhead in small-batch regime: only use `sync_batchnorm` when `batch_per_gpu < 16`
 
 ## 3D Volumetric Data Performance
 
@@ -211,15 +206,7 @@ model = torch.compile(model, mode="max-autotune")  # max speed, slower compile
 
 ## Async / Concurrent Python
 
-```python
-# Profile async code — py-spy supports asyncio natively
-# py-spy record -o profile.svg -- python async_app.py
-
-# Common async bottleneck: sync I/O in async context
-# Bad: calling requests.get() inside an async function (blocks the event loop)
-# Good: use httpx.AsyncClient or aiohttp
-# For unavoidable sync I/O: run_in_executor(ThreadPoolExecutor, sync_fn, arg)
-```
+Profile async code with py-spy (asyncio-native): `py-spy record -o profile.svg -- python async_app.py`. The most common bottleneck is sync I/O inside an async function (e.g. `requests.get()` blocking the event loop) — replace with `httpx.AsyncClient` or `aiohttp`. For unavoidable sync I/O: `loop.run_in_executor(ThreadPoolExecutor(), sync_fn, arg)`.
 
 ## Database Query Optimization
 

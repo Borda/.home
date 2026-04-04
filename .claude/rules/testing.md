@@ -41,11 +41,16 @@ Mirror `src/` layout in `tests/unit/`: `src/foo/bar.py` → `tests/unit/foo/test
 def reset_random_seeds():
     """Ensure reproducible random state for every test."""
     import random
-    import numpy as np
 
     random.seed(42)
-    np.random.seed(42)
     try:
+        import numpy as np
+
+        np.random.seed(42)
+    except ImportError:
+        pass
+    try:
+        # ML stack: conditionally reset torch RNG — fixture works without it
         import torch
 
         torch.manual_seed(42)
@@ -76,7 +81,7 @@ def test_cuda_inference(): ...
 
 ## TDD for New Features
 
-For new features, follow Test-Driven Development — write tests before implementation; tests define the contract. (Applies at development time; not verifiable during post-hoc code review.)
+For new features, follow Test-Driven Development — write tests before implementation; tests define the contract.
 
 ## Doctests
 

@@ -3,7 +3,7 @@ name: brainstorm
 description: Iterative brainstorming skill for turning fuzzy ideas into approved tree documents. Diverges into branches, deepens and prunes them over many rounds, saves a tree doc. Run breakdown on the tree to distill it into a spec via guided questions.
 argument-hint: <fuzzy idea or feature goal> [--tight|--deep] [--type <type>] | breakdown <tree-or-spec-file>
 disable-model-invocation: true
-allowed-tools: Read, Write, Glob, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion
+allowed-tools: Read, Write, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 effort: high
 ---
 
@@ -165,7 +165,7 @@ Use `├─`, `│  ├─`, `└─` for tree rendering. Show sub-branches inde
 
 ## Step 4: Save tree
 
-Assemble the tree state and write to `_brainstorming/YYYY-MM-DD-<slug>.md` using the Write tool (creates the directory if absent). The slug is derived from the title (kebab-case, max 5 words). If a file already exists at the target path (e.g., same day, same slug after a restart), append a counter suffix (`-2`, `-3`, etc.) rather than overwriting.
+Assemble the tree state and write to `.plans/blueprint/YYYY-MM-DD-<slug>.md` using the Write tool (creates the directory if absent). The slug is derived from the title (kebab-case, max 5 words). If a file already exists at the target path (e.g., same day, same slug after a restart), append a counter suffix (`-2`, `-3`, etc.) rather than overwriting.
 
 ```markdown
 # <title>
@@ -210,12 +210,12 @@ Assemble the tree state and write to `_brainstorming/YYYY-MM-DD-<slug>.md` using
 
 Before spawning, pre-compute the output path:
 `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')`
-`OUTPUT_PATH="_outputs/$(date +%Y)/$(date +%m)/output-brainstorm-review-$BRANCH-$(date +%Y-%m-%d).md"`
+`OUTPUT_PATH=".temp/output-brainstorm-review-$BRANCH-$(date +%Y-%m-%d).md"`
 
 Spawn **self-mentor** with a tree-focused prompt (inject the pre-computed `$OUTPUT_PATH` in place of `<output-path>`):
 
 ```
-Read _brainstorming/<tree-file>. Audit for tree quality only (do NOT audit `.claude/` config files — scope is the brainstorm tree only):
+Read .plans/blueprint/<tree-file>. Audit for tree quality only (do NOT audit `.claude/` config files — scope is the brainstorm tree only):
 - Root idea: is the original problem clearly stated in the "Root idea" section?
 - Branch depth: do open branches have enough detail (not just a name)?
 - Closure quality: are closure reasons substantive (not just "not chosen" or "skipped")?
@@ -225,7 +225,7 @@ Write your full findings to <output-path> using the Write tool.
 Return ONLY a compact JSON envelope: {"status":"done","findings":N,"file":"<path>","confidence":0.N,"summary":"<one-line>"}
 ```
 
-**Passive health monitoring**: the Agent tool is synchronous — Claude awaits self-mentor's response natively. If self-mentor does not return within 15 min, surface any partial output already written to `_outputs/` with a ⏱ marker and continue to Step 6 with an incomplete review noted.
+**Passive health monitoring**: the Agent tool is synchronous — Claude awaits self-mentor's response natively. If self-mentor does not return within 15 min, surface any partial output already written to `.temp/` with a ⏱ marker and continue to Step 6 with an incomplete review noted.
 
 If `findings > 0`: add missing details, improve closure reasons, or add open threads as needed — loop back to Step 5 (max 2 revision cycles). After 2 cycles with remaining findings, surface unresolved issues to the user and proceed to Step 6 anyway.
 
@@ -241,7 +241,7 @@ Show the tree file path and a compact tree summary (same format as Step 3). Then
 
 **Gate**: do not exit until the user approves. On (b): return to Step 3 with the existing tree state — add the requested branches or close the specified ones, then loop back to Step 5. Use a reduced cap of **3 additional operations** for this re-entry (not a fresh full budget reset); the cap resets only at the start of Step 3, not on re-entry. On (c): loop back to Step 2. (Max 3 approval cycles — after 3 (b) responses with no convergence, surface unresolved concerns to user and stop.)
 
-On approval, suggest: `/brainstorm breakdown _brainstorming/<file>` to distill the tree into a spec.
+On approval, suggest: `/brainstorm breakdown .plans/blueprint/<file>` to distill the tree into a spec.
 
 ## Mode: Breakdown
 
@@ -323,7 +323,7 @@ If any item fails, call `AskUserQuestion` with:
 On **(a)**: jump back to the failing section in D3 (max 1 extra revision per section).
 On **(b)**: proceed to write.
 
-After all sections approved: write to `_brainstorming/YYYY-MM-DD-<slug>.md` (new file; use the tree's slug with a `-spec` suffix if writing alongside the tree):
+After all sections approved: write to `.plans/blueprint/YYYY-MM-DD-<slug>.md` (new file; use the tree's slug with a `-spec` suffix if writing alongside the tree):
 
 ```markdown
 # <title>
@@ -354,8 +354,8 @@ After all sections approved: write to `_brainstorming/YYYY-MM-DD-<slug>.md` (new
 
 After writing the spec, suggest:
 
-- **Spec targets `.claude/` config**: `/manage update <name> _brainstorming/<spec-file>` or `/manage create <type> <name> "description"`
-- **Spec targets application code or mixed changes**: `/brainstorm breakdown _brainstorming/<spec-file>` to generate the action plan
+- **Spec targets `.claude/` config**: `/manage update <name> .plans/blueprint/<spec-file>` or `/manage create <type> <name> "description"`
+- **Spec targets application code or mixed changes**: `/brainstorm breakdown .plans/blueprint/<spec-file>` to generate the action plan
 
 ______________________________________________________________________
 
@@ -412,12 +412,12 @@ End with a `## Confidence` block per CLAUDE.md output standards.
 - **No code at any point** — this skill produces tree documents and specs only; implementation is out of scope
 - **`disable-model-invocation: true`** — the skill is conversational; the parent model drives all steps turn by turn
 - **self-mentor scope in Step 5** — the spawn prompt must constrain scope to tree quality explicitly; do not let it audit `.claude/` config files
-- **\_brainstorming/ directory** — created if absent; filenames use `YYYY-MM-DD-<kebab-slug>.md` format; tree files use the base slug; spec files append `-spec` to the slug to avoid collision
+- **.plans/blueprint/ directory** — created if absent; filenames use `YYYY-MM-DD-<kebab-slug>.md` format; tree files use the base slug; spec files append `-spec` to the slug to avoid collision
 - **Status field**: tree documents use `Status: tree`; spec documents use `Status: draft`; breakdown auto-detects which path to take
 - **Breakdown heading convention**: distillation mode uses D-prefix steps (D1–D4); action plan mode uses B-prefix steps (B1–B3)
 - **Exploration notes in spec**: Section 6 is derived from the tree's Pruning log — it is intentional context for future readers and should not be removed by self-mentor review
 - **Interaction budget**: idea mode — worst case: 13 (`--tight`) / 23 (default) / 33 (`--deep`) questions + operations + 3 approval cycles; breakdown distillation — max 5 questions + 6 section drafts ≈ 11; typical sessions use ~8–15 total AskUserQuestion calls across both
 - **Flag modes**: `--tight` / `--deep` scale question and operation caps (5/15 vs default 10); `--type` enables type-aware scan and question framing in Steps 1–2; these flags apply to idea mode only and are ignored in breakdown
-- **Follow-up**: after spec approval in distillation mode → if targeting `.claude/` config: `/manage update <name> <spec-file>`; for application or mixed changes: `/brainstorm breakdown _brainstorming/<spec-file>` for the action plan
+- **Follow-up**: after spec approval in distillation mode → if targeting `.claude/` config: `/manage update <name> <spec-file>`; for application or mixed changes: `/brainstorm breakdown .plans/blueprint/<spec-file>` for the action plan
 
 </notes>

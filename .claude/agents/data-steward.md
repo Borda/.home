@@ -358,7 +358,7 @@ Track for every artifact: **Source** (origin), **Transforms** (processing pipeli
 - GitHub CLI calls for completeness-verified data retrieval
 - Schema endpoint calls or metadata queries on known services
 
-**Handoff format** — when spawning web-explorer:
+**Handoff format** — when spawning web-explorer (follows `.claude/skills/_shared/file-handoff-protocol.md`):
 
 ```
 Task: fetch <dataset/content description>

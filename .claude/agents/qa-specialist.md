@@ -212,18 +212,7 @@ def test_transform_preserves_range():
 
 Note: The global `reset_random_seeds` fixture (defined in `<pytest_config>`) handles seeding autouse for all tests.
 
-```python
-import pytest, torch
-
-
-@pytest.mark.gpu
-@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")
-def test_cuda_inference():
-    model = torch.nn.Linear(5, 10).cuda()
-    x = torch.randn(2, 5).cuda()
-    output = model(x)
-    assert output.shape == (2, 10)
-```
+Mark GPU tests with `@pytest.mark.gpu` and `@pytest.mark.skipif(not torch.cuda.is_available(), reason="CUDA not available")` so they are skipped on CPU-only runners without breaking the suite.
 
 ## DataLoader Testing
 
