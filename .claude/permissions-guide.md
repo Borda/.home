@@ -52,7 +52,7 @@ ______________________________________________________________________
 | `Bash(echo:*)`                        | Print strings to stdout                             | Pipe content into another command, emit simple diagnostics                                                |
 | `Bash(find:*)`                        | Locate files by name, type, or modification time    | Discover files matching a pattern across a directory tree                                                 |
 | `Bash(find .cache*)`                  | Locate files inside `.cache/` (GitHub API cache)    | `/analyse` GitHub API response cache inspection and TTL cleanup                                           |
-| `Bash(find .experiments*)`            | Locate files inside `.experiments/` skill run dirs  | `/optimize` campaign iteration inspection and TTL cleanup                                                 |
+| `Bash(find .experiments*)`            | Locate files inside `.experiments/` skill run dirs  | `/optimize` run iteration inspection and TTL cleanup                                                      |
 | `Bash(find .developments*)`           | Locate files inside `.developments/` skill run dirs | `/develop` review-cycle artifact inspection and TTL cleanup                                               |
 | `Bash(find .notes*)`                  | Locate files inside `.notes/`                       | Notes inspection and TTL cleanup                                                                          |
 | `Bash(find .plans*)`                  | Locate files inside `.plans/`                       | Blueprint spec TTL cleanup; plan file inspection                                                          |
@@ -76,7 +76,7 @@ ______________________________________________________________________
 | `Bash(mkdir -p .reports/audit/*)`     | Create `.reports/audit/` skill run subdirs          | `/audit` creates a timestamped run dir before spawning self-mentor agents                                 |
 | `Bash(mkdir -p .reports/review/*)`    | Create `.reports/review/` skill run subdirs         | `/review` creates a run dir for multi-agent review artifacts                                              |
 | `Bash(mkdir -p .reports/analyse/*)`   | Create `.reports/analyse/` skill run subdirs        | `/analyse` creates subdirs for thread, ecosystem, and health modes                                        |
-| `Bash(mkdir -p .experiments/*)`       | Create `.experiments/` skill run subdirs            | `/optimize` creates a run dir for perf and campaign mode artifacts                                        |
+| `Bash(mkdir -p .experiments/*)`       | Create `.experiments/` skill run subdirs            | `/optimize` creates a run dir for run mode artifacts                                                      |
 | `Bash(mkdir -p .developments/*)`      | Create `.developments/` skill run subdirs           | `/develop` creates a run dir for review-cycle artifacts                                                   |
 | `Bash(mkdir -p .temp/)`               | Create the `.temp/` prose output directory          | Skills write quality-gates prose output (research, review, resolve, session) to `.temp/`                  |
 | `Bash(time:*)`                        | Measure wall-clock execution time                   | Establish baseline before an optimisation pass                                                            |
@@ -123,6 +123,8 @@ ______________________________________________________________________
 | `Bash(gh release view:*)` | Inspect an existing release's notes and assets | `/release` uses this to read the previous release as a baseline           |
 | `Bash(gh release list:*)` | List releases                                  | Find the most recent tag to set a changelog range                         |
 | `Bash(gh api graphql:*)`  | Execute GitHub GraphQL API queries             | `/analyse discussion` mode fetches Discussion threads via the GraphQL API |
+| `Bash(gh api repos/*)`    | GitHub REST API calls for repo resources       | `/analyse`, `/review`, `/resolve` fetch PR reviews, issue data via REST   |
+| `Bash(gh api search/*)`   | GitHub REST API search endpoint                | `/resolve` searches for downstream usage of changed APIs                  |
 
 ______________________________________________________________________
 
@@ -152,8 +154,8 @@ ______________________________________________________________________
 | `Bash(git merge:*)`      | Merge a branch into the current branch (with or without committing) | `/resolve` merges the PR head branch to detect and stage conflict resolution; `--no-commit --no-ff` for inspection, `--ff-only` for clean pointer advance |
 | `Bash(git merge-base:*)` | Find the common ancestor commit of two branches                     | `/resolve` uses this to find the diverge point between source and target for diff analysis                                                                |
 | `Bash(git worktree:*)`   | Add, list, or remove linked working trees                           | `/resolve` creates a temporary isolated worktree in `/tmp` to run the merge without touching the user's main working directory                            |
-| `Bash(git commit:*)`     | Commit staged changes to local history                              | `/optimize campaign` commits each experiment atomically before verifying the metric                                                                       |
-| `Bash(git revert:*)`     | Revert a commit by creating an inverse commit                       | `/optimize campaign` reverts failed experiments with `git revert HEAD --no-edit` — preserves history, avoids `reset --hard`                               |
+| `Bash(git commit:*)`     | Commit staged changes to local history                              | `/optimize run` commits each experiment atomically before verifying the metric                                                                            |
+| `Bash(git revert:*)`     | Revert a commit by creating an inverse commit                       | `/optimize run` reverts failed experiments with `git revert HEAD --no-edit` — preserves history, avoids `reset --hard`                                    |
 | `Bash(git add:*)`        | Stage files for the next commit                                     | Stage changes after an edit before prompting user to commit                                                                                               |
 | `Bash(git checkout:*)`   | Switch branches or restore individual files from a ref              | Switch to a feature branch; restore a file to HEAD state                                                                                                  |
 | `Bash(git stash:*)`      | Shelve uncommitted changes temporarily                              | Save work in progress before pulling or switching context                                                                                                 |

@@ -3,7 +3,7 @@ name: resolve
 description: "OSS maintainer fast-close workflow for GitHub PRs. Three phases: (1) PR intelligence — reads the full thread, linked issues, and PR body to synthesize contribution motivation and classify every comment into action items; (2) conflict resolution — checks out the PR branch (fork-aware via gh pr checkout), merges BASE into it, and resolves conflicts semantically using the contributor's intent as the priority lens; (3) implements each action item as a separate attributed commit via Codex, then pushes back to the contributor's fork. Supports three source modes: pr (live GitHub comments only), report (latest /review report findings as action items, no GitHub re-fetch), and pr + report (both sources aggregated and deduplicated in one pass). Also accepts bare comment text for single-comment dispatch."
 argument-hint: <PR number or URL> [report] | report | <review comment text>
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash, TaskCreate, TaskUpdate, Agent
+allowed-tools: Read, Edit, Bash, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 ---
 
 <objective>

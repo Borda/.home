@@ -148,14 +148,18 @@ Always show the tree summary **before** calling `AskUserQuestion`:
 ```
 Tree: <title>
 ├─ Branch 1: <name> [open]
-│  ├─ 1a: <name> [open]
-│  └─ 1b: <name> [closed — <reason>]
-├─ Branch 2: <name> [closed — <reason>]
-└─ Branch 3: <name> [open]
+│  ├─ 1.1: <name> [open]
+│  └─ 1.2: <name> [closed — <reason>]
+├─ Branch 2: <name> [open]
+│  ├─ 2.1: <name> [open]
+│  │  ├─ 2.1.1: <name> [open]
+│  │  └─ 2.1.2: <name> [closed — <reason>]
+│  └─ 2.2: <name> [closed — <reason>]
+└─ Branch 3: <name> [closed — <reason>]
 Open: N | Closed: N | Merged: N
 ```
 
-Use `├─`, `│  ├─`, `└─` for tree rendering. Show sub-branches indented one level. Closed branches show their reason inline.
+Use `├─`, `│  ├─`, `└─` for tree rendering. Show sub-branches indented one level per depth. Sub-branches use hierarchical dot notation: branch 2 splits into 2.1, 2.2, …; those can further split into 2.1.1, 2.1.2, … Closed branches show their reason inline.
 
 ### Loop bounds
 
@@ -189,14 +193,16 @@ Assemble the tree state and write to `.plans/blueprint/YYYY-MM-DD-<slug>.md` usi
 
 [Sub-branches nested as H4 headings if present:]
 
-#### N.a: <sub-branch name> [open | closed — <reason>]
+#### N.1: <sub-branch name> [open | closed — <reason>]
 
 **Core idea**: ...
+
+[Deeper splits nest as H5 headings, e.g. `##### N.1.1: <name>`]
 
 ## Pruning log
 
 - Branch N closed: <reason>
-- Sub-branch N.a closed: <reason>
+- Sub-branch N.1 closed: <reason>
 [One bullet per closed or merged branch, in the order they were closed.]
 
 ## Open threads
@@ -374,7 +380,7 @@ For each blocking question: call `AskUserQuestion` — one at a time, in order. 
    - `.claude/` config change → `/manage create <type> <name> "description"` or `/manage update <name> <spec-file>`
    - System install or shell setup → full shell command
    - Application code change → `/develop feature "<goal>"` or `/develop fix "<symptom>"`
-   - Documentation → `/develop feature "<doc goal>" --mode doc`
+   - Documentation → `/develop feature "<doc goal>"`
    - Verification/testing → `/develop feature "<test goal>"` or manual check command
 3. Output an ordered task table:
 

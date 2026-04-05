@@ -479,7 +479,7 @@ Can be longer than issue replies when the topic warrants it (3–5 sentences or 
 gh issue view 123
 
 # List open issues with a label
-gh issue list --label "bug" --state open
+gh issue list --label "bug" --state open --limit 1000
 
 # Comment on an issue (using heredoc for multi-line)
 gh issue comment 123 --body "$(cat <<'EOF'
@@ -496,7 +496,7 @@ gh pr diff 456
 # Search for related issues before triaging a new one
 gh issue list --search "topic keyword" --state open
 
-# Find downstream usage of a changed API (rate-limited ~30 req/min)
+# Find downstream usage of a changed API (rate-limited ~30 req/min; add --paginate for complete results)
 gh api "search/code" --field "q=from mypackage import changed_fn language:python" \
   --jq '.items[:10] | .[].repository.full_name'
 

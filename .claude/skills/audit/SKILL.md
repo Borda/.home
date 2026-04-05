@@ -936,6 +936,16 @@ If no fix level was passed, stop here and present the report.
 
 ## Step 8: Delegate fixes to subagents
 
+**Fix Action Hierarchy** — before applying any fix, reason through this order:
+
+1. **Reason** — is the finding actually correct? Is the flagged content genuinely wrong, or just in the wrong place? A misidentified finding should be discarded, not acted on.
+2. **Relocate** — if the content is correct but in the wrong location, move it rather than removing it.
+3. **Consolidate** — if the content is redundant with something nearby, merge into one clearer location.
+4. **Minimize** — if the content is too long but otherwise valid, compress it (tighten wording, remove restatements).
+5. **Remove** — only if none of the above apply. Never remove solely because something was flagged as verbose.
+
+Apply this hierarchy to every fix action at all severity levels.
+
 Choose the fix agent based on file type:
 
 - **`.claude/agents/*.md` and `.claude/skills/*/SKILL.md`** → spawn **self-mentor** — it has domain expertise in config quality and has `Write`/`Edit` tools

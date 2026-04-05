@@ -1,24 +1,70 @@
-# Campaign Mode
+<!-- Mode-file include: loaded by .claude/skills/optimize/SKILL.md — not a standalone skill -->
+
+<!-- Implements three modes: plan (P-P0–P-P3), default run (R0–R7), resume (see Resume Mode section) -->
+
+# Run Mode
 
 ______________________________________________________________________
 
-## Plan Mode (Steps C-P1–C-P3)
+## Plan Mode (Steps P-P0–P-P3)
 
-Triggered by `plan <goal>`. Interactive wizard to configure a campaign run.
+<!-- P-P prefix = Plan-mode steps; R-prefix = Run-mode steps; these labels appear in task-tracking instructions -->
 
-**Task tracking**: create tasks for C-P1, C-P2, C-P3 at start.
+Triggered by `plan <goal|file>`. Interactive wizard to configure a run.
 
-### Step C-P1: Parse and scan
+**Task tracking**: create tasks for P-P0, P-P1, P-P2, P-P3 at start.
+
+### Step P-P0: Detect input type
+
+Parse `<input>` from arguments. Determine whether it is a **file path** or a **goal string**:
+
+1. If the argument contains no spaces AND `test -f <argument>` succeeds → **file path**. Enter profiling flow below.
+2. Otherwise → **goal string**. Skip to Step P-P1.
+
+**Profiling flow** (file path detected):
+
+Run baseline profiling:
+
+```bash
+python3 -m cProfile -s cumtime "$ARGUMENTS" 2>&1 | head -40
+time python3 "$ARGUMENTS"
+```
+
+Present the top 5 bottleneck functions. Then ask:
+
+```
+Top bottleneck functions:
+1. <function> — <cumtime>s (<percentage>%)
+2. <function> — <cumtime>s (<percentage>%)
+...
+
+What would you like to optimize?
+  (a) Overall execution time
+  (b) Memory usage
+  (c) Specific function: <top function name>
+  (d) Custom goal: <describe>
+```
+
+Construct a goal string from the user's selection:
+
+- (a) → `"Reduce wall-clock execution time of <file>"`
+- (b) → `"Reduce peak memory usage of <file>"`
+- (c) → `"Optimize <function> in <file> (currently <time>s)"`
+- (d) → user's text
+
+Set the constructed string as `<goal>` and proceed to Step P-P1.
+
+### Step P-P1: Parse and scan
 
 **Scope guard (first action)**: Before scanning, check whether `<goal>` is an optimization goal. If the input is clearly not an optimization goal — e.g., a question about code semantics, a regex or algorithm explanation request, a debugging question, or any prompt that does not describe a measurable improvement target — print:
 
 ```
 ⚠ This input does not look like an optimization goal.
 /optimize plan expects: "Reduce X" / "Increase Y" / "Improve Z metric".
-Use /ask or /research for explanatory questions.
+Use /research for explanatory questions.
 ```
 
-Then stop. Do not proceed to C-P2 or C-P3.
+Then stop. Do not proceed to P-P2 or P-P3.
 
 Parse `<goal>` from arguments. Scan the codebase to detect:
 
@@ -28,7 +74,7 @@ Parse `<goal>` from arguments. Scan the codebase to detect:
 - Candidate guard commands (test suite, lint, type check)
 - Files relevant to the goal (scope files)
 
-### Step C-P2: Present proposed config
+### Step P-P2: Present proposed config
 
 Present the proposed config as a code block for user review. Include:
 
@@ -42,9 +88,9 @@ scope_files:     [files the ideation agent may modify]
 compute:         local | colab | docker
 ```
 
-Dry-run both commands before presenting. If either fails, flag the error and propose corrections. Do not proceed to C-P3 until the user confirms or edits the config.
+Dry-run both commands before presenting. If either fails, flag the error and propose corrections. Do not proceed to P-P3 until the user confirms or edits the config.
 
-### Step C-P3: Write program.md
+### Step P-P3: Write program.md
 
 Determine the output path: if the user provided a second argument after `<goal>`, use that path; otherwise use `program.md` at the project root.
 
@@ -53,7 +99,7 @@ Determine the output path: if the user provided a second argument after `<goal>`
 Write the file using this canonical template, pre-populated from the wizard's findings:
 
 ````markdown
-# Campaign: <title from goal>
+# Program: <title from goal>
 
 ## Goal
 <one-paragraph description of what to improve and why>
@@ -77,6 +123,7 @@ agent_strategy: auto | perf | code | ml | arch
 scope_files:
   - <path or glob>
 compute: local | colab | docker
+colab_hw:                         # optional: H100 | L4 | T4 | A100 (used when compute: colab)
 sandbox_network: none | bridge
 ```
 
@@ -91,20 +138,82 @@ Print:
 
 Next steps:
   /optimize judge program.md   ← validate plan before running (recommended)
-  /optimize campaign program.md ← start iteration loop directly
+  /optimize run program.md     ← start iteration loop directly
 ```
 
 ______________________________________________________________________
 
-## Default Mode (Steps C1–C7)
+## Default Mode (Steps R1–R7)
 
-Triggered by `campaign <goal>` or `campaign <file.md>`.
+Triggered by `run <goal|file.md>`.
 
-**Task tracking**: create tasks for C1–C7 at start. If `--codex` is active, also create task `C5b: Codex co-pilot (iter ?/max)` with status `pending`.
+**Task tracking**: create tasks for R0–R7 at start. If neither `--researcher` nor `--architect` is set, mark R0 as skipped or omit it. If `--codex` is active, also create task `R5b: Codex co-pilot (iter ?/max)` with status `pending`.
 
-### Step C1: Load / build config
+### Step R0: Hypothesis pre-phase (`--researcher` / `--architect`)
+
+If neither `--researcher` nor `--architect` is set, skip to Step R1.
+
+> **Research run directory**: Research outputs (`hypotheses.jsonl`, `checkpoint.json`, `journal.md`) go to `.experiments/<run-id>/` — a timestamped directory created at the start of R0, distinct from the main state directory `.experiments/state/<run-id>/`. Referred to as `<RUN_DIR>` throughout this step. See `.claude/rules/optimize-hypothesis-protocol.md` for the full layout.
+
+1. **Build hypothesis queue** — if `--hypothesis <path>` is provided, read that file as the pre-built queue (skip oracle phase). Otherwise, spawn oracle agents based on active flags — agents run in parallel if both flags are set:
+
+   **If `--researcher` is set** — spawn `ai-researcher` (`maxTurns: 15`):
+
+   ```
+   Read the program file and the project codebase. Generate 5–10 ML experiment hypotheses grounded in SOTA literature and the specific metric goal. Write to `<RUN_DIR>/hypotheses.jsonl` — one JSON object per line, each with fields: hypothesis, rationale, confidence (float 0–1), expected_delta, priority (int, 1=highest), source: "oracle". Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-ai-researcher.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
+   ```
+
+   **If `--architect` is set** — spawn `solution-architect` (`maxTurns: 15`) as hypothesis generator (not just feasibility annotator):
+
+   ```
+   Read the program file and the project codebase. Analyze the architecture, coupling, and structural design. Generate 5–10 architectural optimization hypotheses (refactoring opportunities, coupling reductions, abstraction improvements) that could improve the metric. Write to `<RUN_DIR>/hypotheses-arch.jsonl` — one JSON object per line with the same schema as the research oracle (hypothesis, rationale, confidence, expected_delta, priority, source: "architect"). Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-solution-architect.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
+   ```
+
+   **If both `--researcher` and `--architect` are set**: run both oracle agents in parallel (two separate Agent calls). After both complete, merge the two JSONL files into a single `<RUN_DIR>/hypotheses.jsonl`, interleaving by priority (lower priority number = higher priority, round-robin on ties). Update priority values in the merged file to reflect the interleaved order.
+
+   After oracle phase(s), always run the feasibility annotation pass — spawn `solution-architect` (`maxTurns: 10`):
+
+   ```
+   Read `<RUN_DIR>/hypotheses.jsonl` and the project codebase. For each hypothesis, annotate with: feasible (bool), blocker (str|null, required if feasible=false), codebase_mapping (str). Write the annotated queue back to the same file preserving order. Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-feasibility.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","feasible":N,"infeasible":N,"confidence":0.N}
+   ```
+
+   Note: when `--architect` is the only flag (no `--researcher`), skip the feasibility annotation pass — the architect already validated feasibility during hypothesis generation. Set `feasible: true` on all entries implicitly.
+
+   Both agents follow the handoff envelope protocol (see CLAUDE.md §2). Schema: `.claude/rules/optimize-hypothesis-protocol.md`.
+
+2. **Filter and sort** — load the annotated queue. Infeasible entries (`feasible: false`) remain in the file for audit but are excluded from execution. Sort by `priority` ascending (1 = first to run).
+
+3. **Resume skip** — if `<RUN_DIR>/checkpoint.json` already exists (i.e., resuming a crashed research run), read it. Skip any hypothesis whose 0-indexed position matches a `hypothesis_id` already present in the checkpoint.
+
+4. Store the active queue in memory as `RESEARCH_QUEUE`.
+
+**Per-iteration hypothesis selection** (active when `--researcher` or `--architect` is set, inside Step R5's loop): pop the next hypothesis from `RESEARCH_QUEUE` as the iteration's direction. Append to the Phase 2 ideation prompt: "Focus this iteration on testing this hypothesis: `<hypothesis text>`."
+
+**Per-iteration journal hook** (inside Step R5, after Phase 7 keep-decision): if `--journal` is active, append a journal entry to `<RUN_DIR>/journal.md` after EVERY iteration — regardless of outcome. Entry format: see `.claude/rules/optimize-hypothesis-protocol.md`. Journals record both kept and reverted iterations so the ideation agent can learn what approaches failed and avoid repeating them.
+
+**Per-iteration checkpoint write** (after Phase 7, keep or rollback): if `--researcher` or `--architect` is active, append one line to `<RUN_DIR>/checkpoint.json` per the schema in `.claude/rules/optimize-hypothesis-protocol.md`: `{iteration, hypothesis_id, metric_before, metric_after, status: "passed"|"rolled_back"}`.
+
+### Step R1: Load / build config
 
 **Auto-detect**: if the first non-flag argument ends in `.md`, treat it as a program file path and parse it. Otherwise, treat it as a text goal (existing behavior).
+
+**Clarification prompt** (`.md` file path only): after extracting the `.md` file path argument, inspect the next token (before any `--` flags):
+
+- If absent or starts with `--` → `clarification_prompt = null`
+- If a quoted string (starts and ends with `"`) → extract as `clarification_prompt`, strip the surrounding quotes
+- If a bare unquoted token (no leading `--`, no surrounding `"`) → accept it as `clarification_prompt` as-is; print a one-line advisory: `ℹ clarification set to "<token>" (tip: quote multi-word hints — e.g. "/optimize run program.md \"focus on sort\" --codex")`
+
+After clarification extraction, any remaining non-flag tokens (tokens that do not start with `--`) are unrecognized. For each such token, print:
+
+```
+⚠ Unrecognized argument "<token>" — ignored.
+  Known positional args: <program.md path> [clarification]
+  Known flags: --team, --colab[=HW], --codex, --compute=local|colab|docker, --docker, --researcher, --architect, --journal, --hypothesis <path>
+  If you meant to override the algo, edit the ## Config block in your program.md (algo: sort) and update ## Metric to match.
+  If you meant to set a clarification hint, pass it as a quoted string: "/optimize run program.md \"sort improvements\" --codex"
+```
+
+Do not stop the run for unrecognized tokens — warn and continue.
 
 **If argument is a `.md` file** — read and parse with these rules:
 
@@ -112,12 +221,16 @@ Triggered by `campaign <goal>` or `campaign <file.md>`.
 2. Extract the first fenced code block following that heading.
 3. Parse the block as `key: value` lines; multi-value fields use indented `  - value` list items. Path values containing spaces must be wrapped in double quotes.
 4. Missing required fields (`command` under `## Metric` and `## Guard`) → stop with a clear error.
-5. `agent_strategy: auto` (or omitted) → apply keyword heuristics from `<constants>` in SKILL.md to `## Goal` text and metric command.
+5. `agent_strategy: auto` (or omitted) → apply keyword heuristics from `<constants>` in `.claude/skills/optimize/SKILL.md` to `## Goal` text and metric command.
 6. `target` under `## Metric`: `direction: higher` → stop when metric ≥ target; `direction: lower` → stop when metric ≤ target. If `target` is omitted, run until `max_iterations`.
 7. Unrecognized keys and section headings → warn once, then ignore.
-8. `## Notes` and the `# Campaign:` title are never parsed — human-only.
+8. `## Notes` and the `# Program:` title are never parsed — human-only. (Legacy `# Campaign:` heading is accepted as an alias.)
 
-**If argument is text** — attempt auto-detection of `metric_cmd` and `guard_cmd` from the goal string and codebase scan (same logic as Plan C-P1, but non-interactive — infer reasonable defaults). `config.json` is not read.
+**If argument is text** — attempt auto-detection of `metric_cmd` and `guard_cmd` from the goal string and codebase scan (same logic as Plan P-P1, but non-interactive — infer reasonable defaults). `config.json` is not read.
+
+**`--colab[=HW]` parsing**: if the flag is `--colab` (no `=`), set `compute = "colab"`, `colab_hw = null`. If the flag is `--colab=<value>`, set `compute = "colab"` and `colab_hw = <value>` (uppercased). If `<value>` is not in the known set `{H100, L4, T4, A100}`, print a one-line warning: `"⚠ Unknown Colab hardware '<value>' — proceeding with default GPU. Known: H100, L4, T4, A100"` and set `colab_hw = null`. `--compute=colab` (without `--colab=HW`) sets `compute = "colab"`, `colab_hw = null`.
+
+The optional `colab_hw` key in `## Config` sets the hardware preference (`H100`, `L4`, `T4`, `A100`); CLI `--colab=HW` overrides it.
 
 Generate a `run-id` = `$(date +%Y%m%d-%H%M%S)`. Create the run directory:
 
@@ -127,6 +240,8 @@ Generate a `run-id` = `$(date +%Y%m%d-%H%M%S)`. Create the run directory:
   experiments.jsonl  ← one line per iteration
   diary.md           ← human-readable research diary (hypothesis → outcome → decision)
 ```
+
+Convert `program_file` to absolute path before storing: use `os.path.abspath(<argument>)` or shell `realpath` — Resume Mode matches on absolute path.
 
 Write initial `state.json` (`program_file` is the absolute path to the `.md` file, or `null` when launching from a text goal):
 
@@ -140,11 +255,14 @@ Write initial `state.json` (`program_file` is the absolute path to the `.md` fil
   "best_metric": null,
   "best_commit": null,
   "status": "running",
-  "started_at": "<ISO timestamp>"
+  "started_at": "<ISO timestamp>",
+  "clarification_prompt": null,
+  "colab_hw": null,
+  "sandbox_mode": "local"
 }
 ```
 
-### Step C2: Precondition checks
+### Step R2: Precondition checks
 
 Run all checks before touching code. Fail fast with a clear message if any fail:
 
@@ -153,13 +271,23 @@ Run all checks before touching code. Fail fast with a clear message if any fail:
 3. **Metric command produces numeric output**: run `metric_cmd` once; parse stdout for a float. If no float found: show the output and stop.
 4. **Guard command passes**: run `guard_cmd` once; must exit 0. If it fails: show the output and stop.
 5. **`--colab` check** (if flag present): verify Colab MCP tools are available by checking for `mcp__colab-mcp__runtime_execute_code`. If unavailable, print setup instructions (see Colab MCP section) and stop.
-6. **`--codex` check** (if flag present): verify `claude plugin list 2>/dev/null | grep -q 'codex@openai-codex'`. If unavailable: print "⚠ codex plugin not found — proceeding without Codex ideation (Claude-only mode)" and clear the `--codex` flag for this run. Graceful degradation — not a hard stop.
+   If `--colab=HW` was specified (`colab_hw` is non-null): print:
+   `  Hardware requested: --colab=<colab_hw>. Ensure your Colab notebook is running with a <colab_hw> GPU before proceeding.`
+6. **`--codex` check** (if flag present): verify `claude plugin list 2>/dev/null | grep -q 'codex@openai-codex'`. If unavailable: print `⚠ codex plugin not found. Install it with: /plugin marketplace add openai/codex-plugin-cc` and **stop** — do not proceed with the run.
+7. **`compute: docker` check** (if `compute` field = `docker` or `--docker` flag was passed): run `docker ps` using the Bash tool with `timeout: 5000`. If it exits non-zero: print `⚠ Docker daemon not running. Start Docker Desktop and retry.` and **stop** — do not proceed with the run.
+8. **Flag conflict check**: if both `--colab` (or `compute: colab`) and `--docker` (or `compute: docker`) are active: print `⚠ --colab and --docker are mutually exclusive. Use one or the other.` and **stop**.
+9. **`--journal` prerequisite check** (if `--journal` flag set): verify that `--researcher` or `--architect` is also set. If neither is active: print `⚠ --journal requires --researcher or --architect — omit --journal or add a hypothesis pipeline flag.` and **stop**.
 
-### Step C3: Select ideation agent
+**Initialize `sandbox_mode`** (after all checks above pass):
 
-Apply the `agent_strategy` mapping from `<constants>` in SKILL.md. If `auto`, apply keyword heuristics to `metric_cmd`. Log selected agent to `state.json`.
+- `compute: docker` (daemon check passed in #7) → `sandbox_mode = "docker"`. Print: `sandbox: Docker daemon reachable — sandbox mode active`
+- All other cases (`compute: local`, `compute: colab`) → `sandbox_mode = "local"`
 
-### Step C4: Establish baseline (iteration 0)
+### Step R3: Select ideation agent
+
+Apply the `agent_strategy` mapping from `<constants>` in `.claude/skills/optimize/SKILL.md`. If `auto`, apply keyword heuristics to `metric_cmd`. Log selected agent to `state.json`.
+
+### Step R4: Establish baseline (iteration 0)
 
 Run `metric_cmd` and `guard_cmd`. Parse the metric value. Append to `experiments.jsonl`:
 
@@ -195,32 +323,30 @@ Write initial diary header to `.experiments/state/<run-id>/diary.md`:
 ---
 ```
 
-Then proceed to Step C5.
+Then proceed to Step R5.
 
-### Step C5: Iteration loop
+### Step R5: Iteration loop
 
 For each iteration `i` from 1 to `max_iterations`:
 
 **Phase overview** (all phases run per iteration):
 
-| Phase | Name             | Trigger / description                                                                                                        |
-| ----- | ---------------- | ---------------------------------------------------------------------------------------------------------------------------- |
-| 0     | Print header     | Always — print `[→ Iter N/max · starting]`; TaskUpdate C5 subject with current iteration                                     |
-| 1     | Build context    | Always — build compact context from git log, JSONL history, and recent diff                                                  |
-| 2     | Propose change   | Always — spawn specialist agent to read code, research, investigate, and generate a hypothesis with optional sandbox scripts |
-| 2a    | Sandbox validate | `compute: docker` only — run agent's exploratory scripts in Docker sandbox (read-only mount); skip if sandbox unavailable    |
-| 2b    | Apply change     | Always — agent applies the (validated) proposal to real codebase using Write/Edit tools only; no Bash on codebase            |
-| 2c    | Codex co-pilot   | `--codex` only — **MANDATORY every iteration**; Codex second pass after Phase 2b; must not be skipped                        |
-| 3     | Verify files     | Always — check `git diff --stat`; skip to Phase 8 if no files changed (no-op)                                                |
-| 4     | Commit change    | Always — stage modified files and commit before verifying metric                                                             |
-| 5     | Verify metric    | Always — run `metric_cmd` via `compute` mode (local/colab/docker); revert on timeout                                         |
-| 6     | Run guard        | Always — run `guard_cmd` via `compute` mode; record pass or fail                                                             |
-| 7     | Evaluate outcome | Always — keep, rework, or revert based on metric + guard result                                                              |
-| 7a    | Write diary      | Always — append one structured entry to `diary.md` recording hypothesis, outcome, and decision rationale                     |
-| 8     | Write log        | Always — append JSONL record, update `state.json`, print iteration summary, TaskUpdate C5 with result                        |
-| 9     | Progress checks  | Always — summary every SUMMARY_INTERVAL, stuck detection, diminishing-returns warn, early-stop check                         |
-
-> **Phase 2a and 2b are Track 2 (Docker sandbox) features**. Until Track 2 is implemented, Phase 2 continues to propose AND implement in one step as before. The table above shows the target architecture.
+| Phase | Name             | Trigger / description                                                                                                             |
+| ----- | ---------------- | --------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | Print header     | Always — print `[→ Iter N/max · starting]`; TaskUpdate R5 subject with current iteration                                          |
+| 1     | Build context    | Always — build compact context from git log, JSONL history, and recent diff                                                       |
+| 2     | Propose change   | Always — spawn specialist agent to read code, research, investigate, and generate a hypothesis with optional sandbox scripts      |
+| 2a    | Sandbox validate | `compute: docker` only — run agent's exploratory scripts in Docker sandbox (read-only mount)                                      |
+| 2b    | Apply change     | `compute: docker` only — agent applies the (validated) proposal to real codebase using Write/Edit tools only; no Bash on codebase |
+| 2c    | Codex co-pilot   | `--codex` only — **MANDATORY every iteration**; Codex second pass after Phase 2b; must not be skipped                             |
+| 3     | Verify files     | Always — check `git diff --stat`; skip to Phase 8 if no files changed (no-op)                                                     |
+| 4     | Commit change    | Always — stage modified files and commit before verifying metric                                                                  |
+| 5     | Verify metric    | Always — run `metric_cmd` via `compute` mode (local/colab/docker); revert on timeout                                              |
+| 6     | Run guard        | Always — run `guard_cmd` via `compute` mode; record pass or fail                                                                  |
+| 7     | Evaluate outcome | Always — keep, rework, or revert based on metric + guard result                                                                   |
+| 7a    | Write diary      | Always — append one structured entry to `diary.md` recording hypothesis, outcome, and decision rationale                          |
+| 8     | Write log        | Always — append JSONL record, update `state.json`, print iteration summary, TaskUpdate R5 with result                             |
+| 9     | Progress checks  | Always — summary every SUMMARY_INTERVAL, stuck detection, diminishing-returns warn, early-stop check                              |
 
 **Command execution rules** (apply to ALL phases that run external commands):
 
@@ -234,13 +360,13 @@ For each iteration `i` from 1 to `max_iterations`:
 
 #### Phase 0 — Print header
 
-Before any phase work, print the iteration header and update the C5 task subject:
+Before any phase work, print the iteration header and update the R5 task subject:
 
 ```
 [→ Iter N/max_iterations — best so far: <best_metric> (Δ<best_delta_pct>% vs baseline)]
 ```
 
-TaskUpdate C5 subject: `C5: Iteration N/max_iterations — running`
+TaskUpdate R5 subject: `R5: Iteration N/max_iterations — running`
 
 #### Phase 1 — Build context
 
@@ -255,12 +381,16 @@ git diff --stat HEAD~5 HEAD >> .experiments/state/<run-id>/context-<i>.md
 
 Prepend a header block to `context-<i>.md` with: goal, current metric vs baseline, delta trend (last 5 kept deltas), and the iteration number. The ideation agent in Phase 2 reads this file directly — the content is never echoed back to the main context.
 
+If `--journal` is active and `<RUN_DIR>/journal.md` exists with 1+ entries: append the last 5 journal entries to `context-<i>.md` under a `## Recent journal (avoid repeating reverted approaches)` heading. The ideation agent reads this and should not reproduce any approach marked `outcome: reverted`.
+
 #### Phase 2 — Propose change
 
 Spawn the selected specialist agent with `maxTurns: 15` and this prompt (adapt as needed):
 
 ```
 Goal: <goal>
+Run clarification: <clarification_prompt>  ← omit this line entirely if clarification_prompt is null
+Colab hardware: <colab_hw>  ← omit this line entirely if colab_hw is null; include to let the agent tailor code to the specific GPU architecture (e.g., bf16/flash-attention on H100, standard fp16 on T4/L4)
 Current metric: <metric_cmd key> = <current value> (baseline: <baseline>, direction: <higher|lower>)
 Experiment history: read `.experiments/state/<run-id>/context-<i>.md` for the full context block.
 Scope files (read and modify only these): <scope_files>
@@ -268,15 +398,11 @@ Program constraints: read `<program_file>` — especially `## Notes`, `## Config
   (e.g., "Hard boundaries", "Optuna's role", "What the agent is free to change"). These take precedence
   over general campaign rules. If program_file is null, skip this step.
 
-Read `context-<i>.md`, the scope files, and the program constraints. Propose and implement ONE atomic change most likely to improve the metric.
-The change must not break <guard_cmd>.
-ONE means ONE: do NOT write a script that loops over multiple config variants or implementations to find the best one —
-each variant is a separate iteration; the campaign loop handles comparison and selection.
-Pick the single most promising hypothesis and apply it directly to the source files.
-Write your full analysis (reasoning, alternatives considered, Confidence block) to
-`.experiments/state/<run-id>/ideation-<i>.md` using the Write tool.
-Return ONLY the JSON result line — nothing else after it:
-{"description":"...","files_modified":[...],"confidence":0.N}
+**If `sandbox_mode = "local"`**: Read `context-<i>.md`, the scope files, and the program constraints. Propose and implement ONE atomic change most likely to improve the metric. The change must not break `<guard_cmd>`. Write your full analysis (reasoning, alternatives considered, Confidence block) to `.experiments/state/<run-id>/ideation-<i>.md` using the Write tool. Return ONLY the JSON result line:
+`{"description":"...","files_modified":[...],"scripts":[],"confidence":0.N}`
+
+**If `sandbox_mode = "docker"`**: Read `context-<i>.md`, the scope files, and the program constraints. Propose ONE atomic change most likely to improve the metric. Write your full analysis and the proposed change description to `.experiments/state/<run-id>/ideation-<i>.md`. Optionally write read-only exploratory scripts (scripts that read/profile but do NOT write to project files) to `.experiments/state/<run-id>/scripts/explore-<i>-<slug>.py`. Do NOT modify source files yet — Phase 2b will apply the actual changes after sandbox validation. Return ONLY the JSON result line:
+`{"description":"...","files_modified":[],"scripts":["explore-<i>-<slug>.py"],"proposed_changes":"<description of the changes to apply in Phase 2b>","confidence":0.N}`
 ```
 
 For `--colab` runs: the ideation agent (especially `ai-researcher`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.
@@ -285,9 +411,44 @@ For `--colab` runs: the ideation agent (especially `ai-researcher`) may call `mc
 
 If the Agent tool is unavailable (nested subagent context), implement the change inline and construct the JSON result manually.
 
+#### Phase 2a — Sandbox validate (`sandbox_mode = "docker"` only)
+
+Skip entirely if `sandbox_mode = "local"`.
+
+If Phase 2 returned `"scripts": [...]` with a non-empty list: run each script inside a Docker sandbox with a read-only project mount. For each script path in the list:
+
+```bash
+docker run --rm --network <sandbox_network> \
+  -v "$(pwd):/workspace:ro" \
+  --tmpfs /tmp:rw,size=256m \
+  -w /workspace \
+  python:3.11-slim \
+  python3 /workspace/.experiments/state/<run-id>/scripts/<script>
+```
+
+Use the Bash tool `timeout` parameter: `timeout: <VERIFY_TIMEOUT_SEC * 1000>`. Do NOT use the `timeout` shell command.
+
+If any script exits non-zero: append `status: sandbox-failed` to `ideation-<i>.md`, skip to Phase 8 (log) with `status: sandbox-failed`. Do not proceed to Phase 2b.
+
+If `"scripts"` is empty or absent: Phase 2a is a no-op — proceed directly to Phase 2b.
+
+#### Phase 2b — Apply change (`sandbox_mode = "docker"` only)
+
+Skip entirely if `sandbox_mode = "local"` (Phase 2 already applied changes when in local mode).
+
+Spawn the same specialist agent selected in Step R3, with `maxTurns: 10` and this prompt:
+
+```
+Read the proposed change in `.experiments/state/<run-id>/ideation-<i>.md`.
+Apply the proposed change to the source files.
+Use Write and Edit tools ONLY — no Bash execution on the codebase files.
+Scope files (read and modify only these): <scope_files>
+Return ONLY: {"files_modified":[...]}
+```
+
 #### Phase 2c — Codex co-pilot (`--codex` only)
 
-> **MANDATORY — do not skip.** When `--codex` was active at Step C2 and not cleared, this phase MUST run on every iteration regardless of Phase 2 outcome. Print the narration line and update the C5b task before calling Agent.
+> **MANDATORY — do not skip.** When `--codex` was active at Step R2 and not cleared, this phase MUST run on every iteration regardless of Phase 2 outcome. Print the narration line and update the R5b task before calling Agent.
 
 Print:
 
@@ -295,9 +456,9 @@ Print:
 [→ Iter N/max · Phase 2c: Codex co-pilot — running]
 ```
 
-TaskUpdate C5b subject: `C5b: Codex co-pilot — iter N/max_iterations running`, status: `in_progress`
+TaskUpdate R5b subject: `R5b: Codex co-pilot — iter N/max_iterations running`, status: `in_progress`
 
-Run Phase 2c on **every iteration** when `--codex` is active. Claude-first co-pilot — Codex always gets a second turn; keep whichever of the two proposals produces a better net metric improvement (or keep Claude's if Codex produces no additional improvement).
+Run Phase 2c on **every iteration** when `--codex` is active. Codex co-pilot — Codex always runs a second pass, building on Claude's kept change or making a fresh attempt after a revert/no-op. Codex wins only if its delta ≥ 0.1% AND guard passes.
 
 - If Claude's Phase 2 change was **kept**: Codex runs a second pass on the current state — building on Claude's work, trying an additional improvement.
 - If Claude's Phase 2 change was **reverted or no-op**: the working tree has already been restored to the pre-Phase-2 state; Codex gets a fresh attempt on the clean tree.
@@ -307,7 +468,7 @@ Run Codex ideation:
 ```
 Agent(
   subagent_type="codex:codex-rescue",
-  prompt="Goal: <goal>. Current metric: <metric_key>=<current_value> (baseline: <baseline>, direction: <higher|lower>). Scope files: <scope_files>. Read context from .experiments/state/<run-id>/context-<i>.md. Starting state: Claude's change was [kept|reverted|no-op]. [If kept: try to improve further from the current state. If reverted/no-op: propose a fresh approach.] Propose and implement ONE atomic optimization change most likely to improve the metric without breaking <guard_cmd>. Write your full reasoning to .experiments/state/<run-id>/codex-ideation-<i>.md."
+  prompt="Goal: <goal>. Run clarification: <clarification_prompt>  ← omit this clause entirely if clarification_prompt is null. Current metric: <metric_key>=<current_value> (baseline: <baseline>, direction: <higher|lower>). Scope files: <scope_files>. Read context from .experiments/state/<run-id>/context-<i>.md. Starting state: Claude's change was [kept|reverted|no-op]. [If kept: try to improve further from the current state. If reverted/no-op: propose a fresh approach.] Propose and implement ONE atomic optimization change most likely to improve the metric without breaking <guard_cmd>. Write your full reasoning to .experiments/state/<run-id>/codex-ideation-<i>.md."
 )
 ```
 
@@ -319,7 +480,7 @@ Agent(
 
 After Codex completes (any outcome — kept, reverted, no-op):
 
-TaskUpdate C5b subject: `C5b: Codex co-pilot — iter N done (<outcome>)`
+TaskUpdate R5b subject: `R5b: Codex co-pilot — iter N done (<outcome>)`
 
 **Stuck escalation with `--codex`**: when Phase 9 detects `STUCK_THRESHOLD` consecutive discards and `--codex` is active, increase Codex ideation effort — add this hint to the Codex prompt for the next iteration: "Previous N attempts were all reverted. Focus on a fundamentally different approach (different file, different algorithm, different abstraction)."
 
@@ -343,34 +504,33 @@ If pre-commit hooks fail:
 
 #### Phase 5 — Verify metric
 
-**If `sandbox_mode = "docker"`** (Phase 2a set this):
+**If `sandbox_mode = "docker"`** (set in Step R2):
 
 ```bash
 docker run --rm --network <sandbox_network> \
   -v "$(pwd):/workspace:ro" \
   -v "$(pwd)/.experiments:/workspace/.experiments:rw" \
   --tmpfs /tmp:rw,size=256m \
-  campaign-<run-id> \
+  python:3.11-slim \
   sh -c '<metric_cmd>'
 ```
 
 No resource limits — the container may use all available CPU and memory. Use the Bash tool `timeout` parameter (not the `timeout` command): `timeout: <VERIFY_TIMEOUT_SEC * 1000>`.
 
-**If `sandbox_mode = "local"`** (Docker unavailable or `--sandbox=local`):
+**If `sandbox_mode = "local"`**:
 Run `metric_cmd` directly using the Bash tool with `timeout: <VERIFY_TIMEOUT_SEC * 1000>` (milliseconds). Do NOT use the `timeout` shell command wrapper.
 If the command requires a different working directory, issue a separate `cd <path>` Bash call first (CWD persists).
 If metric parsing requires complex Python logic (regex, JSON), write a parser script to `.experiments/state/<run-id>/scripts/parse-metric-<i>.py` using the Write tool and execute it with `python3 <path>` instead of an inline `python3 -c "..."` one-liner.
-If the local command triggers a user approval prompt, include in the approval description: "⚠ Docker sandbox unavailable — running metric_cmd uncontained. Start Docker Desktop to enable sandboxed execution."
 
-**If `--colab` active**: `--colab` and `--sandbox` are mutually exclusive. Colab routes all execution through the remote GPU runtime via `mcp__colab-mcp__runtime_execute_code`; Docker sandbox is not used. If both flags are present, `--colab` takes precedence and `sandbox_mode` is ignored for Phases 5/6.
+**If `--colab` active**: Colab routes all execution through the remote GPU runtime via `mcp__colab-mcp__runtime_execute_code`; Docker sandbox is not used. (`--colab` + `--docker` conflict is caught at R2 — they never coexist at runtime.) If `colab_hw` is non-null, prepend a GPU identity check to the `metric_cmd` call: execute `import torch; actual=torch.cuda.get_device_name(0); assert '<colab_hw>' in actual, f'Wrong GPU: expected <colab_hw>, got {actual}'` via `mcp__colab-mcp__runtime_execute_code` before running the metric command. If the assertion fails, print a warning and stop the run: `"⚠ GPU mismatch: requested <colab_hw> but runtime has {actual}. Change the Colab runtime type and re-run."` Do not proceed to Phase 6.
 
 If timeout expires: append `status: timeout`, revert via `git revert HEAD --no-edit`, continue loop.
 
 #### Phase 6 — Run guard
 
-**If `sandbox_mode = "docker"`**: run `guard_cmd` inside the same Docker container as Phase 5 (same flags: `--network <sandbox_network>`, `:ro` project mount, `:rw` `.experiments/` mount, `--tmpfs /tmp`; no resource limits). Check exit code only. `--colab` flag: same mutual-exclusion rule as Phase 5 — colab takes precedence, sandbox is ignored.
+**If `sandbox_mode = "docker"`**: run `guard_cmd` inside the same Docker container as Phase 5 (same flags: `--network <sandbox_network>`, `:ro` project mount, `:rw` `.experiments/` mount, `--tmpfs /tmp`; no resource limits). Check exit code only.
 
-**If `sandbox_mode = "local"`**: run `guard_cmd` directly. If it triggers a user approval prompt, include: "⚠ Docker sandbox unavailable — running guard_cmd uncontained. Start Docker Desktop to enable sandboxed execution."
+**If `sandbox_mode = "local"`**: run `guard_cmd` directly.
 
 Record pass (exit 0) or fail (non-zero).
 
@@ -446,26 +606,26 @@ Print iteration summary:
 [✓ Iter N/max — <kept|reverted|no-op|...> · metric=<value> (Δ<delta>%) · agent=<agent_type>]
 ```
 
-TaskUpdate C5 subject: `C5: Iter N/max — last: <status>, best: <best_metric>`
+TaskUpdate R5 subject: `R5: Iter N/max — last: <status>, best: <best_metric>`
 
 #### Phase 9 — Progress checks
 
 - **Summary every SUMMARY_INTERVAL iterations**: print compact table (iteration, metric, delta, status) for the last N iterations.
-- **Stuck detection**: if last `STUCK_THRESHOLD` entries all have `status: reverted|no-op|hook-blocked`, trigger escalation (see `<constants>` in SKILL.md). Log escalation action.
+- **Stuck detection**: if last `STUCK_THRESHOLD` entries all have `status: reverted|no-op|hook-blocked`, trigger escalation (see `<constants>` in `.claude/skills/optimize/SKILL.md`). Log escalation action.
 - **Diminishing returns**: if last `DIMINISHING_RETURNS_WINDOW` kept entries each improved < 0.5%, print a warning and suggest stopping. Do not auto-stop — let the user decide.
 - **Early stop**: if `target` is set in the program file (or config), stop when the metric crosses it (`direction: higher` → metric ≥ target; `direction: lower` → metric ≤ target). Mark `state.json` `status: goal-achieved`.
 - **Context compaction** (every SUMMARY_INTERVAL iterations): write a full iteration summary table to `.experiments/state/<run-id>/progress-<i>.md` and actively discard verbose per-iteration details from working memory. Retain in working memory only: current metric value, iteration count, JSONL file path, and `best_commit`. This prevents linear context growth in long campaigns — full history is always recoverable from `experiments.jsonl` and `ideation-<i>.md` files on disk.
 
-### Step C6: Results report
+### Step R6: Results report
 
 Pre-compute the branch before writing: `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')`
 
-Write full report to `.temp/output-optimize-campaign-$BRANCH-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
+Write full report to `.temp/output-optimize-run-$BRANCH-$(date +%Y-%m-%d).md` using the Write tool. Do not print the full report to terminal.
 
 **Report structure:**
 
 ```markdown
-## Campaign Run: <goal>
+## Run: <goal>
 
 **Run ID**: <run-id>
 **Date**: <date>
@@ -494,19 +654,19 @@ Print compact terminal summary:
 
 ```
 ---
-Campaign — <goal>
+Run — <goal>
 Iterations: <total>  Kept: <kept>  Reverted: <reverted>
 Baseline:   <metric_key> = <baseline>
 Best:       <metric_key> = <best> (<delta>% improvement, commit <sha>)
 Agent:      <agent type used>
-→ saved to .temp/output-optimize-campaign-<date>.md
+→ saved to .temp/output-optimize-run-<date>.md
 → diary: .experiments/state/<run-id>/diary.md
 ---
 ```
 
 Update `state.json`: `status = completed`.
 
-### Step C7: Codex delegation (optional)
+### Step R7: Codex delegation (optional)
 
 After confirming results, inspect applied changes (`git diff <baseline_commit>...<best_commit> --stat`) and identify tasks Codex can complete (inline comments on non-obvious changes, docstring updates for modified functions, test coverage for the modified path). Read `.claude/skills/_shared/codex-delegation.md` and apply the criteria defined there.
 
@@ -521,8 +681,8 @@ Triggered by `resume` or `resume <file.md>`.
 - `resume` (no argument): scan all run dirs in `.experiments/state/`, select the one with the latest `started_at` that has `status: running`.
 - `resume <file.md>`: resolve the path to absolute. Scan all run dirs, filter for those whose `state.json` has `"program_file"` matching that absolute path. Pick the one with the latest `started_at`. If no match: stop with a clear error.
 
-1. Read `state.json` from the located run dir.
-2. **Re-parse program file**: if `program_file` is non-null, re-read and re-parse that file (Step C1 parsing rules) and update config in memory. This applies any edits the user made between runs. Note: edits to `program.md` while a campaign loop is actively running do not take effect until the next `resume`.
+1. Read `state.json` from the located run dir. Also restore `clarification_prompt` and `colab_hw` from `state.json` into the active config (may be null if the original run had no clarification or hardware specification).
+2. **Re-parse program file**: if `program_file` is non-null, re-read and re-parse that file (Step R1 parsing rules) and update config in memory. This applies any edits the user made between runs. Note: edits to `program.md` while a campaign loop is actively running do not take effect until the next `resume`.
 3. **Validate `experiments.jsonl` integrity**: read the last line of `experiments.jsonl` and attempt to parse it as JSON. If the last line is truncated or not valid JSON, warn the user:
    ```
    ⚠ experiments.jsonl last line appears corrupt (truncated or invalid JSON).
@@ -540,7 +700,7 @@ ______________________________________________________________________
 
 **Workflow:**
 
-1. Lead completes Steps C1–C4 (config, preconditions, baseline) solo.
+1. Lead completes Steps R1–R4 (config, preconditions, baseline) solo.
 
 2. Lead identifies 2–3 distinct optimization axes from the goal + codebase analysis.
 
@@ -561,11 +721,12 @@ ______________________________________________________________________
 
    ```
    Read .claude/TEAM_PROTOCOL.md and use AgentSpeak v2.
-   You are a campaign teammate. Your axis: <axis description>.
+   You are a run teammate. Your axis: <axis description>.
    Ideation agent: <agent type>.
    Run 3–5 independent iterations of the Review→Ideate→Modify→Commit→Verify→Guard→Log loop.
    Baseline metric: <metric_cmd key> = <baseline>. Direction: <higher|lower>.
    Scope files: <scope_files>.
+   Run clarification: <clarification_prompt>  ← omit this line entirely if clarification_prompt is null
    Write your full iteration log (all runs, metrics, reasoning) to `$RUN_DIR/teammate-<axis>.md` using the Write tool before returning.
    Return ONLY a compact JSON envelope: {axis, iterations_run, kept, best_metric, best_commit, description}
    Call TaskUpdate(in_progress) when starting; TaskUpdate(completed) when done.
@@ -588,7 +749,7 @@ ______________________________________________________________________
 
 6. Lead cherry-picks the winning commits from each axis into the main branch, tests for compatibility, runs `guard_cmd`.
 
-7. Lead measures combined metric, resolves conflicts if needed, writes the Step C6 report with per-axis breakdown and combined result.
+7. Lead measures combined metric, resolves conflicts if needed, writes the Step R6 report with per-axis breakdown and combined result.
 
 8. Shutdown teammates.
 
@@ -599,6 +760,8 @@ ______________________________________________________________________
 ## Colab MCP Integration (`--colab`)
 
 **Purpose**: route metric verification and GPU code testing to a Colab notebook runtime instead of local execution. Essential for ML training metrics, CUDA benchmarks, and any workload requiring a GPU.
+
+**Hardware selection** (`--colab=HW`): optionally specify the GPU type for the Colab runtime. Known values: `H100`, `L4`, `T4`, `A100`. If omitted, Colab picks the default GPU. This is advisory — the actual hardware is configured in the Colab notebook UI. Claude Code validates the GPU identity at Phase 5 via a `torch.cuda.get_device_name()` assertion and halts the run if the runtime does not match.
 
 **Setup** (user must complete before running `--colab`):
 
@@ -615,12 +778,12 @@ ______________________________________________________________________
 
 **How it works during a run:**
 
-- Step C2 (preconditions): checks for `mcp__colab-mcp__runtime_execute_code` availability.
+- Step R2 (preconditions): checks for `mcp__colab-mcp__runtime_execute_code` availability.
 - Phase 5 (verify metric): calls `mcp__colab-mcp__runtime_execute_code` with `metric_cmd` instead of local `timeout <cmd>`.
 - Phase 2 (ideate): `ai-researcher` agent can call `mcp__colab-mcp__runtime_execute_code` to prototype GPU code before committing.
 - `VERIFY_TIMEOUT_SEC` = 300 (vs 120 local) to account for network + GPU startup latency.
 
-If Colab MCP is unavailable at Step C2, print:
+If Colab MCP is unavailable at Step R2, print:
 
 ```
 ⚠ Colab MCP not available. To enable:
@@ -643,3 +806,4 @@ ______________________________________________________________________
 - **JSONL over TSV** — richer structured fields, `jq`-parseable, no delimiter ambiguity; query with `jq -c 'select(.status == "kept")' experiments.jsonl`.
 - **State persistence enables resume** — if the loop crashes or times out, `resume` picks up exactly where it stopped.
 - **Safety break**: max iterations default is 20; the skill never exceeds MAX_ITERATIONS without a user override in config.
+- **Explicit flags = hard requirements**: any flag the user passes (`--colab`, `--docker`, `--codex`, `--researcher`, `--architect`) must be available at R2 precondition checks. If unavailable, stop immediately — never silently degrade to a mode the user did not request.

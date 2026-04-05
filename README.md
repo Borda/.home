@@ -101,25 +101,25 @@ Agents and skills for [Claude Code](https://claude.ai/code) (Anthropic's AI codi
 
 Skills are multi-agent workflows invoked via slash commands. Each skill composes several agents in a defined topology.
 
-| Skill           | What It Does                                                                                                                                                                                                                                                                                      |
-| --------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**      | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts comment                                                                                                                                                                                                     |
-| **analyse**     | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                                                                                                                           |
-| **brainstorm**  | `/brainstorm <idea>` — clarifying questions → approaches → spec (saved to `.plans/blueprint/`) → self-mentor review → approval gate; `/brainstorm breakdown <spec>` — read approved spec → ordered task table with per-task skill/command tags                                                    |
-| **develop**     | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                                                                                                                        |
-| **resolve**     | OSS fast-close: conflicts + review comments via codex-plugin-cc; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                       |
-| **calibrate**   | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                                                                                          |
-| **audit**       | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                                                                                                                    |
-| **release**     | Notes, changelog, summary, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                 |
-| **research**    | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                       |
-| **optimize**    | Five modes: `plan` = config wizard → `program.md`; `judge` = research-supervisor review of experimental methodology (APPROVED/NEEDS-REVISION/BLOCKED); `campaign` = metric-driven iteration loop; `resume` = continue after crash; `perf` = profiling deep-dive; `--team` and `--colab` supported |
-| **manage**      | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                                                                                                                     |
-| **sync**        | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                                                                                                                        |
-| **investigate** | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                   |
-| **session**     | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                   |
-| **distill**     | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                                                                                                                           |
+| Skill           | What It Does                                                                                                                                                                                                                                                                                                                |
+| --------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **review**      | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts comment                                                                                                                                                                                                                               |
+| **analyse**     | GitHub thread analysis; `health` = repo overview + duplicate clustering                                                                                                                                                                                                                                                     |
+| **brainstorm**  | `/brainstorm <idea>` — clarifying questions → approaches → spec (saved to `.plans/blueprint/`) → self-mentor review → approval gate; `/brainstorm breakdown <spec>` — read approved spec → ordered task table with per-task skill/command tags                                                                              |
+| **develop**     | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                                                                                                                                                  |
+| **resolve**     | OSS fast-close: conflicts + review comments via codex-plugin-cc; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                                                 |
+| **calibrate**   | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                                                                                                                    |
+| **audit**       | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                                                                                                                                              |
+| **release**     | Notes, changelog, summary, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                           |
+| **research**    | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                                                 |
+| **optimize**    | Four modes: `plan` = config wizard (or `plan <file.py>` for profile-first bottleneck discovery) → `program.md`; `judge` = research-supervisor review of experimental methodology (APPROVED/NEEDS-REVISION/BLOCKED); `run` = metric-driven iteration loop; `resume` = continue after crash; `--team` and `--colab` supported |
+| **manage**      | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                                                                                                                                               |
+| **sync**        | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                                                                                                                                                  |
+| **investigate** | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                             |
+| **session**     | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                             |
+| **distill**     | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                                                                                                                                                     |
 
-→ Full command reference, orchestration flows, rules (12 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
+→ Full command reference, orchestration flows, rules (13 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
 
 ### Common Workflow Sequences
 
@@ -140,7 +140,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
 ```
-/optimize perf src/mypackage/dataloader.py     # profile and fix top bottleneck
+/optimize plan src/mypackage/dataloader.py     # profile-first: cProfile → pick goal → wizard
 /develop refactor src/mypackage/dataloader.py  # extract caching layer
 /review                                        # full quality pass on changes
 ```
@@ -185,7 +185,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 
 ```
 /optimize plan "increase test coverage to 90%"      # interactive config wizard → program.md
-/optimize campaign "increase test coverage to 90%"  # run 20-iteration loop; auto-rollback on regression
+/optimize run "increase test coverage to 90%"   # run 20-iteration loop; auto-rollback on regression
 /optimize resume                                    # resume after crash or manual stop
 /review                                             # validate kept commits
 ```
@@ -217,7 +217,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 ```
 /research "knowledge distillation for small models"           # find best approach
 /optimize plan "improve F1 from 0.82 to 0.87"                 # configure metric + guard + agent
-/optimize campaign  --team                                    # parallel exploration across axes
+/optimize run --team                                      # parallel exploration across axes
 /review                                                       # quality pass on kept changes
 ```
 
@@ -368,7 +368,7 @@ Every skill that reviews or validates code uses a three-tier pipeline: **Tier 0*
 
    Claude identifies what needs to change and delegates execution to the plugin agent. Claude keeps its context clean and validates the output via `git diff HEAD`.
 
-   Dispatched automatically by `/review`, `/resolve`, `/calibrate`, and `/optimize campaign` via `codex-delegation.md`. The plugin agent has full working-tree access.
+   Dispatched automatically by `/review`, `/resolve`, `/calibrate`, and `/optimize run` via `codex-delegation.md`. The plugin agent has full working-tree access.
 
 2. **Codex reviewing staged work**
 
@@ -401,7 +401,7 @@ Two optional MCP servers are defined in `.mcp.json` (synced to `~/.claude/.mcp.j
 | Server        | Purpose                                                                                                                                   | Enable                                       |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **openspace** | Skill auto-evolution — reduces token consumption on repeated tasks via `execute_task`, `search_skills`, `fix_skill`, `upload_skill` tools | add `"openspace"` to `enabledMcpjsonServers` |
-| **colab-mcp** | GPU workloads via Google Colab (used by `/optimize campaign --colab`)                                                                     | add `"colab-mcp"` to `enabledMcpjsonServers` |
+| **colab-mcp** | GPU workloads via Google Colab (used by `/optimize run --colab`)                                                                          | add `"colab-mcp"` to `enabledMcpjsonServers` |
 
 → New-machine setup and full reference: [`.claude/README.md` → MCP Servers](.claude/README.md#-mcp-servers)
 

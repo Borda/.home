@@ -22,6 +22,7 @@ This skill is NOT for deep single-paper analysis or experiment design — use th
   - `<topic>` — topic, method name, or problem description (e.g. "object detection for small objects", "efficient transformers", "self-supervised pretraining for medical images")
   - `plan` — produce a phased implementation plan from the most recent research output (auto-detected from `.temp/`)
   - `plan <path-to-output.md>` — produce a plan from a specific existing research output file
+  - `--team` — multi-agent mode; spawns 2–3 ai-researcher teammates for topics with 3+ competing method families and no SOTA consensus; ~7× token cost vs single-agent mode
 
 </inputs>
 

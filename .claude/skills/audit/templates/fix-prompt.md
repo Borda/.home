@@ -17,3 +17,11 @@ Fix type reference:
 - Duplicate section → remove the listed lines verbatim
 
 Do not add comments, docstrings, or any other improvements beyond the listed fixes.
+
+Fix Action Hierarchy — work through this order before acting:
+
+1. Reason: is the finding actually correct? If not, discard it — do not act on a wrong finding.
+2. Relocate: if the content is correct but in the wrong place, move it.
+3. Consolidate: if it duplicates something nearby, merge.
+4. Minimize: if it is too long but valid, compress.
+5. Remove: only if none of the above apply.

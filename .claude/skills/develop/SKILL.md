@@ -3,7 +3,7 @@ name: develop
 description: Unified development orchestrator with three modes — feature (TDD-first new capability), fix (reproduce-first bug resolution), refactor (test-first code quality). Each mode includes a built-in self-review gate before the shared quality stack and progressive review loop.
 argument-hint: feature|fix|refactor|plan|debug <goal>
 disable-model-invocation: true
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 effort: high
 ---
 
@@ -237,7 +237,7 @@ Read `.claude/skills/_shared/worktree-protocol.md` before spawning any worktree 
 - Related agents: `sw-engineer` (analysis + implementation), `qa-specialist` (tests + security), `doc-scribe` (documentation), `linting-expert` (type safety + style)
 - Follow-up chains:
   - Feature changes public API → `/release` to prepare CHANGELOG + migration guide
-  - Feature/fix is performance-sensitive → `/optimize perf` for baseline + bottleneck analysis
+  - Feature/fix is performance-sensitive → `/optimize plan <file>` for profile-first bottleneck analysis
   - Any mode touches `.claude/` config files → spawn `self-mentor` on changed files, then `/sync` to propagate
   - Mechanical follow-up beyond Codex step → `/codex:rescue` to delegate additional tasks
   - External validation → `/review` if an independent multi-agent review is desired beyond the built-in self-review gates

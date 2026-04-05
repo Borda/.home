@@ -17,7 +17,7 @@ Mark "Calibrate skills" in_progress. For each skill in the domain table, spawn o
 
 For skill targets (target name starts with `/`): spawn a `general-purpose` subagent with the skill's `SKILL.md` content prepended as context, running against the synthetic input from the problem. The pipeline template write-and-acknowledge pattern still applies.
 
-For mode-specific targets (`/optimize-plan`, `/optimize-judge`): instead of the full `SKILL.md`, prepend the relevant mode file as context — read `.claude/skills/optimize/modes/campaign.md` (plan wizard steps C-P1–C-P3) for `/optimize-plan`, and `.claude/skills/optimize/modes/judge.md` (steps J1–J6) for `/optimize-judge`. The `<TARGET>` substitution uses the kebab form without leading slash (e.g. `optimize-plan`, `optimize-judge`).
+For mode-specific targets (`/optimize-plan`, `/optimize-judge`): instead of the full `SKILL.md`, prepend the relevant mode file as context — read `.claude/skills/optimize/modes/run.md` (plan wizard steps P-P0–P-P3) for `/optimize-plan`, and `.claude/skills/optimize/modes/judge.md` (steps J1–J6) for `/optimize-judge`. The `<TARGET>` substitution uses the kebab form without leading slash (e.g. `optimize-plan`, `optimize-judge`).
 
 For `/optimize-judge`, the calibration pattern mirrors `/audit`: inject N specific known issues into the synthetic `program.md`, then score recall of those injected issues against the judge's findings list. Ground truth is the set of injected issues and their severities (per the J2 severity table: critical/high/medium/low).
 
@@ -32,7 +32,7 @@ Each subagent receives the pipeline template from `.claude/skills/calibrate/temp
 - `<MODE>` = `fast` or `full`
 - `<AB_MODE>` = `true` or `false`
 
-**Partial-calibration principle**: individual skill modes with deterministic, auditable outputs can be calibrated even when the full orchestration skill cannot. The full `optimize campaign` loop (which requires live metric commands, git state, and real guard scripts) is excluded. But its sub-modes that produce structured, inspectable output are in scope:
+**Partial-calibration principle**: individual skill modes with deterministic, auditable outputs can be calibrated even when the full orchestration skill cannot. The full `optimize run` loop (which requires live metric commands, git state, and real guard scripts) is excluded. But its sub-modes that produce structured, inspectable output are in scope:
 
 - `optimize plan` — config wizard; output is a `program.md` checkable against a completeness schema
 - `optimize judge` — plan auditor; output is a findings list checkable against injected known issues (same pattern as `/audit`)
@@ -57,7 +57,6 @@ Modes evaluated for calibration but deferred due to significant barriers. `/audi
 | `/develop-plan`      | Output is somewhat subjective; no clear ground-truth checklist beyond section presence    | Structured plan schema is formalized    |
 | `/distill-review`    | Reads real agent/skill files; synthetic roster possible but overlaps `/audit` calibration | Distinct synthetic scenarios identified |
 | `/distill-lessons`   | Reads real `.notes/lessons.md`; needs realistic synthetic lesson corpus                   | Lesson corpus fixtures exist            |
-| `/optimize-perf`     | Requires running real profiling tools against real code                                   | Profiling sandbox environment exists    |
 
 **Excluded** (inherently non-calibratable — documented to avoid recurring evaluation):
 
@@ -70,5 +69,5 @@ Modes evaluated for calibration but deferred due to significant barriers. `/audi
 - `/session` — session lifecycle management; no quality signal to measure
 - `/sync` — drift detection; deterministic but trivially correct (diff-based, no findings to score)
 - `/calibrate` itself — meta-calibration is circular
-- `/optimize-campaign` — sustained iteration loop with live metric commands and git state
-- `/optimize-resume` — continuation of campaign; same barriers as campaign
+- `/optimize-run` — sustained iteration loop with live metric commands and git state
+- `/optimize-resume` — continuation of run; same barriers as run
