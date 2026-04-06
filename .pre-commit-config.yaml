@@ -10,7 +10,7 @@
 ci:
   autofix_prs: true
   autoupdate_commit_msg: "[pre-commit.ci] bump ⬆ suggestions"
-  autoupdate_schedule: monthly
+  autoupdate_schedule: quarterly
   skip: [lychee] # pre-commit.ci has no lychee binary and no cargo to install it
   # submodules: true
 
