@@ -76,6 +76,15 @@
           }
         ],
         "matcher": "Bash"
+      },
+      {
+        "hooks": [
+          {
+            "command": "node .claude/hooks/md-compress.js",
+            "type": "command"
+          }
+        ],
+        "matcher": "Read"
       }
     ],
     "SessionEnd": [
@@ -173,26 +182,6 @@
       }
     ],
     "UserPromptSubmit": [
-      {
-        "hooks": [
-          {
-            "command": "node .claude/hooks/task-log.js",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "WorktreeCreate": [
-      {
-        "hooks": [
-          {
-            "command": "node .claude/hooks/task-log.js",
-            "type": "command"
-          }
-        ]
-      }
-    ],
-    "WorktreeRemove": [
       {
         "hooks": [
           {

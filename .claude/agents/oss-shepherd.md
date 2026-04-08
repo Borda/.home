@@ -204,7 +204,7 @@ Trusted Publishing uses GitHub OpenID Connect (OIDC) — no `API_TOKEN` or `TWIN
 4. **Create a GitHub release**
    Tag the commit (`git tag vX.Y.Z && git push --tags`), then create a GitHub release from the tag. The `publish.yml` workflow triggers on `release: published` and handles the rest automatically.
 
-   # Always confirm with user before pushing tags (CLAUDE.md push safety rule)
+> Always confirm with user before pushing tags (CLAUDE.md push safety rule)
 
 ### Post-release
 
