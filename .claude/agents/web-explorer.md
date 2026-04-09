@@ -1,9 +1,9 @@
 ---
 name: web-explorer
-description: Web fetching and content extraction specialist — fetches library docs, API references, changelogs from live URLs. Always reads before summarizing. Extracts migration guides, compares API changes across versions, and checks ecosystem compatibility. NOT for ML paper analysis or experiment design (use ai-researcher), NOT for writing or auditing docstrings (use doc-scribe).
+description: Fetches web pages, API docs, and external package/release information for use by orchestrators and other agents. Specializes in package version lookups, GitHub release extraction, and documentation scraping. NOT for code analysis or implementation (use sw-engineer), NOT for ML paper analysis or experiment design (use ai-researcher), NOT for writing or auditing docstrings (use doc-scribe), NOT for dependency upgrade lifecycle decisions (use oss-shepherd).
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
-effort: high
+effort: medium
 memory: project
 color: cyan
 ---

@@ -47,54 +47,13 @@ Failure type → Response
 
 ## Modern Python CI (uv + ruff + mypy + pytest)
 
-```yaml
-# .github/workflows/ci.yml
-# Template — pin version tags to full commit SHAs before production use
-name: CI
-on:
-  push:
-    branches: [main]
-  pull_request:
-
-concurrency:
-  group: ${{ github.workflow }}-${{ github.ref }}
-  cancel-in-progress: true   # cancel older runs on the same PR
-
-jobs:
-  quality:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4  # ← replace with full SHA in production (canonical: v4 / astral-sh/setup-uv: v5)
-      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
-        with:
-          enable-cache: true     # uv.lock-based caching
-      - run: uv sync --dev
-      - run: uv run ruff check .
-      - run: uv run ruff format --check .
-      - run: uv run mypy src/
-      # For ruff/mypy config and rule selection, see linting-expert agent
-
-  test:
-    runs-on: ubuntu-latest
-    strategy:
-      fail-fast: false
-      matrix:
-        python-version: ['3.10', '3.11', '3.12', '3.13']
-    steps:
-      - uses: actions/checkout@v4  # ← same canonical versions as quality job above
-      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
-        with:
-          enable-cache: true
-          python-version: ${{ matrix.python-version }}
-      - run: uv sync --all-extras
-      - run: |
-          uv run pytest tests/ -n auto --tb=short -q \
-            --cov=src --cov-report=xml
-      - uses: codecov/codecov-action@v4  # pin SHA: run: gh api repos/codecov/codecov-action/git/refs/tags/v4 --jq '.object.sha'
-        if: matrix.python-version == '3.12'
-        with:
-          files: ./coverage.xml
-```
+- **Concurrency**: `cancel-in-progress: true` grouped by `${{ github.workflow }}-${{ github.ref }}`
+- **Caching**: `astral-sh/setup-uv@v5` with `enable-cache: true` (uses `uv.lock` as cache key)
+- **Quality job**: `uv sync --dev` → `uv run ruff check .` → `ruff format --check .` → `uv run mypy src/`
+- **Test matrix**: `fail-fast: false`; Python 3.10–3.13; `uv sync --all-extras`; `pytest -n auto --tb=short -q --cov=src`
+- **Coverage**: `codecov/codecov-action` on primary Python version only (e.g. 3.12)
+- **SHA pinning**: replace `@v4`/`@v5` tags with 40-char commit SHAs in production — resolve: `gh api repos/<org>/<repo>/git/ref/tags/<tag> --jq '.object.sha'`
+- For ruff/mypy config and rule selection, see `linting-expert` agent
 
 ## Caching Best Practices
 
@@ -167,27 +126,13 @@ uv run pytest --durations=20 tests/ -q  # find slow tests
 
 ## Mandatory Gates (block merge if failing)
 
-```yaml
-# Enforce via branch protection rules + required status checks:
-  - CI / quality       # ruff + mypy
-  - CI / test (3.12)   # primary test matrix
-```
+- `CI / quality` (ruff + mypy) and `CI / test (3.12)` enforced via branch protection required status checks
 
 ## Recommended Additional Gates
 
-```yaml
-# Security scanning
-  - uses: pypa/gh-action-pip-audit@v1  # ← replace with full SHA in production
-    with:
-      inputs: requirements.txt
-
-# Coverage enforcement
-  - run: pytest --cov=src --cov-fail-under=85
-
-# Mutation testing (slow — only on main, not PRs)
-  - run: mutmut run --paths-to-mutate src/
-    if: github.ref == 'refs/heads/main'
-```
+- **Security scanning**: `pypa/gh-action-pip-audit` on `requirements.txt` (pin to full SHA)
+- **Coverage enforcement**: `pytest --cov=src --cov-fail-under=85`
+- **Mutation testing** (main-branch only, not PRs): `mutmut run --paths-to-mutate src/`
 
 \</quality_gates>
 
@@ -213,32 +158,10 @@ Dependabot has two independent features — enable both:
 - **Security updates**: automatic PRs for Common Vulnerabilities and Exposures (CVEs) (enabled via repo Settings → Security)
 - **Version updates**: scheduled PRs to keep deps current (configured via `.github/dependabot.yml`)
 
-```yaml
-# .github/dependabot.yml
-version: 2
-updates:
-  - package-ecosystem: pip
-    directory: /
-    schedule:
-      interval: weekly
-      day: monday
-    groups:
-      dev-tools:
-        patterns: [pytest*, ruff, mypy, pre-commit*]
-        update-types: [minor, patch]
-    ignore:
-      - dependency-name: torch
-        update-types: [version-update:semver-major]
+Key `.github/dependabot.yml` settings:
 
-  - package-ecosystem: github-actions
-    directory: /
-    schedule:
-      interval: monthly
-    groups:
-      actions:
-        patterns: ['*']
-        update-types: [minor, patch]
-```
+- `package-ecosystem: pip` — weekly schedule, group `dev-tools` (pytest*, ruff, mypy, pre-commit*) for minor+patch; ignore major `torch` updates
+- `package-ecosystem: github-actions` — monthly schedule, group `actions: ['*']` for minor+patch
 
 ### Auto-merge Dependabot PRs (patch/minor dev-deps, after CI passes)
 
@@ -253,22 +176,11 @@ Use `gh pr list --author 'app/dependabot'` to check for stale PRs.
 
 ## Reusable Workflows (Don't Repeat Yourself (DRY) CI)
 
-```yaml
-# .github/workflows/reusable-test.yml
-on:
-  workflow_call:
-    inputs:
-      python-version:
-        required: true
-        type: string
-      os:
-        required: false
-        type: string
-        default: ubuntu-latest
+Key `.github/workflows/reusable-test.yml` structure:
 
-# Job body: same checkout → setup-uv → uv sync → pytest pattern as the main quality job.
-# For the full publish workflow, see the <trusted_publishing> section in this file.
-```
+- `on: workflow_call` with inputs: `python-version` (required, string) and `os` (optional, default: ubuntu-latest)
+- Job body: same checkout → setup-uv → uv sync → pytest pattern as the main quality job
+- Callers: `uses: ./.github/workflows/reusable-test.yml` with `python-version` in a matrix
 
 Callers use `uses: ./.github/workflows/reusable-test.yml` with `python-version` input in a matrix.
 
@@ -278,43 +190,16 @@ Callers use `uses: ./.github/workflows/reusable-test.yml` with `python-version` 
 
 ## Ecosystem Nightly CI (Downstream Testing)
 
-```yaml
-# .github/workflows/nightly-upstream.yml
-name: Nightly upstream
-on:
-  schedule:
-    - cron: 0 4 * * *
+Key `.github/workflows/nightly-upstream.yml` settings:
 
-jobs:
-  test-pytorch-nightly:
-    runs-on: ubuntu-latest
-    continue-on-error: true  # intentional — nightly upstream may be pre-release/broken; does not gate merges
-    steps:
-      - uses: actions/checkout@v4  # ← canonical versions: see quality job above
-      - uses: astral-sh/setup-uv@v5  # ← replace with full SHA in production
-        with: {enable-cache: true, python-version: '3.12'}
-      - run: uv sync --all-extras
-      - run: |
-          # nightly index URL — verify current path at https://pytorch.org/get-started/locally/
-          uv pip install --pre torch torchvision \
-            --index-url https://download.pytorch.org/whl/nightly/cpu
-      - run: uv run pytest tests/ -x --timeout=300 -m "not slow"
-```
+- Schedule: `cron: '0 4 * * *'`
+- `continue-on-error: true` at job level (nightly upstream may be pre-release/broken — does not gate merges)
+- Install: `uv pip install --pre torch torchvision --index-url https://download.pytorch.org/whl/nightly/cpu`
+- Run: `pytest tests/ -x --timeout=300 -m "not slow"`
 
 ### xfail Policy for Known Upstream Issues
 
-```python
-import pytest, torch
-
-
-@pytest.mark.xfail(
-    condition=torch.__version__
-    >= "2.5",  # or: from tests.helpers import _TORCH_GREATER_2_5
-    reason="upstream regression pytorch/pytorch#12345",
-    strict=False,
-)
-def test_affected_feature(): ...
-```
+Use `@pytest.mark.xfail(condition=<version_check>, reason="upstream regression <url>", strict=False)` — always link the upstream issue; `strict=False` auto-recovers when the fix lands.
 
 - Always link the upstream issue; set `strict=False` so test auto-recovers when fix lands
 - Review xfails weekly: use `Grep(pattern="xfail", glob="tests/**/*pytorch*.py")` to find xfail marks in pytorch-related test files
@@ -327,27 +212,11 @@ For multi-Graphics Processing Unit (GPU) CI, use self-hosted runners with `runs-
 
 ## Performance Regression Detection
 
-```yaml
-# .github/workflows/benchmark.yml
-on:
-  push:
-    branches: [main]
+Key `.github/workflows/benchmark.yml` settings:
 
-jobs:
-  benchmark:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: astral-sh/setup-uv@v5  # ← canonical version: see quality job above
-      - run: uv sync --all-extras
-      - run: uv run pytest tests/benchmarks/ --benchmark-json output.json
-      - uses: benchmark-action/github-action-benchmark@v1  # ← replace with full SHA in production
-        with:
-          tool: pytest
-          output-file-path: output.json
-          alert-threshold: 120%
-          fail-on-alert: true
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-```
+- Trigger: `push: branches: [main]`
+- Run: `pytest tests/benchmarks/ --benchmark-json output.json`
+- Use `benchmark-action/github-action-benchmark` with `tool: pytest`, `alert-threshold: 120%`, `fail-on-alert: true`
 
 Track: training step time, inference latency, peak memory, data loading throughput.
 Alert: when any metric regresses > 20% vs main branch baseline.
@@ -360,44 +229,13 @@ Alert: when any metric regresses > 20% vs main branch baseline.
 
 Trusted Publishing uses GitHub's OIDC identity token to authenticate with PyPI — no `TWINE_PASSWORD` or `API_TOKEN` secret needed. Requires: Python ≥ 3.10 (project minimum), `pyproject.toml` with `[project]` metadata, PyPI project created in advance.
 
-```yaml
-# .github/workflows/publish.yml
-name: Publish to PyPI
-on:
-  release:
-    types: [published]
+Key `.github/workflows/publish.yml` structure:
 
-jobs:
-  build:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683  # v4
-      - uses: astral-sh/setup-uv@5e3b2e07e2d2b39c95fc7b40e4a2f4a3f6ffe84f  # v5
-        with:
-          enable-cache: true
-          python-version: '3.12'
-      - run: uv build
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02  # v4
-        with:
-          name: dist
-          path: dist/
-
-  publish:
-    runs-on: ubuntu-latest
-    needs: build
-    environment:
-      name: pypi
-      url: https://pypi.org/p/${{ env.PACKAGE_NAME }}
-    permissions:
-      id-token: write   # required for OIDC — Trusted Publishing
-    steps:
-      - uses: actions/download-artifact@d3f86a106a0bac45b974a628896c90dbdf5c8093  # v4
-        with:
-          name: dist
-          path: dist/
-      - uses: pypa/gh-action-pypa-publish@v1.12.2  # ← REPLACE WITH FULL SHA before production use; resolve: gh api repos/pypa/gh-action-pypa-publish/git/ref/tags/v1.12.2 --jq '.object.sha'
-        # No token/password needed — PyPI authenticates via OIDC
-```
+- Trigger: `on: release: types: [published]`
+- **Build job**: `uv build` → `actions/upload-artifact` (name: dist)
+- **Publish job**: `needs: build`; `permissions: id-token: write` (required for OIDC); `actions/download-artifact` → `pypa/gh-action-pypa-publish` (no token needed — PyPI authenticates via OIDC)
+- Pin `actions/checkout` and `astral-sh/setup-uv` to full 40-char SHAs (resolve fresh before production use)
+- For PyPI dashboard + GitHub environment setup, see `oss-shepherd` agent
 
 For setup instructions (PyPI dashboard + GitHub environment config), see `oss-shepherd` agent.
 

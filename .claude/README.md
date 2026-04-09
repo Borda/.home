@@ -22,8 +22,11 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 - [🏗️ Architecture](#-architecture)
   - [File-based handoff protocol](#file-based-handoff-protocol)
   - [Tiered review pipeline](#tiered-review-pipeline)
-  - [Hook state machine](#hook-state-machine)
   - [Agent Teams](#agent-teams)
+- [🪝 Hooks](#-hooks)
+  - [Hooks inventory](#hooks-inventory)
+  - [task-log.js state machine](#task-logjs-state-machine)
+  - [Supplementary hooks](#supplementary-hooks)
 - [📊 Status Line](#-status-line)
 - [🤝 Integration with Codex](#-integration-with-codex)
 - [📂 Artifact Layout](#-artifact-layout)
@@ -54,6 +57,8 @@ This repo is the **source of truth** for all `.claude/` configuration. Home (`~/
 ```
 
 Run `/sync` after editing any agent, skill, hook, or `settings.json` in this repo to propagate the change to home config.
+
+**Why not symlinks?** Symlinks would skip path rewriting (statusLine hooks need `$HOME`-prefixed paths in home `settings.json`) and can't selectively exclude `settings.local.json`; drift-detection lets you review what changed before applying.
 
 **Path rewriting:** `statusLine` and hook paths in home `settings.json` use `$HOME` prefix (`node $HOME/.claude/hooks/statusline.js`) — portable, avoids hardcoded usernames. The `/sync` skill applies this rewrite automatically.
 
@@ -131,29 +136,29 @@ Key relationships:
 - `web-explorer` feeds `ai-researcher` — fetches current docs/papers; researcher interprets and designs experiments
 - `oss-shepherd` is the external interface — PR replies, releases, contributor communication; no code implementation
 
-**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `ai-researcher`, `solution-architect`, `oss-shepherd`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (plan-gated opus).
+**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `ai-researcher`, `solution-architect`, `oss-shepherd`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (`opusplan` = plan-gated Opus — uses Opus-level reasoning when plan mode is active, defaulting to a lighter model for simple turns; pays for reasoning only when the task warrants it).
 
 ## ⚡ Skills
 
 ### Reference table
 
-| Skill           | Command                                                  | What It Does                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------- | -------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **review**      | `/review [file\|PR#] [--reply]`                          | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                                                                                                                                                                                                                                                                          |
-| **analyse**     | `/analyse <N\|health\|ecosystem> [--reply]`              | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                                                                                                                                                                                                                                                                                         |
-| **brainstorm**  | `/brainstorm <idea> \| breakdown <tree-or-spec>`         | Two modes: (1) **idea** — clarifying questions → build divergent branch tree (deepen, close, merge, up to 10 ops) → save tree doc → self-mentor review → gate; (2) **breakdown** — auto-detects input: tree (`Status: tree`) → distillation questions → section-by-section spec; spec (`Status: draft`) → ordered action plan                                                                                                                                      |
-| **develop**     | `/develop feature\|fix\|refactor\|plan\|debug <goal>`    | TDD-first feature dev, reproduce-first bug fixing, test-first refactor, scope analysis (`plan`), or investigation-first debugging (`debug`)                                                                                                                                                                                                                                                                                                                        |
-| **resolve**     | `/resolve <PR#\|URL> [report] \| report \| <comment>`    | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                                                                                                                                                                                                  |
-| **calibrate**   | `/calibrate [target] [fast\|full] [apply]`               | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                                                                                                                                                                                                                                                                            |
-| **audit**       | `/audit [scope] fix [high\|medium\|all] \| upgrade`      | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                                                                                                                                                                                                                                                                          |
-| **release**     | `/release <mode> [range]`                                | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                                                                                                                                                                           |
-| **research**    | `/research <topic> \| plan [path]`                       | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                                                                                                                                                                                        |
-| **optimize**    | `/optimize plan\|judge\|run\|resume\|sweep <goal\|file>` | Five modes: `plan` = config wizard (or `plan <file.py>` for profile-first bottleneck discovery) → `program.md`; `judge` = research-supervisor review of experimental methodology (hypothesis, measurement, controls, scope, strategy fit → APPROVED/NEEDS-REVISION/BLOCKED); `run` = metric-driven iteration loop; `resume` = continue after crash/stop; `sweep` = non-interactive pipeline (auto-plan → judge gate → run); `--team` and `--colab` (GPU) supported |
-| **manage**      | `/manage <op> <type>`                                    | Create, update, delete agents/skills/rules; manage `settings.json` permissions (`add perm`/`remove perm`); auto type-detection and cross-ref propagation                                                                                                                                                                                                                                                                                                           |
-| **sync**        | `/sync [apply]`                                          | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                                                                                                                                                                                                                                                                                         |
-| **investigate** | `/investigate <symptom>`                                 | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                                                                                                                                                                    |
-| **session**     | `/session [resume\|archive\|summary]`                    | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                                                                                                                                                                    |
-| **distill**     | `/distill`                                               | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                                                                                                                                                                                                                                                                                  |
+| Skill           | Command                                                        | What It Does                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| **review**      | `/review [file\|PR#] [--reply]`                                | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                                                                                                                                                                                                                                                                          |
+| **analyse**     | `/analyse <N\|health\|ecosystem\|path/to/report.md> [--reply]` | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                                                                                                                                                                                                                                                                                         |
+| **brainstorm**  | `/brainstorm <idea> \| breakdown <tree-or-spec>`               | Two modes: (1) **idea** — clarifying questions → build divergent branch tree (deepen, close, merge, up to 10 ops) → save tree doc → self-mentor review → gate; (2) **breakdown** — auto-detects input: tree (`Status: tree`) → distillation questions → section-by-section spec; spec (`Status: draft`) → ordered action plan                                                                                                                                      |
+| **develop**     | `/develop feature\|fix\|refactor\|plan\|debug <goal>`          | TDD-first feature dev, reproduce-first bug fixing, test-first refactor, scope analysis (`plan`), or investigation-first debugging (`debug`)                                                                                                                                                                                                                                                                                                                        |
+| **resolve**     | `/resolve <PR#\|URL> [report] \| report \| <comment>`          | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                                                                                                                                                                                                  |
+| **calibrate**   | `/calibrate [target] [fast\|full] [apply]`                     | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                                                                                                                                                                                                                                                                            |
+| **audit**       | `/audit [scope] fix [high\|medium\|all] \| upgrade`            | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                                                                                                                                                                                                                                                                          |
+| **release**     | `/release <mode> [range]`                                      | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                                                                                                                                                                           |
+| **research**    | `/research <topic> \| plan [path]`                             | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                                                                                                                                                                                        |
+| **optimize**    | `/optimize plan\|judge\|run\|resume\|sweep <goal\|file>`       | Five modes: `plan` = config wizard (or `plan <file.py>` for profile-first bottleneck discovery) → `program.md`; `judge` = research-supervisor review of experimental methodology (hypothesis, measurement, controls, scope, strategy fit → APPROVED/NEEDS-REVISION/BLOCKED); `run` = metric-driven iteration loop; `resume` = continue after crash/stop; `sweep` = non-interactive pipeline (auto-plan → judge gate → run); `--team` and `--colab` (GPU) supported |
+| **manage**      | `/manage <op> <type>`                                          | Create, update, delete agents/skills/rules; manage `settings.json` permissions (`add perm`/`remove perm`); auto type-detection and cross-ref propagation                                                                                                                                                                                                                                                                                                           |
+| **sync**        | `/sync [apply]`                                                | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                                                                                                                                                                                                                                                                                         |
+| **investigate** | `/investigate <symptom>`                                       | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                                                                                                                                                                    |
+| **session**     | `/session [resume\|archive\|summary]`                          | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                                                                                                                                                                    |
+| **distill**     | `/distill`                                                     | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                                                                                                                                                                                                                                                                                  |
 
 ### Orchestration flow by skill
 
@@ -434,6 +439,8 @@ Example: editing `tests/test_transforms.py` auto-loads `testing.md` (matches `te
 
 ### File-based handoff protocol
 
+*When multiple analysis agents return findings inline, the orchestrator's context window fills with intermediate output it never uses directly — file-based handoff keeps the orchestrator clean for decision-making.*
+
 **When it applies:**
 
 - Any skill spawning **2+ agents in parallel** for analysis or review
@@ -480,6 +487,8 @@ ______________________________________________________________________
 
 ### Tiered review pipeline
 
+*Most code changes don't need six parallel Opus agents — a cheap diff scan catches obvious issues and gates the expensive tier, saving 10-50x on routine changes without compromising thoroughness on diffs that matter.*
+
 Every skill that reviews or validates code uses a three-tier pipeline. Cheaper tiers gate the expensive ones:
 
 | Tier                          | What                                                                   | Cost | When                               |
@@ -500,49 +509,9 @@ Every skill that reviews or validates code uses a three-tier pipeline. Cheaper t
 
 ______________________________________________________________________
 
-### Hook state machine
-
-`task-log.js` is the central event handler. It handles six Claude Code hook events and maintains runtime state read by `statusline.js`:
-
-**Event → action mapping:**
-
-| Event           | Action                                                                                                                                  |
-| --------------- | --------------------------------------------------------------------------------------------------------------------------------------- |
-| `PreToolUse`    | Logs Task/Agent and Skill invocations to `logs/invocations.jsonl`; opens codex plugin session file; increments per-tool-type state file |
-| `PostToolUse`   | Closes codex plugin session file when any Skill(codex:\*) completes                                                                     |
-| `SubagentStart` | Creates `state/agents/<id>.json` with agent type, model, color, start timestamp — one file per agent (no race)                          |
-| `SubagentStop`  | Deletes per-agent file; appends completion entry to `invocations.jsonl`                                                                 |
-| `PreCompact`    | Appends to `logs/compactions.jsonl`; extracts modified file paths from transcript; writes `state/session-context.md`                    |
-| `Stop`          | Clears `state/tools/` — resets the 🔧 row between turns (agents intentionally NOT cleared — may still be running)                       |
-| `SessionEnd`    | Clears `state/agents/`, `state/tools/`, `state/codex/`; runs `git worktree prune`; removes orphaned worktrees >2h                       |
-
-**State files layout:**
-
-```
-.claude/state/
-├── agents/<id>.json        # one per active subagent (created at start, deleted at stop)
-├── codex/<id>.json         # one per active codex plugin session
-├── tools/<tool>.json       # one per tool type fired this turn (cleared at Stop)
-└── session-context.md      # modified-file breadcrumb (survives compaction)
-
-.claude/logs/               # skill-specific logs (project-scoped)
-# Hook audit logs are global — written to ~/.claude/logs/:
-#   invocations.jsonl       append-only: agent launches, skill invocations, completions (includes project field)
-#   compactions.jsonl       append-only: compaction events (includes project field)
-#   timings.jsonl           append-only: per-tool wall-clock timing (includes project field)
-```
-
-**Age-out rules:**
-
-- Agents: 10-minute safety-net — files older than 10 min with no corresponding Stop event indicate a crashed agent; statusline excludes them
-- Codex plugin sessions: 30-minute cutoff — stalled plugin sessions are treated as timed out
-- Worktrees: 2-hour cutoff in SessionEnd cleanup
-
-______________________________________________________________________
-
 ### Agent Teams
 
-Agent Teams is Claude Code's experimental multi-agent feature. Teams are always **user-invoked** — nothing auto-spawns. Enabled via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `settings.json`.
+Agent Teams is Claude Code's experimental multi-agent feature. Teams are always **user-invoked** — nothing auto-spawns. Auto-spawning teams would multiply token costs 5-10x on routine tasks; explicit invocation lets you make the cost/benefit call per run. Enabled via `CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS=1` in `settings.json`.
 
 **When to use teams vs subagents:**
 
@@ -576,6 +545,90 @@ Agent Teams is Claude Code's experimental multi-agent feature. Teams are always 
 **Security in teams:** No standalone security agent. `qa-specialist` automatically embeds OWASP Top 10 security checks when the task touches auth, payment flows, or user data.
 
 **Quality hooks:** `hooks/teammate-quality.js` handles `TeammateIdle` (redirects to pending tasks) and `TaskCompleted` (reserved for future quality gates).
+
+## 🪝 Hooks
+
+### Hooks inventory
+
+| Hook                | Event                       | Matcher     | Purpose                |
+| ------------------- | --------------------------- | ----------- | ---------------------- |
+| task-log.js         | 9 events                    | all         | Session state tracking |
+| lint-on-save.js     | PostToolUse                 | Write, Edit | Lint on save           |
+| md-compress.js      | PreToolUse                  | Read (.md)  | Token compression      |
+| rtk-rewrite.js      | PreToolUse                  | Bash        | CLI output compression |
+| teammate-quality.js | TeammateIdle, TaskCompleted | all         | Team quality gate      |
+| stats-reader.js     | (standalone)                | n/a         | Session stats          |
+| statusline.js       | (statusLine)                | n/a         | Status bar             |
+
+### task-log.js state machine
+
+`task-log.js` is the central event handler. It handles nine Claude Code hook events and maintains runtime state read by `statusline.js`:
+
+**Event → action mapping:**
+
+| Event                | Action                                                                                                                                                                                                                                           |
+| -------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `PreToolUse`         | Logs Task/Agent and Skill invocations to `logs/invocations.jsonl`; opens codex plugin session file; increments per-tool-type state file                                                                                                          |
+| `PostToolUse`        | Closes codex plugin session file when any Skill(codex:\*) completes; computes wall-clock timing delta from the PreToolUse start marker and appends to `~/.claude/logs/timings.jsonl`                                                             |
+| `PostToolUseFailure` | Records timing with error status to timings.jsonl (same timing path as PostToolUse)                                                                                                                                                              |
+| `UserPromptSubmit`   | Writes a queue marker to `state/queue/` to light the processing badge 💬 in statusline                                                                                                                                                           |
+| `SubagentStart`      | Creates `state/agents/<id>.json` with agent type, model, color, start timestamp — one file per agent (no race)                                                                                                                                   |
+| `SubagentStop`       | Deletes per-agent file; appends completion entry to `invocations.jsonl`                                                                                                                                                                          |
+| `PreCompact`         | Appends to `logs/compactions.jsonl`; extracts modified file paths from transcript; writes `state/session-context.md`                                                                                                                             |
+| `Stop`               | Clears `state/tools/` — resets the 🔧 row between turns (agents intentionally NOT cleared — may still be running); clears `state/queue/` processing markers (dismisses 💬 badge) and removes orphaned timing start markers from `state/timings/` |
+| `SessionEnd`         | Deletes entire `/tmp/claude-state-<session>/` directory (agents, tools, codex, queue, timings, dedup locks); runs `git worktree prune`; removes orphaned worktrees >2h                                                                           |
+
+**State files layout:**
+
+```
+/tmp/claude-state-<session>/
+├── agents/<id>.json        # one per active subagent (created at start, deleted at stop)
+├── codex/<id>.json         # one per active codex plugin session
+├── tools/<tool>.json       # one per tool type fired this turn (cleared at Stop)
+├── timings/<tool_use_id>.json   # in-flight timing start markers (PreToolUse → PostToolUse)
+├── queue/<timestamp>.json       # processing badge markers (UserPromptSubmit → Stop)
+└── pending/<tool_use_id>.json   # agent type cache for SubagentStart resolution
+
+.claude/state/
+└── session-context.md      # modified-file breadcrumb (survives compaction)
+
+.claude/logs/               # skill-specific logs (project-scoped)
+# Hook audit logs are global — written to ~/.claude/logs/:
+#   invocations.jsonl       append-only: agent launches, skill invocations, completions (includes project field)
+#   compactions.jsonl       append-only: compaction events (includes project field)
+#   timings.jsonl           append-only: per-tool wall-clock timing (includes project field)
+```
+
+**Age-out rules:**
+
+- Agents: 10-minute safety-net — files older than 10 min with no corresponding Stop event indicate a crashed agent; statusline excludes them
+- Codex plugin sessions: 30-minute cutoff — stalled plugin sessions are treated as timed out
+- Worktrees: 2-hour cutoff in SessionEnd cleanup
+
+**`PostCompact` over-registration:** `PostCompact` is registered in `settings.json` for `task-log.js` but is handled as a no-op — the code handles `PreCompact` instead.
+
+**Inline `SessionStart` hooks** (shell commands, not JS files): (1) `claude auth status > ~/.claude/state/subscription.json` — snapshots billing plan for the status line billing indicator, async; (2) `rm -f .claude/state/session-context.md` — clears last session's breadcrumb on fresh startup.
+
+### Supplementary hooks
+
+Registered alongside `task-log.js` in `settings.json`:
+
+**`lint-on-save.js`** (PostToolUse — Write, Edit) — closes the gap between "Claude edits a file" and "a human runs pre-commit" by linting every file the moment it is written. Runs `pre-commit run --files <path>` on each Write/Edit, exits 2 on failure so Claude sees the diagnostics and applies a fix immediately. No-op when `.pre-commit-config.yaml` is absent or pre-commit is not installed.
+
+**`md-compress.js`** (PreToolUse — Read, `.md` files only) — transparently compresses token-wasteful whitespace in Markdown files before Claude reads them, reducing context consumption without altering content. Collapses table column padding (2+ spaces → 1), consecutive blank lines, and trailing whitespace — all outside fenced code blocks. Writes to a stable temp file keyed by source-path hash; reused within a session when the source is unchanged.
+
+**`rtk-rewrite.js`** (PreToolUse — Bash) — rewrites supported CLI calls to go through the RTK proxy (`git status` → `rtk git status`) for 60–99% token savings on build/test/git output. RTK is a *structural* compressor — it understands git diff, pytest, and build-log formats and removes tokens that are visually useful to humans but informationally redundant for an LLM, unlike generic truncation which can drop the relevant parts. No-op when RTK is not installed — see root [README → Token Savings](../README.md#-token-savings-rtk).
+
+**Session stats utility** — `hooks/stats-reader.js` is a standalone script (not a hook event) for inspecting session token and tool usage from JSONL history. Run directly:
+
+```bash
+node .claude/hooks/stats-reader.js --latest              # most recent session
+node .claude/hooks/stats-reader.js --latest --timings    # + per-tool wall-clock stats from timings.jsonl
+node .claude/hooks/stats-reader.js --date 2026-04-08     # all sessions on a date
+node .claude/hooks/stats-reader.js <session-uuid>        # specific session by UUID prefix
+```
+
+Output: JSON with token usage by model (input/output/cache), tool call counts, turn count, duration, and optional timing percentiles (`count`, `mean_ms`, `p95_ms`) per tool.
 
 ## 📊 Status Line
 

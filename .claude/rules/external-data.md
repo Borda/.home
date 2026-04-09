@@ -23,7 +23,7 @@ gh api repos/:owner/:repo/issues --paginate
 gh api repos/:owner/:repo/pulls --paginate --field state=all
 
 # Combine: paginate + jq for large result sets
-gh api repos/:owner/:repo/issues --paginate | jq '[.[]]'
+# --paginate emits one JSON array per page; jq '[.[]]'
 ```
 
 Rules:
@@ -44,6 +44,27 @@ Rules:
 
 - Check `pageInfo.hasNextPage` — if `true`, issue another query with `after: endCursor`
 - Never treat a single query result as complete if `hasNextPage` is not explicitly `false`
+
+## Cloud / Google-style APIs (next_page_token)
+
+- Check for `nextPageToken` (or `next_page_token`) in the response body
+- If present and non-empty, pass it as `pageToken=<value>` on the next request
+- Stop when the field is absent or empty string — dataset is complete
+
+Example:
+```bash
+# Google Cloud style — loop on nextPageToken
+next_token=""
+all_items=()
+while true; do
+  url="https://api.example.com/v1/items"
+  [ -n "$next_token" ] && url="${url}?pageToken=${next_token}"
+  response=$(curl -s "$url")
+  all_items+=( $(echo "$response" | jq -r ".items[]") )
+  next_token=$(echo "$response" | jq -r ".nextPageToken // empty")
+  [ -z "$next_token" ] && break
+done
+```
 
 ## General Rules
 

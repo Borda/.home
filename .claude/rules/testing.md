@@ -18,12 +18,13 @@ paths:
 1. **Function goals / docs / intended user application** — tests that verify the contract and normal use
 2. **Edge cases** — boundary values, empty inputs, extreme sizes, unusual combinations
 3. **Exception handling** — only after the above are covered; don't lead with error-path tests
+   - When adding exception-handling tests, include at least one contract/normal-use test in the same commit or point to an existing test that covers the contract — do not submit error-path-only test files.
 
 ## Test Structure
 
 - **Arrange-Act-Assert (AAA)**: one setup block, one `act`, one assertion group per test — never a second `act` in the same test
 - Each test validates exactly one scenario
-- No `if`/`for` logic in test bodies; exception: parametrize value generation when it covers \<30% of cases and enables a significantly larger parametrize list
+- No `if`/`for` logic in test bodies; exception: a list-comprehension or generator expression used solely to build `@pytest.mark.parametrize` arguments, provided it spans fewer than 30% of the lines in the `parametrize` decorator call.
 - Parametrize aggressively — 3+ test functions with the same structure → `@pytest.mark.parametrize`
 - Group topic-related tests into a class; class name carries unit (and optionally condition) so method names describe the expected outcome only
 
@@ -35,6 +36,7 @@ Mirror `src/` layout in `tests/unit/`: `src/foo/bar.py` → `tests/unit/foo/test
 
 - Never seed RNG anywhere except inside an `autouse=True` fixture — not in test bodies,
   not at module level, not in non-autouse fixtures
+- If the fixture is needed project-wide, place it in `tests/conftest.py` — do not duplicate it per file. Per-file placement is acceptable only when a specific file needs a different seed strategy.
 - Use a pytest fixture that resets all RNG sources: `torch.manual_seed`, `numpy.random.seed`, `random.seed`, `torch.cuda.manual_seed_all`
 - Fixture should use `autouse=True`
 

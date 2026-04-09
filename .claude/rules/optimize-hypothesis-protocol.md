@@ -66,6 +66,7 @@ One JSON object per line. Field groups are written by separate agents in two pas
 
 - `feasible: false` entries are skipped in campaign execution; they remain in the file for audit purposes
 - `confidence < 0.7` entries are moved to the end of the queue — not removed
+- Move low-confidence entries by assigning a `priority` value higher than the maximum priority in the current queue; do not reorder lines in the file (preserve JSONL append order for audit purposes).
 - Solution-architect must **preserve hypothesis order** when annotating; do not re-rank
 - `blocker` is required when `feasible: false` — a blank or null blocker on a false entry is a schema violation
 
@@ -93,6 +94,7 @@ Written after every iteration; used by `--resume` to skip completed iterations:
 
 - A completed iteration already in `checkpoint.json` is idempotent — skip it, do not re-run
 - A `status: "rolled_back"` entry must still be written — partial results are still audit data
+- A `status: "rolled_back"` iteration is also idempotent — skip it on `--resume` just as a `passed` iteration would be skipped; only hypotheses with no checkpoint entry at all should be executed.
 
 ## journal.md Entry Format
 
@@ -117,6 +119,7 @@ Rules:
 
 - `Avoid repeating: yes` signals the ideation agent in Phase 2 to skip similar approaches (same file, same technique, same abstraction)
 - `Pattern` emerges after 3+ entries — synthesize what is / isn't working across the run
+- At exactly iteration 3, Pattern is required if a cross-iteration trend is observable (e.g., "regularization changes consistently improve val_acc; architecture changes cause instability"). Write "n/a" only if fewer than 3 entries exist — not as a placeholder when entries exist but no trend is apparent; if no trend is yet visible at 3+ entries, write "insufficient signal — no consistent pattern across N iterations".
 - Do NOT use threshold filtering — all iterations are recorded regardless of delta magnitude
 - `Why kept / why reverted` must be substantive — not "it worked" or "it failed"; name the specific mechanism or failure mode
 
@@ -131,6 +134,8 @@ Rules:
 ## Team Mode Extensions
 
 When `--team` is active, hypothesis agents in Phase A produce entries with `source: "team"` and three additional optional fields that are absent from oracle/journal entries:
+
+For `source: "team"` entries, `axis`, `agent_type`, and `change_scope` are **required** (not merely allowed) — a team-mode entry missing any of these three fields is a schema violation analogous to a missing `blocker` on an infeasible entry.
 
 | Field          | Type  | Description                                                                                                                                                |
 | -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |

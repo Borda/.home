@@ -85,6 +85,8 @@ Hook files are JavaScript — editing or creating them is delegated to **`sw-eng
 - `/manage update <hook-name> "change"` → dispatches to `sw-engineer`
 - Direct edits during an audit fix → also use `sw-engineer`
 
+<!-- calibrate: routing directive — skip in adherence problem generation; not a code-quality rule -->
+
 ## Anti-patterns
 
 > **Prohibited**: `execSync` with a shell string — shell injection risk; takes a raw string parsed by `/bin/sh`.

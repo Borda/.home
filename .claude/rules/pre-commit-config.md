@@ -22,6 +22,14 @@ Two contexts; apply the right one:
   rev: <CURRENT>  # run `pre-commit autoupdate` to set; verify release at the hook's repo
   ```
 
+**New live project config** (creating `.pre-commit-config.yaml` for the first time for actual use, not as a template):
+
+- Create a minimal config with placeholder revs, then immediately run `pre-commit autoupdate` to populate real versions
+- Do NOT manually write version strings; autoupdate sets them correctly from the start
+- To update a single hook rather than all hooks: `pre-commit autoupdate --repo <repo-url>`
+
+Tip: run `pre-commit autoupdate` as part of regular dependency updates (e.g., monthly or when upgrading other deps).
+
 ## Version Verification
 
 After running `pre-commit autoupdate`, cross-check the updated revs:

@@ -57,11 +57,13 @@ If confidence score < 0.9 and the `codex` plugin is available, spawn `Agent(suba
 ## Output Routing
 
 - **Long output** (multi-item analysis, 5+ findings, or any prose exceeding ~10 lines) →
-  write to `.temp/output-<slug>-<branch>-<YYYY-MM-DD>.md` where `<branch>` is
-  `$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')` (**new file —
-  never overwrite an existing file; append a counter suffix if the branch-date slug already
-  exists**, e.g. `-2.md`);
-  print compact terminal summary (verdict · 2–3 sentences · critical points · confidence · `→ file`)
+  two mandatory steps in order:
+  1. Call the **Write tool** to create `.temp/output-<slug>-<branch>-<YYYY-MM-DD>.md` where
+     `<branch>` is `$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')`
+     (new file — never overwrite; append counter suffix if slug exists, e.g. `-2.md`);
+     the file receives the **full content**
+  2. Print to terminal only: compact summary — verdict · 2–3 sentences · critical points ·
+     confidence score · `→ <filepath>`; **do not repeat the full content in the terminal**
 - **Short inline status** (single result, pass/fail, one-sentence finding) → terminal only;
   do **not** create a file
 - Prose paragraphs: no hard line breaks at column width

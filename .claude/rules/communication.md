@@ -41,6 +41,18 @@ Rules:
   - *Executive summary* — bullets, outcome-first, no jargon
   - When format is ambiguous, ask one question before writing.
 
+## Interactive Questions
+
+**All questions directed at the user must use the `AskUserQuestion` tool — never plain terminal text.**
+
+A labelled or annotated question (e.g. `[AskUserQuestion simulated] — What format?`) is still plain text and still violates this rule. Only an actual tool invocation satisfies the constraint.
+
+- Plain text questions are easily missed, don't block execution, and don't surface as a distinct UI affordance
+- This applies to: ambiguous input, clarifying choices, scope decisions, continuation guards, and any other point where user input is required before proceeding
+- Applies globally — to all skills, agents, and model-generated questions without exception
+- When `AskUserQuestion` is not in a skill's `allowed-tools`, add it before asking any question
+- Maximum 4 questions per call; group related sub-questions into one option set rather than asking sequentially
+
 ## Output Routing
 
 Full rules (including anti-overwrite counter-suffix and branch-slug format), breaking-findings format, and terminal colors: see `.claude/rules/quality-gates.md`.

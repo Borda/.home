@@ -12,7 +12,11 @@ paths:
 
 ## Deprecation
 
-**Version check first**: before generating any deprecation code, run `python3 -c "import deprecate; print(deprecate.__version__)"`. If the installed version differs from what Claude knows, read `help(deprecate)` or the project CHANGELOG before generating code — do not assume Claude knows the latest API. Do **not** upgrade pyDeprecate in projects that are on an older version and working fine.
+**Version check first**: before generating any deprecation code:
+- In agentic/tool context: execute `python3 -c "import deprecate; print(deprecate.__version__)"` via Bash
+- In conversation context: output the command for the user to run and wait for confirmation before proceeding
+
+If the installed version differs from what Claude knows, read `help(deprecate)` or the project CHANGELOG before generating code — do not assume Claude knows the latest API. Do **not** upgrade pyDeprecate in projects that are on an older version and working fine.
 
 **Never use `warnings.warn` for deprecation** — use `pyDeprecate` exclusively. Import from `deprecate`, not `pyDeprecate`:
 
@@ -58,6 +62,27 @@ class OldClass: ...
 ```
 
 `deprecated_class` wraps the class in a transparent proxy — per installed docs, attribute access, method calls, `isinstance()`, and instantiation all forward to `NewClass` with a `FutureWarning`.
+
+**Version conflict resolution**: If the installed pyDeprecate is below v0.6.0 and upgrading is
+prohibited (stable project, pinned deps), do NOT use `deprecated_class` — instead apply
+`@deprecated` to a thin subclass wrapper:
+
+```python
+from deprecate import deprecated
+
+class ModelWrapper: ...  # new class
+
+class _OldModelWrapperImpl(ModelWrapper):
+    """Transitional subclass — do not use directly."""
+    ...
+
+@deprecated(target=ModelWrapper, deprecated_in="X.Y", remove_in="Z.W")
+def OldModelWrapper(*args, **kwargs):  # noqa: N802
+    return _OldModelWrapperImpl(*args, **kwargs)
+```
+
+Alternatively, ask the user whether upgrading pyDeprecate is acceptable before proceeding.
+Never silently recommend an upgrade.
 
 ### Instance deprecation — use `deprecated_instance` (v0.6.0+) <!-- verified: 2026-04-06; re-verify if pyDeprecate is upgraded past 0.6.x -->
 
