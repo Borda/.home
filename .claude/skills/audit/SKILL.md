@@ -192,30 +192,30 @@ Run the following checks. Use native tools first (Glob, Grep, Read); Bash only f
 
 ### Check summary
 
-| # | Name | Severity | Scope | Notes |
-|---|------|----------|-------|-------|
-| 1 | Inventory drift (MEMORY.md vs disk) | medium | setup | Agents + skills on disk vs MEMORY.md roster |
-| 2 | README vs disk | medium | setup | Agent/skill table rows in README vs disk |
-| 3 | settings.json permissions | medium | setup | Bash commands in skills vs allow list |
-| 4 | Orphaned follow-up references | medium | agents/skills | Skill-name refs in SKILL.md vs disk inventory |
-| 5 | Hardcoded user paths | high | agents/skills | `/Users/`/`/home/` in config files + settings.json |
-| 6 | permissions-guide.md drift | medium | setup | Every allow entry must have a guide row, and vice versa |
-| 6b | Permission safety audit | critical/high | setup | Allow entries must be non-destructive, reversible, local-only |
-| 7 | Skill frontmatter conflicts | critical | skills | `context:fork` + `disable-model-invocation:true` is broken |
-| 8 | Model tier appropriateness | medium/high | agents | Tier policy: opusplan/opus/sonnet/haiku — report only |
-| 9 | Example value vs. token cost | low | agents/skills | Inline examples: high-value vs. low-value (prose restatement) |
-| 10 | Agent color drift | medium | setup | statusline COLOR_MAP vs agent frontmatter `color:` |
-| 11 | RTK hook alignment | high/medium | setup | RTK_PREFIXES vs installed RTK subcommands — skip if rtk absent |
-| 12 | Memory health | low | setup | 12a duplicate rules, 12b stale version pins, 12c absorbed feedback files |
-| 13 | Agent description routing | medium/low | agents | 13a overlap pairs, 13b NOT-for coverage, 13c trigger specificity — report only |
-| 14 | codex plugin integration | medium | setup | Plugin installed and enabled; dispatches work |
-| 15 | Rules integrity | high/medium | rules | 15a inventory, 15b frontmatter, 15c redundancy, 15d cross-ref integrity |
-| 16 | Cross-file content duplication | medium | agents/skills | ≥40% consecutive step overlap between files — report only |
-| 17 | File length | medium | all | Agents >300, skills >600, rules >200 lines — report only |
-| 18 | Bash misuse / native tool substitution | medium | agents/skills | `cat`/`grep`/`find`/`echo >`/`sed` replaceable by native tools |
-| 19 | Stale settings.json allow entries | low | setup | Allow entries with no usage in any `.claude/` file |
-| 20 | Calibration coverage gap | medium/low | skills | Unregistered calibratable modes; stale domain table entries |
-| 21 | Heading hierarchy continuity | medium | all | Heading level jumps >1 (e.g. `##` → `####`) |
+| #   | Name                                   | Severity      | Scope         | Notes                                                                          |
+| --- | -------------------------------------- | ------------- | ------------- | ------------------------------------------------------------------------------ |
+| 1   | Inventory drift (MEMORY.md vs disk)    | medium        | setup         | Agents + skills on disk vs MEMORY.md roster                                    |
+| 2   | README vs disk                         | medium        | setup         | Agent/skill table rows in README vs disk                                       |
+| 3   | settings.json permissions              | medium        | setup         | Bash commands in skills vs allow list                                          |
+| 4   | Orphaned follow-up references          | medium        | agents/skills | Skill-name refs in SKILL.md vs disk inventory                                  |
+| 5   | Hardcoded user paths                   | high          | agents/skills | `/Users/`/`/home/` in config files + settings.json                             |
+| 6   | permissions-guide.md drift             | medium        | setup         | Every allow entry must have a guide row, and vice versa                        |
+| 6b  | Permission safety audit                | critical/high | setup         | Allow entries must be non-destructive, reversible, local-only                  |
+| 7   | Skill frontmatter conflicts            | critical      | skills        | `context:fork` + `disable-model-invocation:true` is broken                     |
+| 8   | Model tier appropriateness             | medium/high   | agents        | Tier policy: opusplan/opus/sonnet/haiku — report only                          |
+| 9   | Example value vs. token cost           | low           | agents/skills | Inline examples: high-value vs. low-value (prose restatement)                  |
+| 10  | Agent color drift                      | medium        | setup         | statusline COLOR_MAP vs agent frontmatter `color:`                             |
+| 11  | RTK hook alignment                     | high/medium   | setup         | RTK_PREFIXES vs installed RTK subcommands — skip if rtk absent                 |
+| 12  | Memory health                          | low           | setup         | 12a duplicate rules, 12b stale version pins, 12c absorbed feedback files       |
+| 13  | Agent description routing              | medium/low    | agents        | 13a overlap pairs, 13b NOT-for coverage, 13c trigger specificity — report only |
+| 14  | codex plugin integration               | medium        | setup         | Plugin installed and enabled; dispatches work                                  |
+| 15  | Rules integrity                        | high/medium   | rules         | 15a inventory, 15b frontmatter, 15c redundancy, 15d cross-ref integrity        |
+| 16  | Cross-file content duplication         | medium        | agents/skills | ≥40% consecutive step overlap between files — report only                      |
+| 17  | File length                            | medium        | all           | Agents >300, skills >600, rules >200 lines — report only                       |
+| 18  | Bash misuse / native tool substitution | medium        | agents/skills | `cat`/`grep`/`find`/`echo >`/`sed` replaceable by native tools                 |
+| 19  | Stale settings.json allow entries      | low           | setup         | Allow entries with no usage in any `.claude/` file                             |
+| 20  | Calibration coverage gap               | medium/low    | skills        | Unregistered calibratable modes; stale domain table entries                    |
+| 21  | Heading hierarchy continuity           | medium        | all           | Heading level jumps >1 (e.g. `##` → `####`)                                    |
 
 ### Claude Code docs freshness (within Step 4)
 
@@ -223,6 +223,7 @@ Spawn a **web-explorer** agent to fetch current Claude Code documentation. **Fil
 `{"status":"done","file":"$RUN_DIR/docs-freshness.md","findings":N,"deprecated":N,"new_features":N,"confidence":0.N,"summary":"N findings, N deprecated, N new features"}`
 
 Validate the local config against fetched docs:
+
 - **Hook validation**: every hook event name and `type` exists in documented schema; no deprecated `decision:`/`reason:` fields
 - **Agent frontmatter validation**: all fields in documented schema; `model` values are recognized short-names
 - **Skill frontmatter validation**: all fields in documented schema
@@ -233,7 +234,6 @@ Findings: deprecated/invalid = **high**; deprecated frontmatter field = **medium
 <!-- URLs fetched live by web-explorer at runtime; graceful degradation: if any 404, instruct navigation from code.claude.com homepage. -->
 
 After all checks complete: collect all `⚠` lines, write the full details to `$RUN_DIR/system-checks.md`, and include only the summary table in the conversation context.
-
 
 ## Step 5: Aggregate and classify findings
 

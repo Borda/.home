@@ -11,7 +11,7 @@ ci:
   autofix_prs: true
   autoupdate_commit_msg: "[pre-commit.ci] bump ⬆ suggestions"
   autoupdate_schedule: quarterly
-  skip: [lychee] # pre-commit.ci has no lychee binary and no cargo to install it
+  skip: [lychee, gitlint] # lychee: no binary in CI; gitlint: commit-msg stage, not run in CI
   # submodules: true
 
 repos:
@@ -77,3 +77,26 @@ repos:
           - --no-progress
           #- --exclude=^https?://
         types_or: [markdown, toml]
+
+  - repo: local
+    hooks:
+      - id: node-syntax-check
+        name: node --check (hooks)
+        language: system
+        entry: node --check
+        files: ^\.claude/hooks/.*\.js$
+        types: [javascript]
+
+      - id: no-hardcoded-user-paths
+        name: No hardcoded user paths in .claude/
+        language: pygrep
+        # Matches /Users/<realname>/ or /home/<realname>/ — alphanumeric usernames only.
+        # Placeholder docs like /Users/<name>/ are not flagged (< is not alphanumeric).
+        entry: /Users/[a-zA-Z0-9_-]+/|/home/[a-zA-Z0-9_-]+/
+        files: ^\.claude/(agents|skills|rules)/.*\.md$|^\.claude/hooks/[^/]+\.js$|^\.claude/settings\.json$
+
+  - repo: https://github.com/jorisroovers/gitlint
+    rev: v0.19.1 # run `pre-commit autoupdate --repo https://github.com/jorisroovers/gitlint` to set
+    hooks:
+      - id: gitlint
+        stages: [commit-msg]

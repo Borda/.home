@@ -13,6 +13,7 @@ paths:
 ## Deprecation
 
 **Version check first**: before generating any deprecation code:
+
 - In agentic/tool context: execute `python3 -c "import deprecate; print(deprecate.__version__)"` via Bash
 - In conversation context: output the command for the user to run and wait for confirmation before proceeding
 
@@ -70,11 +71,15 @@ prohibited (stable project, pinned deps), do NOT use `deprecated_class` — inst
 ```python
 from deprecate import deprecated
 
+
 class ModelWrapper: ...  # new class
+
 
 class _OldModelWrapperImpl(ModelWrapper):
     """Transitional subclass — do not use directly."""
+
     ...
+
 
 @deprecated(target=ModelWrapper, deprecated_in="X.Y", remove_in="Z.W")
 def OldModelWrapper(*args, **kwargs):  # noqa: N802

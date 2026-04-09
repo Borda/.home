@@ -1,0 +1,24 @@
+# .gitlint — commit message lint rules
+#
+# Enforces the commit format defined in .claude/rules/git-commit.md:
+#   - Subject ≤ 50 chars (imperative mood is policy-only — not machine-checked)
+#   - Blank line before body (when body present)
+#   - No WIP/fixup/squash/amend commits (local enforcement only — runs at
+#     commit-msg stage; CI skips this hook per ci.skip in .pre-commit-config.yaml)
+#
+# Rules ignored:
+#   B1  body-max-line-length  — bullets are intentionally long (no line wrapping per git-commit.md)
+#   B3  body-hard-tab         — tabs in body are allowed
+#   B5  body-min-length       — not applicable
+#   B6  body-is-missing       — subject-only commits are explicitly allowed
+
+[general]
+ignore=B1,B3,B5,B6
+ignore-fixup-commits=false
+ignore-squash-commits=false
+
+[title-max-length]
+line-length=50
+
+[title-must-not-contain-word]
+words=wip,fixup,squash,amend

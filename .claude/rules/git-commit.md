@@ -7,12 +7,16 @@ paths:
 ## Commit Message Format
 
 - First line: short TLDR subject in imperative mood, ≤50 chars — name up to 3 most significant changes/additions/removals only (prefer user-visible impact as the tie-breaker when significance is comparable)
+
 - Blank line, then bullet list — one bullet per logical change; include extended description of the top changes plus all other notable changes; skip typos, linting, and whitespace-only edits; if all changes are skip-worthy, omit the bullet list entirely and use a subject-only commit. In a subject-only commit, still include the co-author block separated by a blank line and ---:
 
-      Fix typo in config key name
+  ```
+  Fix typo in config key name
 
-      ---
-      Co-authored-by: Claude Code <noreply@anthropic.com>
+  ---
+  Co-authored-by: Claude Code <noreply@anthropic.com>
+  ```
+
 - No line wrapping — each bullet is a single long line
 
 ## Gathering Diff Context

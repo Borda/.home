@@ -160,7 +160,7 @@ Dependabot has two independent features — enable both:
 
 Key `.github/dependabot.yml` settings:
 
-- `package-ecosystem: pip` — weekly schedule, group `dev-tools` (pytest*, ruff, mypy, pre-commit*) for minor+patch; ignore major `torch` updates
+- `package-ecosystem: pip` — weekly schedule, group `dev-tools` (pytest, ruff, mypy, pre-commit) for minor+patch; ignore major `torch` updates
 - `package-ecosystem: github-actions` — monthly schedule, group `actions: ['*']` for minor+patch
 
 ### Auto-merge Dependabot PRs (patch/minor dev-deps, after CI passes)

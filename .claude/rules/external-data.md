@@ -52,6 +52,7 @@ Rules:
 - Stop when the field is absent or empty string — dataset is complete
 
 Example:
+
 ```bash
 # Google Cloud style — loop on nextPageToken
 next_token=""
