@@ -47,7 +47,9 @@ Co-authored-by: Claude Code <noreply@anthropic.com>
 ```
 
 - Claude: `Co-authored-by: Claude Code <noreply@anthropic.com>`
-- Codex (if it reviewed or implemented any part): `Co-authored-by: OpenAI Codex <codex@openai.com>`
+- Codex (if it contributed anything — code, review, diagnosis, analysis, architectural guidance, or “here’s what needs fixing and why”): `Co-authored-by: OpenAI Codex <codex@openai.com>`
+
+**Codex intellectual contributions count**: Codex earns a trailer whenever it shaped the outcome — even if Claude wrote the final code. Examples: Codex identified the root cause, Codex suggested the approach, Codex returned a review comment that led to the change. The test: “would this commit exist in its current form without Codex’s input?” — if yes, include the trailer.
 
 The co-author trailer is added to every commit produced by Claude Code — it is not conditional on the user explicitly mentioning Claude's involvement.
 

@@ -469,7 +469,7 @@ If code changed → commit:
 # Stage tracked modifications + new files from Codex (never git add -A)
 git add $(git diff HEAD --name-only)                                                     # timeout: 3000
 git ls-files --others --exclude-standard | grep . | xargs git add -- 2>/dev/null || true # grep . filters empty output (macOS-portable; xargs -r is GNU-only); permission matcher sees 'git ls-files' as first token  # timeout: 3000
-# timeout: 3000 — git commit (local operation)
+# timeout: 3000 — git commit (local operation); include co-author trailer per git-commit.md
 git commit -m "$(
 	cat <<'EOF'
 <imperative short summary of the change>
@@ -507,7 +507,7 @@ Wait for both. Then:
 
 ```bash
 git add $(git diff HEAD --name-only)                          # timeout: 3000
-git commit -m "lint: auto-fix violations after resolve cycle" # timeout: 3000
+git commit -m "lint: auto-fix violations after resolve cycle"  # include co-author trailer per git-commit.md; timeout: 3000
 ```
 
 - If `qa-specialist` reports **blocking** issues → fix each one (via Codex if `CODEX_AVAILABLE=true`, otherwise inline edit), then re-run qa-specialist once to confirm resolution; if issues remain after one fix pass, surface them in the final report and continue (do not loop indefinitely)
@@ -669,7 +669,7 @@ Agent(qa-specialist, maxTurns: 15): "Review all files changed in the most recent
 
 ```bash
 git add $(git diff HEAD --name-only)                          # timeout: 3000
-git commit -m "lint: auto-fix violations after resolve cycle" # timeout: 3000
+git commit -m "lint: auto-fix violations after resolve cycle"  # include co-author trailer per git-commit.md; timeout: 3000
 ```
 
 - If `qa-specialist` reports blocking issues → fix inline, then re-run once; surface any unresolved issues in the report

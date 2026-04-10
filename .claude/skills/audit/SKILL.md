@@ -187,6 +187,14 @@ Every `$MONITOR_INTERVAL` seconds, run `find $RUN_DIR -newer "$AUDIT_CHECKPOINT"
 
 Run the following checks. Use native tools first (Glob, Grep, Read); Bash only for pipeline operations the native tools cannot do.
 
+**Agent roster consistency policy**: evaluate the agent system as a set of capabilities, not just files. For every overlap surfaced in checks 13 or 16, make an explicit judgment:
+
+- **keep** when both roles own meaningfully different acceptance criteria
+- **sharpen** when both roles are justified but one or both descriptions/handoffs are too fuzzy
+- **merge/prune** when the roles differ mostly by tone or examples rather than by decision surface
+
+Do not leave overlap findings as vague "potential duplication" notes. The audit must say which of the three outcomes applies and why.
+
 **Context discipline for Step 4**: write all check findings to `$RUN_DIR/system-checks.md` (using Write tool after all checks complete), not to the main conversation context. Keep only a one-line status per check in context:
 
 - `✓ Check N — <one-line result>` (pass)
@@ -203,30 +211,30 @@ Run the following checks. Use native tools first (Glob, Grep, Read); Bash only f
 
 ### Check summary
 
-| #   | Name                                   | Severity      | Scope         | Notes                                                                          |
-| --- | -------------------------------------- | ------------- | ------------- | ------------------------------------------------------------------------------ |
-| 1   | Inventory drift (MEMORY.md vs disk)    | medium        | setup         | Agents + skills on disk vs MEMORY.md roster                                    |
-| 2   | README vs disk                         | medium        | setup         | Agent/skill table rows in README vs disk                                       |
-| 3   | settings.json permissions              | medium        | setup         | Bash commands in skills vs allow list                                          |
-| 4   | Orphaned follow-up references          | medium        | agents/skills | Skill-name refs in SKILL.md vs disk inventory                                  |
-| 5   | Hardcoded user paths                   | high          | agents/skills | `/Users/`/`/home/` in config files + settings.json                             |
-| 6   | permissions-guide.md drift             | medium        | setup         | Every allow entry must have a guide row, and vice versa                        |
-| 6b  | Permission safety audit                | critical/high | setup         | Allow entries must be non-destructive, reversible, local-only                  |
-| 7   | Skill frontmatter conflicts            | critical      | skills        | `context:fork` + `disable-model-invocation:true` is broken                     |
-| 8   | Model tier appropriateness             | medium/high   | agents        | Tier policy: opusplan/opus/sonnet/haiku — report only                          |
-| 9   | Example value vs. token cost           | low           | agents/skills | Inline examples: high-value vs. low-value (prose restatement)                  |
-| 10  | Agent color drift                      | medium        | setup         | statusline COLOR_MAP vs agent frontmatter `color:`                             |
-| 11  | RTK hook alignment                     | high/medium   | setup         | RTK_PREFIXES vs installed RTK subcommands — skip if rtk absent                 |
-| 12  | Memory health                          | low           | setup         | 12a duplicate rules, 12b stale version pins, 12c absorbed feedback files       |
-| 13  | Agent description routing              | medium/low    | agents        | 13a overlap pairs, 13b NOT-for coverage, 13c trigger specificity — report only |
-| 14  | codex plugin integration               | medium        | setup         | Plugin installed and enabled; dispatches work                                  |
-| 15  | Rules integrity                        | high/medium   | rules         | 15a inventory, 15b frontmatter, 15c redundancy, 15d cross-ref integrity        |
-| 16  | Cross-file content duplication         | medium        | agents/skills | ≥40% consecutive step overlap between files — report only                      |
-| 17  | File length                            | medium        | all           | Agents >300, skills >600, rules >200 lines — report only                       |
-| 18  | Bash misuse / native tool substitution | medium        | agents/skills | `cat`/`grep`/`find`/`echo >`/`sed` replaceable by native tools                 |
-| 19  | Stale settings.json allow entries      | low           | setup         | Allow entries with no usage in any `.claude/` file                             |
-| 20  | Calibration coverage gap               | medium/low    | skills        | Unregistered calibratable modes; stale domain table entries                    |
-| 21  | Heading hierarchy continuity           | medium        | all           | Heading level jumps >1 (e.g. `##` → `####`)                                    |
+| #   | Name                                   | Severity      | Scope         | Notes                                                                                             |
+| --- | -------------------------------------- | ------------- | ------------- | ------------------------------------------------------------------------------------------------- |
+| 1   | Inventory drift (MEMORY.md vs disk)    | medium        | setup         | Agents + skills on disk vs MEMORY.md roster                                                       |
+| 2   | README vs disk                         | medium        | setup         | Agent/skill table rows in README vs disk                                                          |
+| 3   | settings.json permissions              | medium        | setup         | Bash commands in skills vs allow list                                                             |
+| 4   | Orphaned follow-up references          | medium        | agents/skills | Skill-name refs in SKILL.md vs disk inventory                                                     |
+| 5   | Hardcoded user paths                   | high          | agents/skills | `/Users/`/`/home/` in config files + settings.json                                                |
+| 6   | permissions-guide.md drift             | medium        | setup         | Every allow entry must have a guide row, and vice versa                                           |
+| 6b  | Permission safety audit                | critical/high | setup         | Allow entries must be non-destructive, reversible, local-only                                     |
+| 7   | Skill frontmatter conflicts            | critical      | skills        | `context:fork` + `disable-model-invocation:true` is broken                                        |
+| 8   | Model tier appropriateness             | medium/high   | agents        | Tier policy: opusplan/opus/sonnet/haiku — report only                                             |
+| 9   | Example value vs. token cost           | low           | agents/skills | Inline examples: high-value vs. low-value (prose restatement)                                     |
+| 10  | Agent color drift                      | medium        | setup         | statusline COLOR_MAP vs agent frontmatter `color:`                                                |
+| 11  | RTK hook alignment                     | high/medium   | setup         | RTK_PREFIXES vs installed RTK subcommands — skip if rtk absent                                    |
+| 12  | Memory health                          | low           | setup         | 12a duplicate rules, 12b stale version pins, 12c absorbed feedback files                          |
+| 13  | Agent description routing              | medium/low    | agents        | 13a overlap pairs, 13b NOT-for coverage, 13c trigger specificity, 13d keep/sharpen/prune decision |
+| 14  | codex plugin integration               | medium        | setup         | Plugin installed and enabled; dispatches work                                                     |
+| 15  | Rules integrity                        | high/medium   | rules         | 15a inventory, 15b frontmatter, 15c redundancy, 15d cross-ref integrity                           |
+| 16  | Cross-file content duplication         | medium        | agents/skills | ≥40% consecutive step overlap between files; for agents, recommend canonical owner or merge path  |
+| 17  | File length                            | medium        | all           | Agents >300, skills >600, rules >200 lines — report only                                          |
+| 18  | Bash misuse / native tool substitution | medium        | agents/skills | `cat`/`grep`/`find`/`echo >`/`sed` replaceable by native tools                                    |
+| 19  | Stale settings.json allow entries      | low           | setup         | Allow entries with no usage in any `.claude/` file                                                |
+| 20  | Calibration coverage gap               | medium/low    | skills        | Unregistered calibratable modes; stale domain table entries                                       |
+| 21  | Heading hierarchy continuity           | medium        | all           | Heading level jumps >1 (e.g. `##` → `####`)                                                       |
 
 ### Claude Code docs freshness (within Step 4)
 

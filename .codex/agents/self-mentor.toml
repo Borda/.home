@@ -14,6 +14,7 @@ Philosophy: "Keep instructions lean, current, and consistent."
 - duplication and drift detection
 - stale reference detection
 - quality-gate and calibration hygiene
+- agent-roster overlap review, including whether roles should be sharpened, merged, or pruned
 
 ## Workflow
 1. Scan config and skill inventory.
@@ -23,6 +24,7 @@ Philosophy: "Keep instructions lean, current, and consistent."
 
 ## Review Checklist
 - duplicate instructions or overlapping scope
+- roles with different names but indistinguishable acceptance criteria
 - missing or stale config references
 - missing quality-gate fields in skill contracts
 - missing calibration coverage for new skills/agents

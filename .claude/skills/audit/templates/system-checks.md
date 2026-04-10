@@ -300,7 +300,7 @@ ______________________________________________________________________
 
 ## Check 13 — Agent description routing alignment
 
-Three sub-checks, all **report-only**.
+This is the canonical roster-consistency check. Three routing sub-checks plus one decision check, all **report-only**.
 
 Extract all agent descriptions:
 
@@ -313,13 +313,28 @@ for f in .claude/agents/*.md; do # timeout: 5000
 done
 ```
 
-Apply model reasoning:
+### Apply model reasoning:
 
 **13a — Overlap analysis**: For each pair of agents, assess domain overlap. Flag pairs where descriptions alone do not disambiguate → **medium** finding per ambiguous pair.
 
 **13b — NOT-for clause coverage**: For each high-overlap pair from 13a, check whether at least one agent has a "NOT for" exclusion clause referencing the other or its domain. Missing disambiguation → **medium**.
 
 **13c — Trigger phrase specificity**: For each agent, check whether the description's first clause states an exclusive domain. A vague opener → **low**.
+
+**13d — Keep / sharpen / merge-prune decision**: For every overlap pair from 13a, make an explicit roster judgment:
+
+- **keep** — both agents own distinct acceptance criteria or review surfaces
+- **sharpen** — both agents should remain, but one or both descriptions / NOT-for clauses / handoff notes need tightening
+- **merge-prune** — the pair differs mostly by tone, examples, or tool list, not by decision surface
+
+### Decision rules:
+
+- Different tools alone do not justify separate roles
+- Different examples alone do not justify separate roles
+- Distinct acceptance criteria, escalation paths, or review surfaces do justify separate roles
+- If two agents could be swapped on a realistic task with no material change in expected output, treat the pair as a **merge-prune** candidate unless another file makes the boundary explicit
+
+Every Check 13 finding must include the overlapping pair, the shared surface, the remaining distinct surface (if any), the decision (`keep`, `sharpen`, or `merge-prune`), and a concrete fix path.
 
 Fix reference: run `/calibrate routing` to verify whether description overlap translates to actual routing confusion.
 
@@ -415,6 +430,8 @@ Using model reasoning, compare the workflow body of each file against all others
 4. Flag if run fraction ≥ 0.4 (40%)
 
 Scattered similarity does **not** count — only a contiguous block triggers this check. **Severity**: **medium** — report only, never auto-fix.
+
+For agent pairs flagged here, name the canonical owner of the duplicated content. If there is no clear canonical owner because both files are effectively describing the same role, route the pair back to Check 13 as a `merge-prune` candidate instead of leaving the duplication judgement ambiguous.
 
 ______________________________________________________________________
 

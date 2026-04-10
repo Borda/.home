@@ -21,59 +21,72 @@ Run a linear configuration and workflow audit loop.
 
 1. Create run directory.
 
-```bash
-TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-OUT_DIR=".reports/codex/audit/$TS"
-mkdir -p "$OUT_DIR"
-```
+   ```bash
+   TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+   OUT_DIR=".reports/codex/audit/$TS"
+   mkdir -p "$OUT_DIR"
+   ```
 
 2. Collect inventory.
 
-```bash
-find .codex -maxdepth 4 -type f | sort >"$OUT_DIR/inventory.txt"
-```
+   ```bash
+   find .codex -maxdepth 4 -type f | sort >"$OUT_DIR/inventory.txt"
+   ```
 
 3. Run shared quality gates.
 
-```bash
-.codex/skills/_shared/run-gates.sh \
-    --out "$OUT_DIR" \
-    --lint "${LINT_CMD:-bash -lc 'if command -v ruff >/dev/null 2>&1; then ruff check .codex; else UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/codex-uv-cache} uv run --no-sync ruff check .codex; fi'}" \
-    --format "${FORMAT_CMD:-bash -lc 'if command -v ruff >/dev/null 2>&1; then ruff format --check .codex; else UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/codex-uv-cache} uv run --no-sync ruff format --check .codex; fi'}" \
-    --types "${TYPES_CMD:-true}" \
-    --tests "${TESTS_CMD:-true}" \
-    --review "${REVIEW_CMD:-git diff --check}"
-```
+   ```bash
+   .codex/skills/_shared/run-gates.sh \
+       --out "$OUT_DIR" \
+       --lint "${LINT_CMD:-bash -lc 'if command -v ruff >/dev/null 2>&1; then ruff check .codex; else UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/codex-uv-cache} uv run --no-sync ruff check .codex; fi'}" \
+       --format "${FORMAT_CMD:-bash -lc 'if command -v ruff >/dev/null 2>&1; then ruff format --check .codex; else UV_CACHE_DIR=${UV_CACHE_DIR:-/tmp/codex-uv-cache} uv run --no-sync ruff format --check .codex; fi'}" \
+       --types "${TYPES_CMD:-true}" \
+       --tests "${TESTS_CMD:-true}" \
+       --review "${REVIEW_CMD:-git diff --check}"
+   ```
 
 4. Detect drift and broken references.
 
-```bash
-rg -n "config_file|skills/|quality-gates|run-gates.sh|write-result.sh" .codex >"$OUT_DIR/reference-scan.txt"
-```
+   ```bash
+   rg -n "config_file|skills/|quality-gates|run-gates.sh|write-result.sh" .codex >"$OUT_DIR/reference-scan.txt"
+   ```
 
 5. Audit spawn-pattern coverage and overlap in `AGENTS.md` (instruction-level check).
 
-```bash
-rg -n "^### Spawn $(.+) when:" .codex/AGENTS.md >"$OUT_DIR/spawn-sections.txt"
-rg -n "Automatic spawn patterns \\(all agents\\)|Collaboration team patterns" .codex/AGENTS.md >"$OUT_DIR/spawn-policy-sections.txt"
-```
+   ```bash
+   rg -n "^### Spawn $(.+) when:" .codex/AGENTS.md >"$OUT_DIR/spawn-sections.txt"
+   rg -n "Automatic spawn patterns \\(all agents\\)|Collaboration team patterns" .codex/AGENTS.md >"$OUT_DIR/spawn-policy-sections.txt"
+   ```
 
-6. Classify findings using `../_shared/severity-map.md`.
-7. Write mandatory result artifact.
+6. Review agent-roster consistency.
 
-```bash
-.codex/skills/_shared/write-result.sh \
-    --out "$OUT_DIR/result.json" \
-    --status "$STATUS" \
-    --checks-run "lint,format,types,tests,review" \
-    --checks-failed "$CHECKS_FAILED" \
-    --critical "$CRITICAL" \
-    --high "$HIGH" \
-    --medium "$MEDIUM" \
-    --low "$LOW" \
-    --confidence "$CONFIDENCE" \
-    --artifact-path "$OUT_DIR/result.json"
-```
+   ```bash
+   rg -n "^(name|description|developer_instructions)" .codex/agents >"$OUT_DIR/agent-roster-scan.txt"
+   ```
+
+   Classify overlap findings explicitly as `keep`, `sharpen`, or `merge-prune`:
+
+   - `keep`: distinct decision surface remains
+   - `sharpen`: role stays, but boundary text should tighten
+   - `merge-prune`: role no longer owns a distinct acceptance criterion
+
+7. Classify findings using `../_shared/severity-map.md`.
+
+8. Write mandatory result artifact.
+
+   ```bash
+   .codex/skills/_shared/write-result.sh \
+       --out "$OUT_DIR/result.json" \
+       --status "$STATUS" \
+       --checks-run "lint,format,types,tests,review" \
+       --checks-failed "$CHECKS_FAILED" \
+       --critical "$CRITICAL" \
+       --high "$HIGH" \
+       --medium "$MEDIUM" \
+       --low "$LOW" \
+       --confidence "$CONFIDENCE" \
+       --artifact-path "$OUT_DIR/result.json"
+   ```
 
 ## Fail-fast Rules
 
@@ -82,7 +95,8 @@ rg -n "Automatic spawn patterns \\(all agents\\)|Collaboration team patterns" .c
 3. Broken config/skill references in critical paths => fail.
 4. Missing spawn coverage for any configured agent => fail.
 5. Unclear or overlapping spawn intent without explicit collaboration-team guidance => fail.
-6. Result artifact missing => fail.
+6. Agent overlap left without a keep/sharpen/merge-prune decision => fail.
+7. Result artifact missing => fail.
 
 ## Output Contract
 

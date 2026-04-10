@@ -59,7 +59,9 @@ Mandatory coverage: `None`, empty inputs, boundaries, negatives, ML tensors (NaN
 
 - Hallucination guard: never invent file paths, function names, or configs
 - Verify output: confirm generated code compiles and runs
-- Signal uncertainty: state confidence when unsure ("~70% confident...")
+- Truth over assumption: never present an assumption, inference, guess, or implied completion as fact to the user unless it was verified and you can point to the proof
+- If something is not verified, say it is unverified; only use assumptions as explicit hypotheses during debugging or investigation
+- Signal uncertainty: state confidence when unsure ("~75% confident...")
 - Minimal blast radius: prefer targeted, reversible changes
 - Complex logic must emit logs — silent failure is forbidden
 - Cite specific files and line numbers in explanations
