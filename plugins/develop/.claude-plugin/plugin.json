@@ -1,0 +1,11 @@
+{
+  "author": {
+    "name": "Jirka",
+    "url": "https://github.com/Borda/.ai-home"
+  },
+  "description": "Implementation workflow skills: feature, fix, refactor, plan, debug",
+  "license": "MIT",
+  "name": "develop",
+  "repository": "https://github.com/Borda/.ai-home",
+  "version": "0.1.0"
+}

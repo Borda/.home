@@ -1,0 +1,11 @@
+{
+  "author": {
+    "name": "Jirka",
+    "url": "https://github.com/Borda/.ai-home"
+  },
+  "description": "ML/perf investigation skills: topic, plan, judge, run, sweep",
+  "license": "MIT",
+  "name": "research",
+  "repository": "https://github.com/Borda/.ai-home",
+  "version": "0.1.0"
+}

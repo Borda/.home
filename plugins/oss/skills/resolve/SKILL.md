@@ -579,8 +579,6 @@ Mark the task `completed`, then print:
 
 **Next**:
 - `gh pr merge <PR#> --merge` to merge now (preserves all commits)
-- `gh pr review <PR#> --approve` to approve first
-- Reply to any `[question]` items with the rationale before merging if the reviewer is external
 
 ## Confidence
 **Score**: [0.N]
@@ -706,7 +704,7 @@ Mark the task `completed`, then print:
 - **Never rebase** — all conflict resolution uses `git merge`; rebase rewrites commit SHAs and breaks cherry-pick / revert; Step 5 uses `git merge --continue --no-edit` to complete a merge after conflict resolution
 - **Contribution motivation before code** — Step 3a must happen before any file is read or edited; it provides the "whose intent wins" lens for conflict decisions; reading the PR body and linked issues often reveals design constraints that are invisible from git diff alone
 - **Separate commits per action item** — each `[req]` and `[suggest]` item must produce exactly one atomic commit; the `[resolve #N]` tag in the message lets `git log --grep='resolve #3'` find the exact commit for any action item; this makes the history reviewable, the diff bisectable, and each change independently revertable; an empty commit is never created when Codex makes no changes
-- **`[question]` items** — answer first (in a PR comment or inline reasoning), then reclassify before implementing; never silently implement a response to an unanswered question
+- **`[question]` items** — answer inline in the resolve report only (never post to the PR); then reclassify before implementing; never silently implement a response to an unanswered question
 - **Case A (already MERGING)** — if a prior `git merge origin/$BASE_REF` left markers, the skill skips Steps 5 detection and 6 context-distill, jumps directly to Step 7a (resolve per file), uses the existing markers; no new merge is started
 - **Push verification** — always confirm via `gh pr view --json commits` that new commits appear on GitHub before reporting success; exit code 0 from `git push` is necessary but not sufficient (branch protection rules can silently reject)
 - **`gh pr merge` flags**: `--merge` preserves all commits and history; `--squash` collapses to one (loses individual action-item commits); never suggest `--rebase` (rewrites SHAs); default recommendation is `--merge` unless project convention says otherwise
@@ -719,8 +717,8 @@ Mark the task `completed`, then print:
 - **Sources block**: always printed after mode resolution and before any GitHub API calls — gives the user a clear "abort if wrong source" moment with zero cost.
 - **Step 7 delegation** — Step 7 delegates per-file conflict edits to `sw-engineer`; resolve owns workflow orchestration and context (conflict list, motivation, merge-base log, diff stat); sw-engineer owns code-level semantic resolution (Read → Edit → stage); resolve retains the conflict report block and the `git merge --continue` call.
 - Follow-up chains:
-  - After push → `gh pr review <PR#> --approve` if satisfied; for substantial maintainer changes, comment on the PR explaining what was done and why — don't silently push to a contributor's fork
-  - For `[question]` items left unanswered → post a PR comment with the rationale before merging; gives the contributor context and closes the thread
+  - After push → never approve or comment on the PR; the maintainer reviews the pushed commits and clicks Merge on GitHub
+  - For `[question]` items left unanswered → record rationale in the resolve report only; do NOT post to the PR
   - After merge → linked issues close automatically when the PR is merged, provided the PR body contains `Closes #<issue#>` or `Fixes #<issue#>`; if `CLOSING_ISSUES` were found in Step 3b but the PR body lacks those keywords, add them to the PR description: `gh pr edit <PR#> --body "$(gh pr view <PR#> --json body -q .body)\n\nCloses #<issue#>"`
 
 </notes>

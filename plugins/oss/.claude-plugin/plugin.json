@@ -1,0 +1,11 @@
+{
+  "author": {
+    "name": "Jirka",
+    "url": "https://github.com/Borda/.ai-home"
+  },
+  "description": "OSS maintenance skills: analyse, resolve, review, release",
+  "license": "MIT",
+  "name": "oss",
+  "repository": "https://github.com/Borda/.ai-home",
+  "version": "0.1.0"
+}
