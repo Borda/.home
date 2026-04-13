@@ -112,8 +112,8 @@ Used by `/optimize run --colab` for GPU workloads via Google Colab. See the `/op
 | ---------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **sw-engineer**        | Architecture and implementation               | SOLID principles, type safety, clean architecture, doctest-driven dev                                            |
 | **solution-architect** | System design and API planning                | ADRs, interface specs, migration plans, coupling analysis, API surface audit                                     |
-| **oss-shepherd**       | Project lifecycle management                  | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
-| **ai-researcher**      | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
+| **shepherd**           | Project lifecycle management                  | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
+| **researcher**         | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
 | **qa-specialist**      | Testing and validation                        | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns; auto-includes OWASP Top 10 in teams      |
 | **linting-expert**     | Code quality and static analysis              | ruff, mypy, pre-commit, rule selection strategy, CI quality gates; runs autonomously (`permissionMode: dontAsk`) |
 | **perf-optimizer**     | Performance engineering                       | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision                                       |
@@ -133,10 +133,10 @@ Key relationships:
 - `qa-specialist` is often parallel to `sw-engineer` (reviews) or downstream (validates implementation)
 - `doc-scribe` is always downstream — documents finalized code; never shapes design
 - `self-mentor` is orthogonal — audits config files, not user code; spawned by `/distill`, `/audit`, `/brainstorm`
-- `web-explorer` feeds `ai-researcher` — fetches current docs/papers; researcher interprets and designs experiments
-- `oss-shepherd` is the external interface — PR replies, releases, contributor communication; no code implementation
+- `web-explorer` feeds `scientist` — fetches current docs/papers; researcher interprets and designs experiments
+- `shepherd` is the external interface — PR replies, releases, contributor communication; no code implementation
 
-**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `ai-researcher`, `solution-architect`, `oss-shepherd`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (`opusplan` = plan-gated Opus — uses Opus-level reasoning when plan mode is active, defaulting to a lighter model for simple turns; pays for reasoning only when the task warrants it).
+**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `scientist`, `solution-architect`, `shepherd`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (`opusplan` = plan-gated Opus — uses Opus-level reasoning when plan mode is active, defaulting to a lighter model for simple turns; pays for reasoning only when the task warrants it).
 
 ## ⚡ Skills
 
@@ -172,7 +172,7 @@ Tier 1: Codex pre-pass (independent diff review, ~60s)
 Tier 2: 6 parallel agents — sw-engineer, qa-specialist, perf-optimizer,
         doc-scribe, solution-architect, linting-expert
 → consolidator reads all findings → final report
-→ oss-shepherd writes --reply output (if flag present)
+→ shepherd writes --reply output (if flag present)
 ```
 
 **`/develop feature`** — sequential with inner loops:
@@ -212,9 +212,9 @@ Quality stack: linting-expert → qa-specialist → Codex pre-pass
 **`/research`** — research-first:
 
 ```
-web-explorer (fetch current papers/docs) → ai-researcher (deep analysis, writes to file)
+web-explorer (fetch current papers/docs) → researcher (deep analysis, writes to file)
 → consolidator reads findings → implementation plan
-(--team: multiple ai-researcher instances on competing method families)
+(--team: multiple researcher instances on competing method families)
 ```
 
 **`/brainstorm`** — conversational spec, then task breakdown:
@@ -538,7 +538,7 @@ Agent Teams is Claude Code's experimental multi-agent feature. Teams are always 
 | `/optimize`               | Directory or system-wide scope → Claude proposes team (heuristic)         |
 | `/develop refactor`       | Directory or system-wide scope → Claude proposes team (heuristic)         |
 
-**Model tiering:** Lead uses `opusplan`/`opus`. Deep reasoning teammates (`sw-engineer`, `qa-specialist`, `ai-researcher`, `perf-optimizer`) use `opus`. Execution teammates (`doc-scribe`, `linting-expert`, `ci-guardian`) use `sonnet`. Keep teams to 3–5 teammates (~7× token cost vs single session).
+**Model tiering:** Lead uses `opusplan`/`opus`. Deep reasoning teammates (`sw-engineer`, `qa-specialist`, `scientist`, `perf-optimizer`) use `opus`. Execution teammates (`doc-scribe`, `linting-expert`, `ci-guardian`) use `sonnet`. Keep teams to 3–5 teammates (~7× token cost vs single session).
 
 **Communication protocol:** Inter-agent messages use AgentSpeak v2 (defined in `TEAM_PROTOCOL.md`) — ~60% token savings vs natural language. Status codes (`alpha`/`beta`/`gamma`/`delta`/`epsilon`/`omega`), action symbols (`+`/`-`/`~`/`!`), file locking (`+lock`/`-lock`), and priority prefixes (`!!` urgent, `..` FYI). Lead-to-human communication uses normal English.
 

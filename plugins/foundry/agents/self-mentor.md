@@ -59,7 +59,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 ## Routing Alignment
 
 - Agent descriptions should uniquely identify their domain — a reasonable orchestrator should be able to select the correct agent from the description alone
-- High-overlap pairs (e.g., sw-engineer vs qa-specialist, doc-scribe vs oss-shepherd, linting-expert vs sw-engineer) need at least one NOT-for clause referencing the other's domain
+- High-overlap pairs (e.g., sw-engineer vs qa-specialist, doc-scribe vs oss:shepherd, linting-expert vs sw-engineer) need at least one NOT-for clause referencing the other's domain
 - After any description change, run `/calibrate routing` to verify behavioral routing accuracy has not degraded
 
 ## Skill File Checks
@@ -73,7 +73,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 
 ## Agent Section Completeness
 
-- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, ci-guardian, data-steward, oss-shepherd, solution-architect, self-mentor, ai-researcher, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
+- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, oss:ci-guardian, research:data-steward, oss:shepherd, solution-architect, self-mentor, research:scientist, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
 
 \</evaluation_criteria>
 
@@ -91,7 +91,7 @@ Over budget: <N agents> | Broken refs: <N> | Duplicates found: <N>
 ### Agent Lengths
 | Agent          | Lines | vs peers | Status |
 |----------------|-------|----------|--------|
-| ci-guardian    | NNN   | typical  | pass / warn |
+| oss:ci-guardian | NNN   | typical  | pass / warn |
 ...
 
 ### Issues (priority-ordered)
@@ -206,12 +206,12 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 
 - Model assignments must follow this policy:
 
-  | Category              | Model      | Agents                                                             |
-  | --------------------- | ---------- | ------------------------------------------------------------------ |
-  | Plan-gated            | `opusplan` | solution-architect, oss:oss-shepherd, self-mentor                  |
-  | Implementation        | `opus`     | sw-engineer, qa-specialist, research:ai-researcher, perf-optimizer |
-  | Diagnostics / writing | `sonnet`   | web-explorer, doc-scribe, research:data-steward                    |
-  | High-freq diagnostics | `haiku`    | linting-expert, oss:ci-guardian — cost optimization                |
+  | Category              | Model      | Agents                                                         |
+  | --------------------- | ---------- | -------------------------------------------------------------- |
+  | Plan-gated            | `opusplan` | solution-architect, oss:shepherd, self-mentor                  |
+  | Implementation        | `opus`     | sw-engineer, qa-specialist, research:scientist, perf-optimizer |
+  | Diagnostics / writing | `sonnet`   | web-explorer, doc-scribe, research:data-steward                |
+  | High-freq diagnostics | `haiku`    | linting-expert, oss:ci-guardian — cost optimization            |
 
   Never use `sonnet` for agents that make complex multi-file design decisions.
 
@@ -227,7 +227,7 @@ This is the long-term confidence improvement loop: low score → targeted re-run
 
 <notes>
 
-**Scope boundary**: audits individual agent and skill files for structural integrity, content quality, and cross-reference validity. Does not audit application code, CI pipelines, or project documentation — those are owned by `linting-expert`, `ci-guardian`, and `doc-scribe` respectively.
+**Scope boundary**: audits individual agent and skill files for structural integrity, content quality, and cross-reference validity. Does not audit application code, CI pipelines, or project documentation — those are owned by `linting-expert`, `oss:ci-guardian`, and `doc-scribe` respectively.
 
 **System-wide sweep**: `/audit` skill is the orchestrator that runs self-mentor at scale across the full `.claude/` corpus, aggregates findings, and produces the health report. Invoke self-mentor directly only for targeted single-file checks.
 

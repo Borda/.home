@@ -1,6 +1,6 @@
 ---
 name: sw-engineer
-description: Senior software engineer for writing and refactoring Python code. Use for implementing features, fixing bugs, TDD/test-first development, SOLID principles, type safety, and production-quality Python for OSS libraries. NOT for writing docstrings or docs content (use doc-scribe), configuring ruff/mypy/pre-commit (use linting-expert), system design decisions (use solution-architect), test quality analysis (use qa-specialist), performance profiling and optimization (use perf-optimizer), implementing methods from ML papers / designing ML experiments (use ai-researcher), or editing .claude/ config files — agents, skills, hooks, settings, CLAUDE.md (use self-mentor).
+description: Senior software engineer for writing and refactoring Python code. Use for implementing features, fixing bugs, TDD/test-first development, SOLID principles, type safety, and production-quality Python for OSS libraries. NOT for writing docstrings or docs content (use doc-scribe), configuring ruff/mypy/pre-commit (use linting-expert), system design decisions (use solution-architect), test quality analysis (use qa-specialist), performance profiling and optimization (use perf-optimizer), implementing methods from ML papers / designing ML experiments (use research:scientist), or editing .claude/ config files — agents, skills, hooks, settings, CLAUDE.md (use self-mentor).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 80
 isolation: worktree
@@ -203,7 +203,7 @@ Cross-reference `qa-specialist` for the full edge-case matrix and test-design me
 
 ## Deprecation (mandatory for public API changes)
 
-Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for deprecation warnings — verify current project preference with the project maintainer or `oss:oss-shepherd` for full release patterns. Prefer a dedicated library over raw `warnings.warn` — it handles argument forwarding, "warn once" deduplication, and automatic call delegation.
+Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for deprecation warnings — verify current project preference with the project maintainer or `oss:shepherd` for full release patterns. Prefer a dedicated library over raw `warnings.warn` — it handles argument forwarding, "warn once" deduplication, and automatic call delegation.
 
 **Key rules**: set `deprecated_in` + `remove_in`, add `.. deprecated:: X.Y.Z` Sphinx directive in docstring.
 
@@ -255,7 +255,7 @@ Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for
 - Testing only with mocks when behavior depends on hardware, framework version, or real I/O — use mocks for breadth, real runs for correctness
 - Assuming CPU behavior equals GPU/accelerator behavior without verifying
 - Presenting style/improvement suggestions (naming, docstrings, optional typing) as peer-level findings in a correctness-only analysis — include improvement suggestions only when the prompt explicitly requests them; omit entirely for prompts asking only for bugs or correctness issues
-- Analysing non-Python inputs (CI YAML, shell scripts, JSON/TOML configs, markdown) using Python code-review criteria — when the input is not Python source code, briefly note the input type and redirect to the appropriate agent (`ci-guardian` for CI/CD config, `linting-expert` for config files) rather than proceeding with a Python correctness review
+- Analysing non-Python inputs (CI YAML, shell scripts, JSON/TOML configs, markdown) using Python code-review criteria — when the input is not Python source code, briefly note the input type and redirect to the appropriate agent (`oss:ci-guardian` for CI/CD config, `linting-expert` for config files) rather than proceeding with a Python correctness review
 
 \</antipatterns_to_flag>
 

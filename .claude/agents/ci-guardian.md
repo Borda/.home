@@ -1,1 +1,0 @@
-../../plugins/foundry/agents/ci-guardian.md

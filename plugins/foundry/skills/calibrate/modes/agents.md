@@ -14,10 +14,10 @@ Problem domain by agent:
 - `perf-optimizer` → perf issues: unnecessary loops, repeated computation, wrong dtype, missing vectorisation
 - `oss:ci-guardian` → Continuous Integration (CI) issues: non-pinned action Secure Hash Algorithms (SHAs), missing cache, inefficient matrix
 - `research:data-steward` → data issues: label leakage, split contamination, augmentation order bugs, API pagination truncation, dataset completeness, provenance gaps
-- `research:ai-researcher` → paper analysis: missed contributions, wrong method attribution
+- `research:scientist` → paper analysis: missed contributions, wrong method attribution
 - `solution-architect` → design issues: leaky abstractions, circular dependencies, missing Architecture Decision Record (ADR), backward-compat violations without deprecation path
 - `web-explorer` → content quality: broken or unverified Uniform Resource Locators (URLs), outdated docs, incomplete extraction from fetched pages
-- `oss:oss-shepherd` → Open Source Software (OSS) governance: incorrect Semantic Versioning (SemVer) decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
+- `oss:shepherd` → Open Source Software (OSS) governance: incorrect Semantic Versioning (SemVer) decision, missing CHANGELOG entry, bad deprecation path, wrong release checklist item
 
 All agents support the `ceiling` difficulty tier. Ceiling patterns particularly applicable by domain: `sw-engineer` → adversarial (idiomatic-looking but subtly wrong code), concurrency bugs; `qa-specialist` → incomplete detectability (coverage gaps only visible at runtime); `perf-optimizer` → deep cross-function control flow; `research:data-steward` → adversarial (split contamination disguised as correct preprocessing); `solution-architect` → deep dependency tracing. For agents where ceiling is infeasible (e.g., `linting-expert` — violations are always statically detectable), generators may substitute a hard problem.
 

@@ -42,7 +42,7 @@ Sets `statusLine`, merges `permissions.allow`, and enables `codex@openai-codex` 
 
 | Component  | What it is                                                              |
 | ---------- | ----------------------------------------------------------------------- |
-| **Agents** | 12 specialist roles (sw-engineer, qa-specialist, oss-shepherd, …)       |
+| **Agents** | 12 specialist roles (sw-engineer, qa-specialist, shepherd, …)           |
 | **Skills** | 15+ slash-command workflows (/develop, /review, /release, /audit, …)    |
 | **Hooks**  | Task tracking, teammate quality gates, lint-on-save, tool preprocessing |
 

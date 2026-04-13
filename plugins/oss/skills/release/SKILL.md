@@ -168,7 +168,7 @@ After applying the guidelines above to polish the output, write to disk per mode
 
 ## Step 6: Publish (after writing notes)
 
-**Human gate** — stop here and hand off to the user: the GitHub release must be created with project-level tooling (e.g. `gh release create`). Refer to the project's CLAUDE.md or `oss-shepherd` agent (see `<release_workflow>` section) for the exact command.
+**Human gate** — stop here and hand off to the user: the GitHub release must be created with project-level tooling (e.g. `gh release create`). Refer to the project's CLAUDE.md or `shepherd` agent (see `<release_workflow>` section) for the exact command.
 
 ## Mode: prepare
 
@@ -261,7 +261,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 
 - Filter noise (CI config, dep bumps, typos) unless they are user-impacting
 - **Public-facing content policy**: release notes, changelogs, and migration guides must contain only user-visible changes, fixes, and improvements. Never include: internal staff names, internal maintenance details, internal refactors, CI/tooling-only changes, internal-only dependency bumps, code cleanup, or developer-facing housekeeping with no user-visible impact.
-- Public-facing output (release notes, changelogs, migration guides) is co-authored with `oss-shepherd` — follow its `<voice>` guidelines for human, direct tone
+- Public-facing output (release notes, changelogs, migration guides) is co-authored with `shepherd` — follow its `<voice>` guidelines for human, direct tone
 - Follow-up chains:
   - Readiness check → `/release prepare <version>` runs a built-in audit first; use standalone `/release audit [version]` only when you want a readiness check without cutting the release
   - Release includes breaking changes → `/analyse` for downstream ecosystem impact assessment

@@ -20,16 +20,16 @@ Every `--researcher` run writes to `.experiments/<run-id>/`:
 
 One JSON object per line. Field groups are written by separate agents in two passes:
 
-**Pass 1 — ai-researcher (oracle):**
+**Pass 1 — researcher (oracle):**
 
-| Field            | Type    | Description                                                                                                                       |
-| ---------------- | ------- | --------------------------------------------------------------------------------------------------------------------------------- |
-| `hypothesis`     | `str`   | What to test — concrete, implementable change                                                                                     |
-| `rationale`      | `str`   | Literature or experiment grounding for the hypothesis                                                                             |
-| `confidence`     | `float` | Oracle confidence [0–1]; entries < 0.7 are deprioritized to end of queue                                                          |
-| `expected_delta` | `str`   | Expected metric change (e.g. `"+1–3% val_loss"`)                                                                                  |
-| `priority`       | `int`   | Execution order (1 = highest); journal-sourced entries use lower values than oracle entries                                       |
-| `source`         | `str`   | `"oracle"` for ai-researcher entries; `"journal"` for journal-sourced entries; `"team"` for team-mode hypothesis agents (Phase A) |
+| Field            | Type    | Description                                                                                                                    |
+| ---------------- | ------- | ------------------------------------------------------------------------------------------------------------------------------ |
+| `hypothesis`     | `str`   | What to test — concrete, implementable change                                                                                  |
+| `rationale`      | `str`   | Literature or experiment grounding for the hypothesis                                                                          |
+| `confidence`     | `float` | Oracle confidence [0–1]; entries < 0.7 are deprioritized to end of queue                                                       |
+| `expected_delta` | `str`   | Expected metric change (e.g. `"+1–3% val_loss"`)                                                                               |
+| `priority`       | `int`   | Execution order (1 = highest); journal-sourced entries use lower values than oracle entries                                    |
+| `source`         | `str`   | `"oracle"` for researcher entries; `"journal"` for journal-sourced entries; `"team"` for team-mode hypothesis agents (Phase A) |
 
 **Pass 2 — solution-architect (feasibility filter):** annotates in place, preserving order
 
@@ -140,7 +140,7 @@ For `source: "team"` entries, `axis`, `agent_type`, and `change_scope` are **req
 | Field          | Type  | Description                                                                                                                                                |
 | -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `axis`         | `str` | The optimization axis the hypothesis belongs to (e.g., `"model architecture"`)                                                                             |
-| `agent_type`   | `str` | Specialist agent type to use for implementation (e.g., `"perf-optimizer"`, `"ai-researcher"`)                                                              |
+| `agent_type`   | `str` | Specialist agent type to use for implementation (e.g., `"perf-optimizer"`, `"researcher"`)                                                                 |
 | `change_scope` | `str` | Estimated blast radius: `"small"` (1–2 files), `"medium"` (3–5 files), `"large"` (6+ files or architectural) (primary Phase B sort key — small runs first) |
 
 **Backfill rule** (for R0 `--researcher`/`--architect` entries merged into a team queue): see Phase A Step 5 in `.claude/skills/optimize/modes/team.md` for the full backfill logic.

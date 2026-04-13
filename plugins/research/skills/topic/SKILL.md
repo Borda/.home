@@ -1,6 +1,6 @@
 ---
 name: topic
-description: Research State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, recommends the best implementation strategy for the current codebase, and optionally produces a phased implementation plan mapped to the codebase. Delegates deep analysis to the ai-researcher agent and codebase mapping to solution-architect.
+description: Research State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, recommends the best implementation strategy for the current codebase, and optionally produces a phased implementation plan mapped to the codebase. Delegates deep analysis to the researcher agent and codebase mapping to solution-architect.
 argument-hint: <topic> [--team]
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch, TaskCreate, TaskUpdate
 context: fork
@@ -10,9 +10,9 @@ model: opus
 
 <objective>
 
-Research the literature on an AI/ML topic and return actionable findings: what SOTA methods exist, which fits best for the current use case, and a concrete implementation plan. This skill is an orchestrator — it gathers codebase context, delegates literature search and analysis to the ai-researcher agent, and packages results into a structured report.
+Research the literature on an AI/ML topic and return actionable findings: what SOTA methods exist, which fits best for the current use case, and a concrete implementation plan. This skill is an orchestrator — it gathers codebase context, delegates literature search and analysis to the researcher agent, and packages results into a structured report.
 
-This skill is NOT for deep single-paper analysis or experiment design — use the `ai-researcher` agent directly for hypothesis generation, ablation design, and experiment validation.
+This skill is NOT for deep single-paper analysis or experiment design — use the `scientist` agent directly for hypothesis generation, ablation design, and experiment validation.
 
 </objective>
 
@@ -22,12 +22,12 @@ This skill is NOT for deep single-paper analysis or experiment design — use th
   - `<topic>` — topic, method name, or problem description (e.g. "object detection for small objects", "efficient transformers", "self-supervised pretraining for medical images")
   - `plan` — produce a phased implementation plan from the most recent research output (auto-detected from `.temp/`)
   - `plan <path-to-output.md>` — produce a plan from a specific existing research output file
-  - `--team` — multi-agent mode; spawns 2–3 ai-researcher teammates for topics with 3+ competing method families and no SOTA consensus; ~7× token cost vs single-agent mode
+  - `--team` — multi-agent mode; spawns 2–3 researcher teammates for topics with 3+ competing method families and no SOTA consensus; ~7× token cost vs single-agent mode
 
 </inputs>
 
 <constants>
-HARD_CUTOFF: 900   # 15 min — if ai-researcher does not return, surface partial results from .temp/
+HARD_CUTOFF: 900   # 15 min — if researcher does not return, surface partial results from .temp/
 # Agent calls are synchronous — timeout is handled by Claude Code's native call timeout; no manual extension possible.
 # Deviation from §8: Agent tool is synchronous; no file-activity poll available; timeout enforced by HARD_CUTOFF only
 </constants>
@@ -40,7 +40,7 @@ HARD_CUTOFF: 900   # 15 min — if ai-researcher does not return, surface partia
 - status `deleted` if orphaned / no longer relevant
 - keep `in_progress` only if genuinely continuing
 
-**Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase — paper collection, ai-researcher analysis, and report generation. Mark in_progress/completed throughout.
+**Task tracking**: per CLAUDE.md, create tasks (TaskCreate) for each major phase — paper collection, researcher analysis, and report generation. Mark in_progress/completed throughout.
 
 ## Step 1: Understand the codebase context
 
@@ -52,9 +52,9 @@ Before searching, read the current project to extract constraints:
 
 ## Step 2: Research & codebase check (run in parallel)
 
-### 2a: Spawn ai-researcher agent (issue with 2b simultaneously in one response)
+### 2a: Spawn researcher agent (issue with 2b simultaneously in one response)
 
-Task the ai-researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
+Task the researcher with a single objective: find the top 5 papers for `$ARGUMENTS`, produce a comparison table (method, key idea, benchmark results, compute, code availability), and recommend the single best method given the codebase constraints in Step 1 — with a brief implementation plan. The agent's own workflow handles the research and experiment design details.
 
 Use this prompt scaffold (adapt the constraints from Step 1):
 
@@ -76,9 +76,9 @@ Then return ONLY a compact JSON envelope on your final line — nothing else aft
 {"status":"done","papers":N,"recommendation":"<method name>","file":".temp/output-research-agent-$BRANCH-$DATE.md","confidence":0.N}
 ```
 
-**Health monitoring** — the Agent tool is synchronous; Claude awaits the ai-researcher response natively (no Bash checkpoint available in this skill). If ai-researcher does not return within `$HARD_CUTOFF` seconds (~15 min), use the Read tool to surface any partial results already written to `.temp/` and continue with what was found; mark timed-out agents with ⏱ in the report. # Agent calls are synchronous — timeout is handled by Claude Code's native call timeout; no manual extension possible.
+**Health monitoring** — the Agent tool is synchronous; Claude awaits the researcher response natively (no Bash checkpoint available in this skill). If researcher does not return within `$HARD_CUTOFF` seconds (~15 min), use the Read tool to surface any partial results already written to `.temp/` and continue with what was found; mark timed-out agents with ⏱ in the report. # Agent calls are synchronous — timeout is handled by Claude Code's native call timeout; no manual extension possible.
 
-**If the Agent tool is unavailable** (running as a subagent where nested agent spawning is blocked), skip the Agent call and conduct the research inline: use WebSearch and WebFetch to find the top 5 papers, then synthesize the comparison table yourself. Notify the user: "Note: ai-researcher agent could not be spawned in this context — conducting research inline."
+**If the Agent tool is unavailable** (running as a subagent where nested agent spawning is blocked), skip the Agent call and conduct the research inline: use WebSearch and WebFetch to find the top 5 papers, then synthesize the comparison table yourself. Notify the user: "Note: researcher agent could not be spawned in this context — conducting research inline."
 
 ### 2b: Check for existing implementations (main context)
 
@@ -129,7 +129,7 @@ Use the Grep tool to search the codebase for any existing related code:
 <!-- One row per spawned agent; team mode: 2–3 rows -->
 | Agent | Score | Gaps |
 |---|---|---|
-| ai-researcher | [score] | [gaps] |
+| researcher | [score] | [gaps] |
 ```
 
 Write the full report to `.temp/output-research-$BRANCH-$DATE.md` using the Write tool — **do not print the full report to terminal**.
@@ -154,12 +154,12 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 
 Use when the topic warrants exploring multiple competing method families with adversarial cross-evaluation.
 
-When to trigger: 3+ distinct method families exist for the topic AND the field has no clear leading method (benchmark spread \<5% between top methods, or no SOTA consensus in the past 12 months). Skip for topics with a clear dominant approach — the default single ai-researcher is sufficient.
+When to trigger: 3+ distinct method families exist for the topic AND the field has no clear leading method (benchmark spread \<5% between top methods, or no SOTA consensus in the past 12 months). Skip for topics with a clear dominant approach — the default single researcher is sufficient.
 
 **Workflow with team:**
 
 1. Lead completes Step 1 (codebase context) as normal
-2. Spawn 2–3 **ai-researcher** teammates, each assigned a distinct method cluster
+2. Spawn 2–3 **researcher** teammates, each assigned a distinct method cluster
 3. Broadcast constraints to all: `broadcast {topic: <topic>, constraints: <framework/compute/dataset from Step 1>}`
 4. Each teammate researches independently, reports with `deltaT# HOOK:verify` (AgentSpeak v2 completion signal — see TEAM_PROTOCOL.md) and a compressed comparison table
 5. Lead routes key findings from one researcher to others for cross-challenge: `@AR2: AR1 found [finding] — does it hold under [condition]?`
@@ -171,7 +171,7 @@ When to trigger: 3+ distinct method families exist for the topic AND the field h
 
 ```
 # Substitute pre-computed values — do not pass raw $(date) expressions into spawn prompts
-You are an ai-researcher teammate researching: [topic].
+You are an researcher teammate researching: [topic].
 Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your cluster: [method family N] (e.g., "attention-free architectures" vs "linear attention variants").
 Research the top 3 methods in your cluster: comparison table + recommendation given constraints.
@@ -181,7 +181,7 @@ Compact Instructions: preserve paper titles, benchmarks, code links. Discard pro
 Task tracking: call TaskUpdate(in_progress) when you start your assigned task; call TaskUpdate(completed) when done, before sending your delta message.
 ```
 
-Lead synthesizes by reading teammate file paths from their delta messages. For 3 teammates, spawn a consolidator ai-researcher agent: "Read the research files at [paths from deltas]. Synthesize into the Step 3 unified report structure. Write to `.temp/output-research-$BRANCH-<date>.md`. Return ONLY: `papers=N best_method=<name> confidence=0.N file=<path>`"
+Lead synthesizes by reading teammate file paths from their delta messages. For 3 teammates, spawn a consolidator researcher agent: "Read the research files at [paths from deltas]. Synthesize into the Step 3 unified report structure. Write to `.temp/output-research-$BRANCH-<date>.md`. Return ONLY: `papers=N best_method=<name> confidence=0.N file=<path>`"
 
 ## Plan Mode
 
@@ -281,7 +281,7 @@ Confidence:  [score] — [key gaps]
 
 <notes>
 
-- This skill orchestrates — it gathers context and delegates research to `ai-researcher` and codebase mapping to `solution-architect` (plan mode). For direct hypothesis/experiment work, use the `ai-researcher` agent directly.
+- This skill orchestrates — it gathers context and delegates research to `scientist` and codebase mapping to `solution-architect` (plan mode). For direct hypothesis/experiment work, use the `scientist` agent directly.
 - **Team Mode dependency**: `--team` mode requires `.claude/TEAM_PROTOCOL.md` to exist — each teammate spawn prompt includes `Read .claude/TEAM_PROTOCOL.md and use AgentSpeak v2`; verify the file is present before launching team mode.
 - **Link integrity**: All URLs cited in the research report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
 - Follow-up chains:

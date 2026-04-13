@@ -222,14 +222,14 @@ ______________________________________________________________________
 | `WebFetch(domain:anthropic.com)`             | Anthropic blog, model cards, policy docs | Research model capabilities, fetch release announcements                                     |
 | `WebFetch(domain:docs.anthropic.com)`        | Claude Code documentation                | Fetch Claude Code docs; redirects to code.claude.com — both domains needed for full coverage |
 | `WebFetch(domain:code.claude.com)`           | Claude Code documentation                | `/audit` fetches hook, agent, and skill schemas for validation                               |
-| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/research` and `ai-researcher` fetch papers                                                 |
+| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/research` and `scientist` fetch papers                                                     |
 | `WebFetch(domain:developers.openai.com)`     | OpenAI developer documentation           | Codex CLI docs, API reference                                                                |
 | `WebFetch(domain:platform.openai.com)`       | OpenAI platform and API reference        | Model capabilities, pricing, endpoint docs                                                   |
 | `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                                                     |
 | `WebFetch(domain:www.anthropic.com)`         | Anthropic main site                      | Research blog posts, model announcements, policy pages                                       |
 | `WebFetch(domain:support.claude.com)`        | Anthropic support and help centre        | Lookup Claude feature behaviour, plan limits, billing FAQs                                   |
 | `WebFetch(domain:hr.linkedin.com)`           | LinkedIn profile pages                   | `release-notes.md` contributor lookup: confirm a contributor's real name via their profile   |
-| `WebFetch(domain:scholar.google.com)`        | Google Scholar academic search           | `ai-researcher` and `/research` find papers and citation counts                              |
+| `WebFetch(domain:scholar.google.com)`        | Google Scholar academic search           | `scientist` and `/research` find papers and citation counts                                  |
 
 ______________________________________________________________________
 

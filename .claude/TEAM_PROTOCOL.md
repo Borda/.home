@@ -66,11 +66,11 @@ Status code is always first. Task ID (`T#`) always precedes file shortcode.
 | Code | Agent              | Code | Agent          |
 | ---- | ------------------ | ---- | -------------- |
 | `SW` | sw-engineer        | `PO` | perf-optimizer |
-| `SA` | solution-architect | `AR` | ai-researcher  |
+| `SA` | solution-architect | `AR` | researcher     |
 | `QA` | qa-specialist      | `DS` | doc-scribe     |
 | `LE` | linting-expert     | `CG` | ci-guardian    |
 | `DT` | data-steward       | `WE` | web-explorer   |
-| `OM` | oss-shepherd       | `SM` | self-mentor    |
+| `OM` | shepherd           | `SM` | self-mentor    |
 
 ## Project File Shortcodes (`.claude/` config)
 

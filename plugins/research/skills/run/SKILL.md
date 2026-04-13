@@ -29,7 +29,7 @@ STATE_DIR:                  .experiments/<run-id>/      (timestamped dir per run
 | `auto`           | heuristic                | Default — infer from metric_cmd keywords     |
 | `perf`           | `foundry:perf-optimizer` | latency, throughput, memory, GPU utilization |
 | `code`           | `sw-engineer`            | coverage, complexity, lines, coupling        |
-| `ml`             | `ai-researcher`          | accuracy, loss, F1, AUC, BLEU                |
+| `ml`             | `scientist`              | accuracy, loss, F1, AUC, BLEU                |
 | `arch`           | `solution-architect`     | coupling, cohesion, modularity metrics       |
 
 > note: solution-architect uses opusplan tier — higher cost per ideation call
@@ -38,7 +38,7 @@ STATE_DIR:                  .experiments/<run-id>/      (timestamped dir per run
 
 - contains `pytest`, `coverage`, `complexity` → `code` → `sw-engineer`
 - contains `time`, `latency`, `bench`, `throughput`, `memory` → `perf` → `foundry:perf-optimizer`
-- contains `accuracy`, `loss`, `f1`, `auc`, `train`, `val`, `eval` → `ml` → `ai-researcher`
+- contains `accuracy`, `loss`, `f1`, `auc`, `train`, `val`, `eval` → `ml` → `scientist`
 - no keyword match → `perf` (default fallback)
 
 **Stuck escalation sequence** (at STUCK_THRESHOLD consecutive discards):
@@ -63,10 +63,10 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
 1. **Build hypothesis queue** — if `--hypothesis <path>` is provided, read that file as the pre-built queue (skip oracle phase). Otherwise, spawn oracle agents based on active flags — agents run in parallel if both flags are set:
 
-   **If `--researcher` is set** — spawn `ai-researcher` (`maxTurns: 15`):
+   **If `--researcher` is set** — spawn `scientist` (`maxTurns: 15`):
 
    ```
-   Read the program file and the project codebase. Generate 5–10 ML experiment hypotheses grounded in SOTA literature and the specific metric goal. Write to `<RUN_DIR>/hypotheses.jsonl` — one JSON object per line, each with fields: hypothesis, rationale, confidence (float 0–1), expected_delta, priority (int, 1=highest), source: "oracle". Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-ai-researcher.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
+   Read the program file and the project codebase. Generate 5–10 ML experiment hypotheses grounded in SOTA literature and the specific metric goal. Write to `<RUN_DIR>/hypotheses.jsonl` — one JSON object per line, each with fields: hypothesis, rationale, confidence (float 0–1), expected_delta, priority (int, 1=highest), source: "oracle". Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-researcher.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
    ```
 
    **If `--architect` is set** — spawn `solution-architect` (`maxTurns: 15`) as hypothesis generator (not just feasibility annotator):
@@ -313,7 +313,7 @@ Program constraints: read `<program_file>` — especially `## Notes`, `## Config
 `{"description":"...","files_modified":[],"scripts":["explore-<i>-<slug>.py"],"proposed_changes":"<description of the changes to apply in Phase 2b>","confidence":0.N}`
 ```
 
-For `--colab` runs: the ideation agent (especially `ai-researcher`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.
+For `--colab` runs: the ideation agent (especially `scientist`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.
 
 <!-- MCP tool call — invoked via MCP protocol, not Bash; requires colab-mcp server enabled in settings.local.json -->
 
@@ -622,7 +622,7 @@ ______________________________________________________________________
 
 - Step R2 (preconditions): checks for `mcp__colab-mcp__runtime_execute_code` availability.
 - Phase 5 (verify metric): calls `mcp__colab-mcp__runtime_execute_code` with `metric_cmd` instead of local `timeout <cmd>`.
-- Phase 2 (ideate): `ai-researcher` agent can call `mcp__colab-mcp__runtime_execute_code` to prototype GPU code before committing.
+- Phase 2 (ideate): `scientist` agent can call `mcp__colab-mcp__runtime_execute_code` to prototype GPU code before committing.
 - `VERIFY_TIMEOUT_SEC` = 300 (vs 120 local) to account for network + GPU startup latency.
 
 If Colab MCP is unavailable at Step R2, print:

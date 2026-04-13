@@ -168,8 +168,8 @@ Branch into one of these modes:
 
 3. Choose model based on role complexity:
 
-   - `opusplan` — plan-gated roles (solution-architect, oss:oss-shepherd, self-mentor): long-horizon reasoning + plan mode
-   - `opus` — complex implementation roles (sw-engineer, qa-specialist, research:ai-researcher, perf-optimizer): deep reasoning without plan mode
+   - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, self-mentor): long-horizon reasoning + plan mode
+   - `opus` — complex implementation roles (sw-engineer, qa-specialist, research:scientist, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (research:data-steward, web-explorer, doc-scribe): pattern-matching, structured output
    - `haiku` — high-frequency diagnostics roles (linting-expert, oss:ci-guardian): rule-application, structured lint output
 
@@ -507,7 +507,7 @@ Use Glob (`agents/*.md`, path `.claude/`) for agents, Glob (`skills/*/`, path `.
 
 Use the Edit tool with the **absolute auto-memory path** from the conversation context to update these roster lines in MEMORY.md — they must stay in sync with disk state:
 
-- `- Agents: oss-shepherd, sw-engineer, ...` (the roster line, not the path line)
+- `- Agents: shepherd, sw-engineer, ...` (the roster line, not the path line)
 - `- Skills: review, research, ...`
 - `- Rules (N): artifact-lifecycle, ...` (update count N when rules are created or deleted)
 

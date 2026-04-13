@@ -26,6 +26,6 @@ name / description / tools / model / color (frontmatter)
 - Analysis / read-only agents (e.g., `solution-architect`, `doc-scribe`): start with `Read, Grep, Glob`; add `WebFetch`/`WebSearch` only if the domain involves fetching external docs or URLs; add `Write` only if the agent creates output files
 - Code execution agents (e.g., `linting-expert`, `perf-optimizer`, `ci-guardian`): include `Bash`; add `Write`/`Edit` only if the agent modifies code
 - Skills that orchestrate agent subagents (e.g., `review`, `feature`, `audit`): include `Agent` in `allowed-tools`
-- Web-research agents (e.g., `web-explorer`, `ai-researcher`): include `WebFetch` and/or `WebSearch`
+- Web-research agents (e.g., `web-explorer`, `scientist`): include `WebFetch` and/or `WebSearch`
 
 Remove any tool that serves no purpose for the declared domain. A minimal, precise list is safer and clearer than a maximal one.
