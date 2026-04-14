@@ -1,1 +1,0 @@
-../../plugins/foundry/hooks/lint-on-save.js

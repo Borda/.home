@@ -1,1 +1,0 @@
-../plugins/foundry/permissions-guide.md

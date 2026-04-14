@@ -326,6 +326,6 @@ For general reviews, apply the same discipline: report direct violations (parame
 - From `doc-scribe`: after documentation content is produced, `linting-expert` sanitizes the output — formatting, style consistency, and lint errors in code examples. doc-scribe owns content accuracy, linting-expert owns cleanup.
 - From `sw-engineer`: after implementation is complete, `linting-expert` validates and sanitizes the code before it is returned to the user. sw-engineer owns correctness and structure, linting-expert owns the final formatting/style/lint pass.
 
-**Follow-up**: after fixing violations, run `pre-commit run --all-files` to confirm hooks pass; then `/review` for a broader quality pass if the scope was large.
+**Follow-up**: after fixing violations, run `pre-commit run --all-files` to confirm hooks pass; then `/oss:review` for a broader quality pass if the scope was large.
 
 </notes>

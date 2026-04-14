@@ -1,1 +1,0 @@
-../../plugins/foundry/rules/foundry-config.md

@@ -10,7 +10,7 @@ effort: high
 
 Diagnose unknown failures of any kind: broken local setup, environment mismatch, tool misbehavior, hook problems, CI vs local divergence, permission errors, and runtime anomalies. Gathers signals broadly, eliminates hypotheses systematically, and reports a confirmed root cause with a recommended next skill to engage. Does NOT fix — diagnosis only.
 
-NOT for: known Python test failures with a traceback (use `/develop debug`); `.claude/` config quality sweep (use `/audit`).
+NOT for: known Python test failures with a traceback (use `/develop:debug`); `.claude/` config quality sweep (use `/audit`).
 
 </objective>
 
@@ -157,7 +157,7 @@ Stop when one hypothesis is confirmed with clear evidence, or all top-3 are rule
 **Ruled out**: <hypotheses eliminated and why>
 
 **Recommended next action**: <one of:>
-  - `/develop fix` — code regression confirmed (application code only — NOT for `.claude/` changes)
+  - `/develop:fix` — code regression confirmed (application code only — NOT for `.claude/` changes)
   - `/manage update <name> "<change directive>"` — `.claude/` agent/skill/rule content needs updating (use this, NOT `/develop`, for any proposed change to `.claude/`)
   - `/audit fix` — structural/quality issue in `.claude/` config confirmed
   - `/foundry:init link` — propagate project `.claude/` to `~/.claude/` (foundry plugin is the distribution path)
@@ -172,7 +172,7 @@ End with a `## Confidence` block per output standards.
 <notes>
 
 - **Diagnosis only** — never apply fixes in this skill; hand off cleanly with a specific recommended action
-- **Scope vs `/develop debug`**: `/develop debug` requires a known test failure and runs a TDD fix loop. `/investigate` is for "something is wrong, I don't know what" — the cause may not be in application code at all
+- **Scope vs `/develop:debug`**: `/develop:debug` requires a known test failure and runs a TDD fix loop. `/investigate` is for "something is wrong, I don't know what" — the cause may not be in application code at all
 - **Scope vs `/audit`**: `/audit` is a scheduled quality sweep of `.claude/` config. `/investigate` is triggered by a live failure; the two can complement each other (investigate finds a config symptom → audit confirms the structural issue)
 - **Broad first**: always complete Step 2 signal gathering before hypothesising — premature anchoring is the most common investigation failure
 - **Parallel probes**: run independent probes in a single response to avoid serial latency

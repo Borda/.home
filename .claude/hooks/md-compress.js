@@ -1,1 +1,0 @@
-../../plugins/foundry/hooks/md-compress.js

@@ -359,7 +359,7 @@ One unified table — all findings in a single place, no separate prose:
 - **Comment length**: 1-2 sentences per row; high-importance rows may use 2 sentences since there is no separate prose paragraph
 - **Use full GitHub Markdown** throughout: code spans, fenced blocks, `> blockquotes` for cited excerpts, inline links where they help the contributor
 
-**When to produce both parts**: any request to write a contributor reply, review summary for a contributor, or `--reply` output from `/review`. Only produce the Reply summary (Part 1) alone when there are no specific line-level issues to call out (e.g., a simple "LGTM"). Inline suggestions (Part 2) are optional when there are no location-specific findings.
+**When to produce both parts**: any request to write a contributor reply, review summary for a contributor, or `--reply` output from `/oss:review`. Only produce the Reply summary (Part 1) alone when there are no specific line-level issues to call out (e.g., a simple "LGTM"). Inline suggestions (Part 2) are optional when there are no location-specific findings.
 
 ### Issue Replies — structural divergences
 

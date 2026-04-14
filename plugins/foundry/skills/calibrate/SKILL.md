@@ -1,6 +1,7 @@
 ---
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
+when_to_use: Run to measure agent/skill routing accuracy, validate confidence calibration, or A/B test agent changes after editing descriptions or workflows.
 argument-hint: '{all|agents|skills|routing|communication|<name>} [fast|full] [ab] [apply]'
 allowed-tools: Read, Write, Edit, Bash, Agent, Glob, TaskCreate, TaskUpdate
 effort: high
@@ -21,12 +22,12 @@ Calibration data drives the improvement loop: systematic gaps become instruction
   - **Target** (first token — defaults to `all`):
     - `all` — all agents + relevant skills + routing + communication + all rules (i.e., everything)
     - `agents` — all agents only
-    - `skills` — calibratable skills only (`/audit`, `/review`)
+    - `skills` — calibratable skills only (`/audit`, `/oss:review`)
     - `routing` — routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts (not a per-agent quality benchmark; included in `all`)
     - `communication` — handover + team protocol compliance: runs `self-mentor` against synthetic agent responses and team transcripts with injected protocol violations (missing JSON envelope, missing `summary`, AgentSpeak v2 breaches); included in `all`
     - `rules` — rule adherence test: for each global rule file (no `paths:`) and each path-scoped rule when a matching file is in context, generates synthetic tasks that should trigger the rule's key directives, measures whether a `general-purpose` agent with the rule loaded correctly applies them; reports rules that are ignored, misapplied, or redundant with each other; included in `all`
     - `<agent-name>` — single agent (e.g., `sw-engineer`)
-    - `/audit` or `/review` — single skill
+    - `/audit` or `/oss:review` — single skill
   - **Pace** (optional, default `fast`):
     - `fast` — 3 problems per target
     - `full` — 10 problems per target
@@ -86,9 +87,9 @@ Domain tables per mode: see `modes/agents.md`, `modes/skills.md`, `modes/routing
 From `$ARGUMENTS`, determine:
 
 - **Target list** — parse the first token:
-  - `all` or omitted → all agents + `/audit` + `/review` + routing + communication + all rules
+  - `all` or omitted → all agents + `/audit` + `/oss:review` + routing + communication + all rules
   - `agents` → all agents only (the full agent list in `modes/agents.md`)
-  - `skills` → `/audit` and `/review` only
+  - `skills` → `/audit` and `/oss:review` only
   - `routing` → routing accuracy test only
   - `communication` → handover + team protocol compliance only
   - `rules` → rule adherence test (all rule files in `.claude/rules/`) only

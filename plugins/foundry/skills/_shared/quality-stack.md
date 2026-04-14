@@ -61,7 +61,7 @@ Maximum 3 cycles. Applied after the quality stack.
 
 **Cycle 1: Full review**
 
-- Invoke `/review` for a full multi-agent code review. If `CODEX_FINDINGS` is non-empty, prepend it to the review brief: "Codex pre-pass found the following — verify these, do not rediscover: $CODEX_FINDINGS"
+- Invoke `/oss:review` for a full multi-agent code review. If `CODEX_FINDINGS` is non-empty, prepend it to the review brief: "Codex pre-pass found the following — verify these, do not rediscover: $CODEX_FINDINGS"
 - Capture review state: `{agents_with_findings, unresolved_findings, files_reviewed}`
 - If clean (no critical/high findings): skip to report
 
@@ -70,7 +70,7 @@ Maximum 3 cycles. Applied after the quality stack.
 - Fix critical/high findings from Cycle 1
 - Re-run quality stack on modified files only
 - Set up a run directory for file-based handoff: `RUN_DIR=".developments/$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$RUN_DIR"`
-- For each agent type in `agents_with_findings`: spawn that agent directly (not `/review`) with a focused prompt scoped to modified files + prior findings. Each agent prompt must end with: "Write your full findings to `$RUN_DIR/<agent-name>.md` using the Write tool. Return ONLY a compact JSON envelope: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.N,\"summary\":\"<agent-name>: N critical, N high\"}`"
+- For each agent type in `agents_with_findings`: spawn that agent directly (not `/oss:review`) with a focused prompt scoped to modified files + prior findings. Each agent prompt must end with: "Write your full findings to `$RUN_DIR/<agent-name>.md` using the Write tool. Return ONLY a compact JSON envelope: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.N,\"summary\":\"<agent-name>: N critical, N high\"}`"
 
 Replace bare agent names in spawn prompts with their `foundry:` prefixed equivalents: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:linting-expert`, `foundry:doc-scribe`, `foundry:perf-optimizer`, `foundry:solution-architect`.
 

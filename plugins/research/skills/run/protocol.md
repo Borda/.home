@@ -135,7 +135,7 @@ Rules:
 
 When `--team` is active, hypothesis agents in Phase A produce entries with `source: "team"` and three additional fields that are **required** (not merely allowed):
 
-| Field          | Type  | Description                                                                                                                                                                |
+| Field          | Type  | Description                                                                                                                                                |
 | -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `axis`         | `str` | The optimization axis the hypothesis belongs to (e.g., `"model architecture"`)                                                                             |
 | `agent_type`   | `str` | Specialist agent type to use for implementation (e.g., `"perf-optimizer"`, `"researcher"`)                                                                 |

@@ -169,8 +169,8 @@ Branch into one of these modes:
 3. Choose model based on role complexity:
 
    - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, self-mentor): long-horizon reasoning + plan mode
-   - `opus` — complex implementation roles (sw-engineer, qa-specialist, research:scientist, perf-optimizer): deep reasoning without plan mode
-   - `sonnet` — focused execution roles (research:data-steward, web-explorer, doc-scribe): pattern-matching, structured output
+   - `opus` — complex implementation roles (sw-engineer, qa-specialist, scientist, perf-optimizer): deep reasoning without plan mode
+   - `sonnet` — focused execution roles (data-steward, web-explorer, doc-scribe): pattern-matching, structured output
    - `haiku` — high-frequency diagnostics roles (linting-expert, oss:ci-guardian): rule-application, structured lint output
 
 4. Spawn **self-mentor** subagent to generate and write the agent file — generating 200–400 lines of domain content inline inflates the main context:
@@ -232,7 +232,7 @@ Atomic update — write new file before deleting old:
 
 ```bash
 # 4. Delete old file only after new file is confirmed
-rm .claude/agents/ <old-name >.md # timeout: 5000
+rm .claude/agents/<old-name>.md # timeout: 5000
 ```
 
 ### Mode: Update Skill
@@ -256,7 +256,7 @@ rm -r .claude/skills/<old-name>  # timeout: 5000
 ### Mode: Delete Agent
 
 ```bash
-rm .claude/agents/ <name >.md # timeout: 5000
+rm .claude/agents/<name>.md # timeout: 5000
 ```
 
 ### Mode: Delete Skill
@@ -601,7 +601,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **Content-edit vs rename discrimination**: bare kebab-case second arg = rename; quoted string or `.md` path = content-edit. Unambiguous because names never contain spaces or end in `.md`.
 - Follow-up chains:
   - After any create/update/delete → `/audit` to verify config integrity
-  - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), run `/calibrate routing fast`
+  - After creating a new agent/skill → `/oss:review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), run `/calibrate routing fast`
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - **After any agent create/update/delete or content-edit that changes description** → `/calibrate routing fast` to confirm routing accuracy is unaffected
   - After `add perm`/`remove perm` → confirm both `settings.json` and `permissions-guide.md` are updated; run `/foundry:init` to refresh `~/.claude/` settings

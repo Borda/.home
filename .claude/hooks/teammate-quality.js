@@ -1,1 +1,0 @@
-../../plugins/foundry/hooks/teammate-quality.js

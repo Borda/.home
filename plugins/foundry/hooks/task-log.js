@@ -404,6 +404,11 @@ process.stdin.on("end", () => {
           } catch (_) {}
         }
       } catch (_) {}
+    } else if (hook_event_name === "TaskCreated") {
+      // Log task creation for audit trail. Payload fields vary by Claude Code version — safe fallbacks.
+      const subject = data.subject || data.task?.subject || "";
+      const taskId = data.task_id || data.id || data.task?.id || "";
+      appendLog(logFile, globalLogsDir, { ts, project: projectSlug, event: "task_created", task_id: taskId, subject });
     } else if (hook_event_name === "SessionEnd") {
       // Full session teardown — delete the entire session-scoped temp directory.
       // All ephemeral state (agents, tools, codex, queue, dedup locks) lives there.

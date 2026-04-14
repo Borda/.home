@@ -1,1 +1,0 @@
-../../plugins/foundry/rules/external-data.md

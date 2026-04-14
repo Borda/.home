@@ -1,1 +1,0 @@
-../../plugins/foundry/agents/perf-optimizer.md

@@ -43,15 +43,18 @@ If confidence score < 0.9 and the `codex` plugin is available, spawn `Agent(suba
 **Never add a URL to any file without completing all three steps for that URL:**
 
 1. **Fetch** — call WebFetch (or equivalent); the URL must return a non-error response (not 4xx/5xx)
+
 2. **Read** — read the actual page content returned; do not rely on the URL structure or HTTP status alone
+
 3. **Match** — confirm the content matches the intended description; if it does not match, do not add the link
 
-- Every URL is verified independently — a verified URL on the same domain does not cover other URLs
+4. **Independent** — every URL requires its own Fetch+Read+Match pass; a verified URL on the same domain does not exempt other URLs on that domain. Skipping any step, including inferring validity from URL structure or HTTP status alone, is a violation.
+
 - Applies to: agent files, skill files, CLAUDE.md, any markdown
 
 ## Output Routing
 
-- **Long output** (multi-item analysis, 5+ findings, or any prose exceeding ~10 lines) → two mandatory steps in order:
+- **Long output** (multi-item analysis, 5+ findings — including lists of 5+ items such as module names, issues, or files —, or any prose exceeding ~10 lines) → two mandatory steps in order:
   1. Call the **Write tool** to create `.temp/output-<slug>-<branch>-<YYYY-MM-DD>.md` where `<branch>` is `$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')` (new file — never overwrite; append counter suffix if slug exists, e.g. `-2.md`); the file receives the **full content**
   2. Print to terminal only: compact summary — verdict · 2–3 sentences · critical points · confidence score · `→ <filepath>`; **do not repeat the full content in the terminal**
 - **Short inline status** (single result, pass/fail, one-sentence finding) → terminal only; do **not** create a file

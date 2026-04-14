@@ -83,8 +83,8 @@ claude plugin install research@borda-ai-home
 ### Resume after crash or manual stop
 
 ```bash
-/research:resume                    # reads program_file from state.json
-/research:resume program.md         # resume specific run
+/research:run --resume              # reads program_file from state.json
+/research:run program.md --resume   # resume specific run
 ```
 
 ### Automated end-to-end sweep
@@ -119,7 +119,7 @@ use data-steward to verify train/val split integrity and check for data leakage
 | **scientist**    | Paper analysis, hypothesis generation, experiment design, LLM evaluation, inference optimization | opus   |
 | **data-steward** | Dataset acquisition, completeness verification, split validation, leakage detection, DVC         | sonnet |
 
-**scientist** (formerly `ai-researcher`) owns the intellectual work: reading papers, forming hypotheses, designing ablations, implementing methods from publications. It delegates data acquisition and pipeline integrity to data-steward.
+**scientist** (formerly `researcher`) owns the intellectual work: reading papers, forming hypotheses, designing ablations, implementing methods from publications. It delegates data acquisition and pipeline integrity to data-steward.
 
 **data-steward** owns data lifecycle: fetching datasets from external sources, verifying completeness from paginated APIs, versioning with DVC, auditing train/val/test splits, detecting data leakage, and configuring DataLoaders. It does not design experiments — it ensures the data feeding them is correct.
 

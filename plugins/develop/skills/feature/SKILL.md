@@ -7,6 +7,16 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdat
 disable-model-invocation: true
 ---
 
+<objective>
+
+TDD-first feature development. Crystallise the API as a demo use-case test, drive implementation to pass it, then close quality gaps with review, documentation, and the quality stack.
+
+NOT for: bug fixes (use `/develop:fix`); `.claude/` config changes (use `/manage`).
+
+</objective>
+
+<workflow>
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -108,7 +118,7 @@ Drive the implementation by making tests pass, one cycle at a time:
 python -m pytest --tb=short -q <target_test_dir >-v 2>&1 | tail -20
 ```
 
-**Gate**: all existing tests must pass before proceeding. If any fail, stop — do not add new code on a broken baseline. Use `/develop fix` to address pre-existing failures first, then return here.
+**Gate**: all existing tests must pass before proceeding. If any fail, stop — do not add new code on a broken baseline. Use `/develop:fix` to address pre-existing failures first, then return here.
 
 Start from the Step 2 demo — it is already failing and becomes the first target. For each piece of functionality:
 
@@ -243,9 +253,11 @@ Read `.claude/skills/_shared/quality-stack.md` and execute the Branch Safety Gua
 
 ```
 You are a [role] teammate implementing: [feature].
-Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
+Read ~/.claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your task: [specific responsibility].
 [If QA]: include security checks for any auth/payment/data-handling code.
 Compact Instructions: preserve file paths, test results, API signatures. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal your completion in your final delta message: "Status: complete | blocked — <reason>".
 ```
+
+</workflow>

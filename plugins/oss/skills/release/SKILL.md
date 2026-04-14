@@ -168,7 +168,7 @@ After applying the guidelines above to polish the output, write to disk per mode
 
 ## Step 6: Publish (after writing notes)
 
-**Human gate** — stop here and hand off to the user: the GitHub release must be created with project-level tooling (e.g. `gh release create`). Refer to the project's CLAUDE.md or `shepherd` agent (see `<release_workflow>` section) for the exact command.
+**Human gate** — stop here and hand off to the user: the GitHub release must be created with project-level tooling (e.g. `gh release create`). Refer to the project's CLAUDE.md or `shepherd` agent (see `<release_checklist>` section) for the exact command.
 
 ## Mode: prepare
 

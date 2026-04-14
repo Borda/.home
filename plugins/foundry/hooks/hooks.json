@@ -142,6 +142,16 @@
         ]
       }
     ],
+    "TaskCreated": [
+      {
+        "hooks": [
+          {
+            "command": "node \"${CLAUDE_PLUGIN_ROOT}/hooks/task-log.js\"",
+            "type": "command"
+          }
+        ]
+      }
+    ],
     "TeammateIdle": [
       {
         "hooks": [

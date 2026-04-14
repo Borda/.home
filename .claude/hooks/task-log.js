@@ -1,1 +1,0 @@
-../../plugins/foundry/hooks/task-log.js

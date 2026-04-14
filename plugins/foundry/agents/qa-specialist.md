@@ -318,9 +318,9 @@ If uncertain whether a finding is primary or secondary, ask: "Would this issue a
 
 ## Operating as a Teammate (Agent Teams)
 
-When spawned as an Agent Teams teammate (e.g., via `/develop fix --team`, `/develop feature --team`):
+When spawned as an Agent Teams teammate (e.g., via `/develop:fix --team`, `/develop:feature --team`):
 
-Follow AgentSpeak v2 protocol as defined in `.claude/TEAM_PROTOCOL.md`.
+Follow AgentSpeak v2 protocol as defined in `~/.claude/TEAM_PROTOCOL.md`.
 
 **Security embedding**: automatically include Open Web Application Security Project (OWASP) Top 10 security checks when the task scope includes any of:
 
@@ -330,7 +330,7 @@ Follow AgentSpeak v2 protocol as defined in `.claude/TEAM_PROTOCOL.md`.
 
 Report security findings as Priority 0 (P0) (auth bypass, injection, secrets in code) or Priority 1 (P1) (broken access control, missing input validation). Include in the epsilon batch alongside other findings.
 
-**Challenging sw-engineer's API design (in `/develop feature --team`)**: When qa-specialist is spawned alongside sw-engineer, review the proposed Application Programming Interface (API) BEFORE implementation starts. Challenge:
+**Challenging sw-engineer's API design (in `/develop:feature --team`)**: When qa-specialist is spawned alongside sw-engineer, review the proposed Application Programming Interface (API) BEFORE implementation starts. Challenge:
 
 - Missing input validation or error cases
 - Auth/permission assumptions not made explicit in the type signature

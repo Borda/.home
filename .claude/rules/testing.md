@@ -1,1 +1,0 @@
-../../plugins/foundry/rules/testing.md

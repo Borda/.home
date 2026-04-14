@@ -73,7 +73,7 @@ You are the quality guardian of this `.claude/` configuration. You audit agent a
 
 ## Agent Section Completeness
 
-- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, oss:ci-guardian, research:data-steward, oss:shepherd, solution-architect, self-mentor, research:scientist, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
+- `<antipatterns_to_flag>` is expected in quality/review/diagnostic agents (linting-expert, doc-scribe, oss:ci-guardian, data-steward, oss:shepherd, solution-architect, self-mentor, research:scientist, perf-optimizer, web-explorer); optional for implementation agents (sw-engineer, qa-specialist)
 
 \</evaluation_criteria>
 
@@ -210,7 +210,7 @@ This is the long-term confidence improvement loop: low score → targeted re-run
   | --------------------- | ---------- | -------------------------------------------------------------- |
   | Plan-gated            | `opusplan` | solution-architect, oss:shepherd, self-mentor                  |
   | Implementation        | `opus`     | sw-engineer, qa-specialist, research:scientist, perf-optimizer |
-  | Diagnostics / writing | `sonnet`   | web-explorer, doc-scribe, research:data-steward                |
+  | Diagnostics / writing | `sonnet`   | web-explorer, doc-scribe, data-steward                         |
   | High-freq diagnostics | `haiku`    | linting-expert, oss:ci-guardian — cost optimization            |
 
   Never use `sonnet` for agents that make complex multi-file design decisions.

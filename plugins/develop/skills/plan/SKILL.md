@@ -7,6 +7,16 @@ allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, Ask
 disable-model-invocation: true
 ---
 
+<objective>
+
+Analysis-only mode that produces a structured plan without writing any code. Use this to understand scope, risks, and effort before committing to a full `/develop:feature`, `/develop:fix`, or `/develop:refactor`.
+
+NOT for: writing code or tests (use the appropriate develop mode); `.claude/` config changes (use `/manage`).
+
+</objective>
+
+<workflow>
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -17,7 +27,7 @@ disable-model-invocation: true
 
 # Plan Mode
 
-Analysis-only mode that produces a structured plan without writing any code. Use this to understand scope, risks, and effort before committing to a full `/develop feature|fix|refactor`.
+Analysis-only mode that produces a structured plan without writing any code. Use this to understand scope, risks, and effort before committing to a full `/develop:feature`, `/develop:fix`, or `/develop:refactor`.
 
 ## Step 1: Classify and scope
 
@@ -168,3 +178,5 @@ If unresolved items were escalated, print each after the brief:
 Wait for user input before printing `-> /develop ...`.
 
 No quality stack, no Codex pre-pass, no review loop. Exit after printing the summary.
+
+</workflow>

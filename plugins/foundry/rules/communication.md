@@ -45,7 +45,7 @@ Rules:
 
 ## Interactive Questions
 
-**All questions directed at the user must use the `AskUserQuestion` tool — never plain terminal text.**
+**Hard constraint — never write a question as plain text.** Every question — clarifying, scoping, or continuation — must be posed by invoking the `AskUserQuestion` tool. A prose sentence ending with "?" is a violation even if it names the tool.
 
 A labelled or annotated question (e.g. `[AskUserQuestion simulated] — What format?`) is still plain text and still violates this rule. Only an actual tool invocation satisfies the constraint.
 

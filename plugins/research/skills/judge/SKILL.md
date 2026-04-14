@@ -7,9 +7,19 @@ allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, Ask
 disable-model-invocation: true
 ---
 
+<objective>
+
+Research-supervisor review of `program.md` — validates experimental methodology and emits an APPROVED / NEEDS-REVISION / BLOCKED verdict before the expensive run loop. Read-only; never modifies code or state.
+
+NOT for: running experiments (use `/research:run`); designing hypotheses (use `scientist` agent); config quality (`/audit`).
+
+</objective>
+
+<workflow>
+
 ## --team flag (committee mode)
 
-If `--team` is present in arguments: after emitting the verdict (Step J5/J6), read `.claude/skills/research/run/modes/team.md` Phase A (hypothesis generation only). Spawn 2–3 reviewers using the team protocol to independently audit the methodology — majority rules on the verdict. This is the "committee" review mode.
+If `--team` is present in arguments: after emitting the verdict (Step J5/J6), read `${CLAUDE_SKILL_DIR}/../run/modes/team.md` Phase A (hypothesis generation only). Spawn 2–3 reviewers using the team protocol to independently audit the methodology — majority rules on the verdict. This is the "committee" review mode.
 
 # Judge Mode (Steps J1–J6)
 
@@ -29,7 +39,7 @@ Triggered by `judge` or `judge <file.md>`.
    No program.md found. Run /research:plan <goal> first, or provide a path: /research:judge <path.md>
    ```
 
-**Parsing** — use the program-file section-parsing rules from Step R1 in `.claude/skills/research/run/SKILL.md` (find `## <Section>` headings, extract first fenced code block, parse as `key: value` lines, warn on unrecognized keys). The `--skip-validation` flag and `colab_hw` are judge-specific and extracted independently — they are not part of R1.
+**Parsing** — use the program-file section-parsing rules from Step R1 in `${CLAUDE_SKILL_DIR}/../run/SKILL.md` (find `## <Section>` headings, extract first fenced code block, parse as `key: value` lines, warn on unrecognized keys). The `--skip-validation` flag and `colab_hw` are judge-specific and extracted independently — they are not part of R1.
 
 **Placeholder substitution** — after parsing, apply the same substitution step as R1: resolve all `{field_name}` tokens in `metric_cmd` and `guard_cmd` using the corresponding field from `## Config`, falling back to any declared default for that field. Since judge has no `clarification_prompt`, skip the clarification-override step.
 
@@ -39,20 +49,20 @@ Extract a `<program_title>` from the `# Program: <title>` line for use in report
 
 Check each of the 11 items below. Produce a findings list with severity. Each finding has: `id`, `check`, `status` (pass/fail/warn), `severity`, `detail`.
 
-| ID   | Check                                                        | Severity if failing | Description                                                                                                                                                                                                          |
-| ---- | ------------------------------------------------------------ | ------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| C1   | `## Goal` present and non-empty                              | critical            | Campaign cannot run without a goal                                                                                                                                                                                   |
-| C2   | `## Metric` has `command` field                              | critical            | No metric = no feedback loop                                                                                                                                                                                         |
-| C3   | `## Metric` has `direction` field (higher/lower)             | critical            | Cannot decide keep/revert without direction                                                                                                                                                                          |
-| C4   | `## Guard` has `command` field                               | critical            | Without guard, regressions go undetected                                                                                                                                                                             |
-| C5   | `scope_files` present in `## Config`                         | high                | Without scope, ideation agent modifies arbitrary files                                                                                                                                                               |
-| C6   | Each `scope_files` path exists on disk (glob match)          | high                | Non-matching patterns mean ideation agent has nothing to work with. If filesystem is unavailable, flag as `warn` unless the path name explicitly signals non-existence (e.g., `nonexistent`, `placeholder`, `todo`). |
-| C7   | `target` set in `## Metric`                                  | medium              | Without target, campaign runs to max_iterations — may waste compute                                                                                                                                                  |
-| C8   | `max_iterations` in bounds (1–50)                            | medium              | Missing defaults to 20 (acceptable); >50 violates SKILL.md constants                                                                                                                                                 |
-| C9   | `agent_strategy` is valid (`auto`/`perf`/`code`/`ml`/`arch`) | medium              | Invalid value silently falls back to `auto`                                                                                                                                                                          |
-| C10  | `compute` is valid (`local`/`colab`/`docker`)                | low                 | Invalid defaults to `local`                                                                                                                                                                                          |
-| C10b | `colab_hw` valid (if present)                                | low                 | `colab_hw` absent OR is one of `H100, L4, T4, A100` — fail detail: `"colab_hw '<value>' is not in known set {H100, L4, T4, A100} — may cause GPU identity check failure in run mode"`                                |
-| C11  | `## Notes` section present                                   | low                 | Notes are optional but improve ideation quality                                                                                                                                                                      |
+| ID   | Check                                                        | Severity if failing | Description                                                                                                                                                                                                                                                       |
+| ---- | ------------------------------------------------------------ | ------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| C1   | `## Goal` present and non-empty                              | critical            | Campaign cannot run without a goal                                                                                                                                                                                                                                |
+| C2   | `## Metric` has `command` field                              | critical            | No metric = no feedback loop                                                                                                                                                                                                                                      |
+| C3   | `## Metric` has `direction` field (higher/lower)             | critical            | Cannot decide keep/revert without direction                                                                                                                                                                                                                       |
+| C4   | `## Guard` has `command` field                               | critical            | Without guard, regressions go undetected                                                                                                                                                                                                                          |
+| C5   | `scope_files` present in `## Config`                         | high                | Without scope, ideation agent modifies arbitrary files                                                                                                                                                                                                            |
+| C6   | Each `scope_files` path exists on disk (glob match)          | high                | Non-matching patterns mean ideation agent has nothing to work with. If filesystem is unavailable, flag as `warn` unless the path name explicitly signals non-existence (e.g., `nonexistent`, `placeholder`, `todo`, `legacy_v1`, `deprecated`, `old`, `removed`). |
+| C7   | `target` set in `## Metric`                                  | medium              | Without target, campaign runs to max_iterations — may waste compute                                                                                                                                                                                               |
+| C8   | `max_iterations` in bounds (1–50)                            | medium              | Missing defaults to 20 (acceptable); >50 violates SKILL.md constants                                                                                                                                                                                              |
+| C9   | `agent_strategy` is valid (`auto`/`perf`/`code`/`ml`/`arch`) | medium              | Invalid value silently falls back to `auto`                                                                                                                                                                                                                       |
+| C10  | `compute` is valid (`local`/`colab`/`docker`)                | low                 | Invalid defaults to `local`                                                                                                                                                                                                                                       |
+| C10b | `colab_hw` valid (if present)                                | low                 | `colab_hw` absent OR is one of `H100, L4, T4, A100` — fail detail: `"colab_hw '<value>' is not in known set {H100, L4, T4, A100} — may cause GPU identity check failure in run mode"`                                                                             |
+| C11  | `## Notes` section present                                   | low                 | Notes are optional but improve ideation quality                                                                                                                                                                                                                   |
 
 **Severity summary**: count findings at each severity level. Any critical finding means the verdict cannot be APPROVED.
 
@@ -264,3 +274,5 @@ Next: fix protocol, re-run /research:judge <path>      [NEEDS-REVISION or BLOCKE
 - Verdict is deterministic (finding counts + methodology_rating); it is not inferred from prose
 - Re-run judge after editing `program.md` to confirm fixes resolved the flagged items
 - Judge run directories do not write `result.jsonl` — they are exempt from the automated 30-day TTL cleanup (exempt per `.claude/rules/artifact-lifecycle.md` TTL policy — no `result.jsonl` = cleanup skipped); remove manually when no longer needed (`rm -rf .experiments/judge-*/`)
+
+</workflow>

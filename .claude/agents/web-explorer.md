@@ -1,1 +1,0 @@
-../../plugins/foundry/agents/web-explorer.md

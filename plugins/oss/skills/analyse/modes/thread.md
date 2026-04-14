@@ -66,9 +66,79 @@ jq --arg q "$TITLE" --argjson self $NUMBER '
     '
 ```
 
+## Reproduction Check
+
+Run immediately after the data fetch, before producing the report. Applies to **issues and discussions only** (skip for PRs — the Completeness checklist covers reproduction intent).
+
+### Step R1: Detect reproducible example
+
+Scan the thread body and all comments for any of:
+
+- `Steps to Reproduce`, `Minimal Reproduction`, `MRE`, `Repro`, or similar section headings
+- Fenced code blocks containing executable code (Python, shell, YAML, etc.)
+- Explicit input → output examples or stack traces with triggering call sites
+- Attached config files or test scripts
+
+Set `HAS_REPRO=true` if any of the above is found; `HAS_REPRO=false` otherwise.
+
+### Step R2: Sensitive pattern scan
+
+Scan body and all comments for sensitive patterns. **Flag presence only — never include actual values in the report.**
+
+| Pattern class                | Signals to detect                                                                                                       |
+| ---------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
+| Credentials / tokens         | `sk-`, `ghp_`, `Bearer `, PEM block headers, hex strings > 40 chars assigned to `key`/`token`/`secret`                  |
+| PII in sample data           | Email addresses, phone numbers, full names embedded in data payloads                                                    |
+| Internal infrastructure      | Private domain names (`.internal`, `.corp`, non-public TLDs), S3/GCS bucket paths with internal prefixes, database DSNs |
+| Model / experiment internals | Private checkpoint paths, internal model registry URLs, internal W&B run IDs                                            |
+
+Set `SENSITIVE_FLAGS=()` array; add one entry per class found (e.g., `"credentials"`, `"pii"`, `"internal_infra"`, `"model_internals"`).
+
+### Step R3: Spawn agent (only when `HAS_REPRO=true`)
+
+Extract the minimal reproduction code or steps from the thread. Choose the agent based on content:
+
+- Code uses pytest / unittest / Python testing patterns → `foundry:qa-specialist`
+- General Python / CLI / config reproduction → `foundry:sw-engineer`
+- Language ambiguous or no code → `foundry:sw-engineer`
+
+Spawn the chosen agent with this prompt (all context must be self-contained — this runs in a forked context):
+
+```
+Attempt to reproduce the issue in GitHub #<NUMBER>.
+
+Extracted reproduction steps/code from the thread:
+---
+<paste the minimal code or steps verbatim>
+---
+
+Check:
+1. Does the issue reproduce as described?
+2. What Python / library version or environment is required?
+3. Is anything missing or ambiguous (imports, data, config)?
+
+Return ONLY a compact JSON envelope — nothing else:
+{"status":"reproduced|not_reproduced|partial|missing_context","confidence":0.N,"notes":"<one observation max 15 words>","missing":"<what is missing, or null>"}
+```
+
+Collect the JSON envelope. `REPRO_STATUS` = `status` field.
+
+### Step R4: Build the Reproduction block
+
+Populate the `## Reproduction` block defined at the top of the `Produce:` template below, then include it at the start of the report file.
+
+Status mapping: `reproduced` → ✅ · `not_reproduced` → ❌ · `partial` → ⚠ · `missing_context` → ⚠ (add missing detail) · `HAS_REPRO=false` → 🔍 No Example Provided · PR → ⏭ Skipped
+
 Produce:
 
 ````
+## Reproduction
+
+**Status**: [✅ Reproduced | ❌ Could Not Reproduce | ⚠ Partial | 🔍 No Example Provided | ⏭ Skipped (PR)]
+**Validation**: [agent result `notes`, or "No reproduction attempted"]
+**Missing**: [agent `missing` field — omit line if null]
+**Sensitive patterns**: [🔴 Found: <comma-separated flag names, no values> | ✅ None detected]
+
 ## Thread #[number]: [title]
 
 **Type**: [Issue | Pull Request | Discussion]

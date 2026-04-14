@@ -188,15 +188,15 @@ Every `$MONITOR_INTERVAL` seconds, run `find $RUN_DIR -newer "$AUDIT_CHECKPOINT"
 
 > **Full implementation instructions** are split across 4 scope files in `.claude/skills/audit/templates/`. Read only the file(s) for the active scope at the start of this step — do not read all 4 files unless running a full sweep.
 >
-> | Scope           | File(s) to read                                                        |
-> | --------------- | ---------------------------------------------------------------------- |
-> | `setup`         | `checks-setup.md` + `checks-install.md`                                |
-> | `plugin`        | `checks-setup.md` (Checks 7, 8 only)                                   |
-> | `agents`        | `checks-agents.md` + `checks-shared.md` (run only: 14, 15, 17, 12, 13) |
-> | `skills`        | `checks-skills.md` + `checks-shared.md` (run only: 14, 15, 17, 12, 13) |
-> | `rules`         | `checks-shared.md` (run only: 18, 12, 13)                              |
-> | `communication` | `checks-shared.md` (run only: 15, 16, 12, 13)                          |
-> | No scope (full) | all 4 files                                                            |
+> | Scope           | File(s) to read                                                                                                 |
+> | --------------- | --------------------------------------------------------------------------------------------------------------- |
+> | `setup`         | `checks-setup.md` + `checks-install.md`                                                                         |
+> | `plugin`        | `checks-setup.md` (Checks 7, 8 only)                                                                            |
+> | `agents`        | `checks-agents.md` + `checks-shared.md` (run only: 14, 15, 17, 12, 13, 25) + `checks-skills.md` (Check 22 only) |
+> | `skills`        | `checks-skills.md` + `checks-shared.md` (run only: 14, 15, 17, 12, 13, 25)                                      |
+> | `rules`         | `checks-shared.md` (run only: 18, 12, 13)                                                                       |
+> | `communication` | `checks-shared.md` (run only: 15, 16, 12, 13)                                                                   |
+> | No scope (full) | all 4 files                                                                                                     |
 
 Run the following checks. Use native tools first (Glob, Grep, Read); Bash only for pipeline operations the native tools cannot do.
 
@@ -215,8 +215,8 @@ Do not leave overlap findings as vague "potential duplication" notes. The audit 
 
 **Scope filter**: when `$SCOPE` is set, run only the checks listed for that scope; skip all others silently.
 
-- `agents` — Checks 14, 15, 19, 20, 17, 12, 13
-- `skills` — Checks 14, 15, 21, 17, 12, 23, 22, 13
+- `agents` — Checks 14, 15, 19, 20, 17, 12, 13, 25, 22
+- `skills` — Checks 14, 15, 21, 17, 12, 23, 22, 13, 24, 25
 - `rules` — Checks 18, 12, 13
 - `communication` — Checks 15, 16, 12, 13
 - `setup` — Checks 1, 2, 3, 4, 5, 9, 10, 11, 7, 6, 8, I1, I2, I3 (Step 3: one self-mentor spawn for `init` SKILL.md only; I1–I3 read `~/.claude/`)
@@ -225,34 +225,36 @@ Do not leave overlap findings as vague "potential duplication" notes. The audit 
 
 ### Check summary
 
-| #   | Name                                   | Severity          | Scope         | Notes                                                                                         |
-| --- | -------------------------------------- | ----------------- | ------------- | --------------------------------------------------------------------------------------------- |
-| 1   | Inventory drift (MEMORY.md vs disk)    | medium            | setup         | Agents + skills on disk vs MEMORY.md roster                                                   |
-| 2   | README vs disk                         | medium            | setup         | Agent/skill table rows in README vs disk                                                      |
-| 3   | settings.json permissions              | medium            | setup         | Bash commands in skills vs allow list                                                         |
-| 4   | permissions-guide.md drift             | medium            | setup         | Every allow entry must have a guide row, and vice versa                                       |
-| 5   | Permission safety audit                | critical/high     | setup         | Allow entries must be non-destructive, reversible, local-only                                 |
-| 6   | Stale settings.json allow entries      | low               | setup         | Allow entries with no usage in any .claude/ file                                              |
-| 7   | codex plugin integration               | medium            | setup         | Plugin installed and enabled; dispatches work                                                 |
-| 8   | foundry plugin correctness             | critical/high/med | setup         | 8a manifest, 8b symlinks, 8c hook scripts, 8d hooks.json, 8e dry-run validate, 8f perms drift |
-| 9   | Agent color drift                      | medium            | setup         | statusline COLOR_MAP vs agent frontmatter color:                                              |
-| 10  | RTK hook alignment                     | high/medium       | setup         | RTK_PREFIXES vs installed RTK subcommands - skip if rtk absent                                |
-| 11  | Memory health                          | low               | setup         | 11a duplicate rules, 11b stale version pins, 11c absorbed feedback files                      |
-| I1  | Plugin cache intact                    | high              | setup         | foundry in ~/.claude/plugins/installed_plugins.json; installPath exists                       |
-| I2  | Settings merge complete                | medium            | setup         | statusLine, permissions.allow, enabledPlugins.codex in ~/.claude/settings.json                |
-| I3  | Link health (conditional)              | high              | setup         | Symlinks in ~/.claude/agents/ and ~/.claude/skills/ resolve; fix: /foundry:init link          |
-| 12  | File length                            | medium            | all           | Agents >300, skills >600, rules >200 lines - report only                                      |
-| 13  | Heading hierarchy continuity           | medium            | all           | Heading level jumps >1 (e.g. ## to ####)                                                      |
-| 14  | Orphaned follow-up references          | medium            | agents/skills | Skill-name refs in SKILL.md vs disk inventory                                                 |
-| 15  | Hardcoded user paths                   | high              | agents/skills | /Users/ and /home/ in config files + settings.json                                            |
-| 16  | Example value vs. token cost           | low               | agents/skills | Inline examples: high-value vs. low-value (prose restatement)                                 |
-| 17  | Cross-file content duplication         | medium            | agents/skills | 40%+ consecutive step overlap; recommend canonical owner or merge path                        |
-| 18  | Rules integrity                        | high/medium       | rules         | 18a inventory, 18b frontmatter, 18c redundancy, 18d cross-ref integrity                       |
-| 19  | Model tier appropriateness             | medium/high       | agents        | Tier policy: opusplan/opus/sonnet/haiku - report only                                         |
-| 20  | Agent description routing              | medium/low        | agents        | 20a overlap pairs, 20b NOT-for coverage, 20c trigger specificity, 20d keep/sharpen/prune      |
-| 21  | Skill frontmatter conflicts            | critical          | skills        | context:fork + disable-model-invocation:true is broken                                        |
-| 22  | Calibration coverage gap               | medium/low        | skills        | Unregistered calibratable modes; stale domain table entries                                   |
-| 23  | Bash misuse / native tool substitution | medium            | agents/skills | cat/grep/find/echo>/sed replaceable by native tools                                           |
+| #   | Name                                   | Severity          | Scope         | Notes                                                                                                             |
+| --- | -------------------------------------- | ----------------- | ------------- | ----------------------------------------------------------------------------------------------------------------- |
+| 1   | Inventory drift (MEMORY.md vs disk)    | medium            | setup         | Agents + skills on disk vs MEMORY.md roster                                                                       |
+| 2   | README vs disk                         | medium            | setup         | Agent/skill table rows in README vs disk                                                                          |
+| 3   | settings.json permissions              | medium            | setup         | Bash commands in skills vs allow list                                                                             |
+| 4   | permissions-guide.md drift             | medium            | setup         | Every allow entry must have a guide row, and vice versa                                                           |
+| 5   | Permission safety audit                | critical/high     | setup         | Allow entries must be non-destructive, reversible, local-only                                                     |
+| 6   | Stale settings.json allow entries      | low               | setup         | Allow entries with no usage in any .claude/ file                                                                  |
+| 7   | codex plugin integration               | medium            | setup         | Plugin installed and enabled; dispatches work                                                                     |
+| 8   | foundry plugin correctness             | critical/high/med | setup         | 8a manifest, 8b symlinks, 8c hook scripts, 8d hooks.json, 8e dry-run validate, 8f perms drift                     |
+| 9   | Agent color drift                      | medium            | setup         | statusline COLOR_MAP vs agent frontmatter color:                                                                  |
+| 10  | RTK hook alignment                     | high/medium       | setup         | RTK_PREFIXES vs installed RTK subcommands - skip if rtk absent                                                    |
+| 11  | Memory health                          | low               | setup         | 11a duplicate rules, 11b stale version pins, 11c absorbed feedback files                                          |
+| I1  | Plugin cache intact                    | high              | setup         | foundry in ~/.claude/plugins/installed_plugins.json; installPath exists                                           |
+| I2  | Settings merge complete                | medium            | setup         | statusLine, permissions.allow, enabledPlugins.codex in ~/.claude/settings.json                                    |
+| I3  | Link health (conditional)              | high              | setup         | Symlinks in ~/.claude/rules/ and ~/.claude/TEAM_PROTOCOL.md resolve; fix: /foundry:init                           |
+| 12  | File length                            | medium            | all           | Agents >300, skills >600, rules >200 lines - report only                                                          |
+| 13  | Heading hierarchy continuity           | medium            | all           | Heading level jumps >1 (e.g. ## to ####)                                                                          |
+| 14  | Orphaned follow-up references          | medium            | agents/skills | Skill-name refs in SKILL.md vs disk inventory                                                                     |
+| 15  | Hardcoded user paths                   | high              | agents/skills | /Users/ and /home/ in config files + settings.json                                                                |
+| 16  | Example value vs. token cost           | low               | agents/skills | Inline examples: high-value vs. low-value (prose restatement)                                                     |
+| 17  | Cross-file content duplication         | medium            | agents/skills | 40%+ consecutive step overlap; recommend canonical owner or merge path                                            |
+| 18  | Rules integrity                        | high/medium       | rules         | 18a inventory, 18b frontmatter, 18c redundancy, 18d cross-ref integrity                                           |
+| 19  | Model tier appropriateness             | medium/high       | agents        | Tier policy: opusplan/opus/sonnet/haiku - report only                                                             |
+| 20  | Agent description routing              | medium/low        | agents        | 20a overlap pairs, 20b NOT-for coverage, 20c trigger specificity, 20d keep/sharpen/prune                          |
+| 21  | Skill frontmatter conflicts            | critical          | skills        | context:fork + disable-model-invocation:true is broken                                                            |
+| 22  | Calibration coverage gap               | medium/low        | agents/skills | Unregistered calibratable skills/agents; stale domain table entries                                               |
+| 23  | Bash misuse / native tool substitution | medium            | agents/skills | cat/grep/find/echo>/sed replaceable by native tools                                                               |
+| 24  | Skill sequence compatibility           | high/medium       | skills        | 24a target skill not on disk; 24b argument absent from argument-hint; scans skills, agents, READMEs               |
+| 25  | Implicit agent references              | high              | agents/skills | subagent_type without plugin prefix (e.g. "sw-engineer" instead of "foundry:sw-engineer"); exempt: built-in types |
 
 ### Claude Code docs freshness (within Step 4)
 
@@ -296,7 +298,7 @@ Output a structured audit report before fixing anything:
 - Agents audited: N
 - Skills audited: N
 - Rules audited: N
-- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, RTK hook alignment, memory health, agent routing alignment, codex plugin integration check, rules integrity, cross-file content duplication, file length, Bash misuse / native tool substitution, stale allow entries, calibration coverage gap, heading hierarchy continuity
+- System-wide checks: inventory drift, README sync, permissions, infinite loops, hardcoded paths, CLAUDE.md consistency, docs freshness, permissions-guide drift, model tier appropriateness, agent color drift, RTK hook alignment, memory health, agent routing alignment, codex plugin integration check, rules integrity, cross-file content duplication, file length, Bash misuse / native tool substitution, stale allow entries, calibration coverage gap, heading hierarchy continuity, skill sequence compatibility
 
 ### Findings by Severity
 
@@ -417,13 +419,18 @@ If re-audit surfaces new issues, loop back to Step 8 for those findings only (ma
 
 ## Step 11: Final report
 
-Output the complete audit summary:
+Output the complete audit summary: List each audited file by name in the `### Files Audited` section — names are drawn from the Step 2 inventory; counts alone are insufficient.
 
 ```
 ## Audit Complete — .claude/ config
 
 ### Files Audited
-- Agents: N | Skills: N | Settings: 1 | Hooks: N
+- **Agents** (N): name-1, name-2, ...
+- **Skills** (N): name-1, name-2, ...
+- **Rules** (N): name-1, name-2, ...
+- **Hooks** (N): file-1.js, file-2.js, ...
+- **Settings**: settings.json
+- **Communication** (if in scope): communication.md, quality-gates.md, TEAM_PROTOCOL.md, file-handoff-protocol.md
 
 ### Findings
 | Severity | Found | Fixed | Remaining |
@@ -580,7 +587,7 @@ Propose `/foundry:init link` to the user after upgrade completes — do not auto
 - Follow-up chains:
   - Audit clean → `/foundry:init link` to propagate verified config to `~/.claude/`
   - Audit found structural issues → review flagged files manually before syncing
-  - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop refactor` for a targeted cleanup pass
+  - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop:refactor` for a targeted cleanup pass
   - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration
   - Audit Check 20 found description overlap → `/calibrate routing` to verify behavioral routing impact; update descriptions for confused pairs based on the routing report
   - Audit surfaced upgrade proposals → `/audit upgrade` to apply with correctness checks and calibrate A/B evidence for capability changes

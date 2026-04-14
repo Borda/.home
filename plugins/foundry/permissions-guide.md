@@ -22,22 +22,22 @@ ______________________________________________________________________
 
 These entries pre-authorize `Read`, `Glob`, `Grep`, and `Write` on directories that skills and teammates access frequently as part of their own configuration or runtime state. Without them, agents are prompted to confirm accessing their own config files or writing output to skill run dirs.
 
-| Permission              | Description                                   | Typical use case                                                                                                                                                 |
-| ----------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `Read(.claude/*.md)`    | Read top-level `.claude/` markdown files      | Agents read CLAUDE.md, permissions-guide.md, and TEAM_PROTOCOL.md at spawn                                                                                       |
-| `Read(.claude/**/*.md)` | Read any nested `.claude/` markdown file      | Agents and skills read their own agent/skill/rule files; self-mentor reads config files for audit                                                                |
-| `Read(.claude/logs/**)` | Read log files under `.claude/logs/`          | `/calibrate` reads calibrations.jsonl for historical context; `/audit` reads audit-errors.jsonl                                                                  |
-| `Edit(.claude/logs/**)` | Edit log files under `.claude/logs/`          | Skills append to calibrations.jsonl and audit-errors.jsonl without Bash redirection                                                                              |
-| `Read(./**)`            | Read any file in the project root             | Teammates read `TEAM_PROTOCOL.md` and agent files at spawn; skills read their own SKILL.md files                                                                 |
-| `Glob(./**)`            | Glob-match any file in the project            | `/audit` and `/manage` enumerate agents, skills, hooks, and source files without shell `find`                                                                    |
-| `Grep(./**)`            | Search content in any project file            | `/audit` checks cross-references; `/calibrate` locates skill keyword patterns                                                                                    |
-| `Read(/tmp/**)`         | Read temporary files under `/tmp/`            | `/calibrate` reads checkpoint files for background agent health monitoring; skill temp output files                                                              |
-| `Write(.plans/**)`      | Write plan and blueprint files to `.plans/`   | `/brainstorm` writes spec and tree files to `.plans/blueprint/`; `/develop plan` writes plans to `.plans/active/`                                                |
-| `Write(.notes/**)`      | Write notes and lessons to `.notes/`          | Skills write lessons, diary entries, and guides to `.notes/`                                                                                                     |
-| `Write(.reports/**)`    | Write files into `.reports/` skill run dirs   | Skills and Codex write timestamped run artifacts (result.jsonl, analysis files) to `.reports/<skill>/`                                                           |
-| `Write(.temp/**)`       | Write prose output files to `.temp/`          | Quality-gates long output; research, review, resolve, session, and other skills write findings to `.temp/output-<slug>-<date>.md`                                |
+| Permission              | Description                                   | Typical use case                                                                                                                                                                                               |
+| ----------------------- | --------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `Read(.claude/*.md)`    | Read top-level `.claude/` markdown files      | Agents read CLAUDE.md, permissions-guide.md, and TEAM_PROTOCOL.md at spawn                                                                                                                                     |
+| `Read(.claude/**/*.md)` | Read any nested `.claude/` markdown file      | Agents and skills read their own agent/skill/rule files; self-mentor reads config files for audit                                                                                                              |
+| `Read(.claude/logs/**)` | Read log files under `.claude/logs/`          | `/calibrate` reads calibrations.jsonl for historical context; `/audit` reads audit-errors.jsonl                                                                                                                |
+| `Edit(.claude/logs/**)` | Edit log files under `.claude/logs/`          | Skills append to calibrations.jsonl and audit-errors.jsonl without Bash redirection                                                                                                                            |
+| `Read(./**)`            | Read any file in the project root             | Teammates read `TEAM_PROTOCOL.md` and agent files at spawn; skills read their own SKILL.md files                                                                                                               |
+| `Glob(./**)`            | Glob-match any file in the project            | `/audit` and `/manage` enumerate agents, skills, hooks, and source files without shell `find`                                                                                                                  |
+| `Grep(./**)`            | Search content in any project file            | `/audit` checks cross-references; `/calibrate` locates skill keyword patterns                                                                                                                                  |
+| `Read(/tmp/**)`         | Read temporary files under `/tmp/`            | `/calibrate` reads checkpoint files for background agent health monitoring; skill temp output files                                                                                                            |
+| `Write(.plans/**)`      | Write plan and blueprint files to `.plans/`   | `/brainstorm` writes spec and tree files to `.plans/blueprint/`; `/develop:plan` writes plans to `.plans/active/`                                                                                              |
+| `Write(.notes/**)`      | Write notes and lessons to `.notes/`          | Skills write lessons, diary entries, and guides to `.notes/`                                                                                                                                                   |
+| `Write(.reports/**)`    | Write files into `.reports/` skill run dirs   | Skills and Codex write timestamped run artifacts (result.jsonl, analysis files) to `.reports/<skill>/`                                                                                                         |
+| `Write(.temp/**)`       | Write prose output files to `.temp/`          | Quality-gates long output; research, review, resolve, session, and other skills write findings to `.temp/output-<slug>-<date>.md`                                                                              |
 | `Glob(~/.claude/**)`    | Glob-match files in home `.claude/` directory | `/foundry:init link` checks for existing symlinks/files before linking; `/investigate` probes verify agent/skill/config files exist in `~/.claude/`; scoped to `.claude/` only to avoid broad home-dir timeout |
-| `Read(~/.claude/**)`    | Read files in home `.claude/` directory       | `/foundry:init` reads `~/.claude/settings.json` for merging; `/investigate` probes read `~/.claude/settings.json` during environment checks                     |
+| `Read(~/.claude/**)`    | Read files in home `.claude/` directory       | `/foundry:init` reads `~/.claude/settings.json` for merging; `/investigate` probes read `~/.claude/settings.json` during environment checks                                                                    |
 
 ______________________________________________________________________
 
@@ -61,7 +61,7 @@ ______________________________________________________________________
 | `Bash(find .developments*)`           | Locate files inside `.developments/` skill run dirs | `/develop` review-cycle artifact inspection and TTL cleanup                                               |
 | `Bash(find .notes*)`                  | Locate files inside `.notes/`                       | Notes inspection and TTL cleanup                                                                          |
 | `Bash(find .plans*)`                  | Locate files inside `.plans/`                       | Blueprint spec TTL cleanup; plan file inspection                                                          |
-| `Bash(find .reports*)`                | Locate files inside `.reports/` (skill runs)        | `/analyse`, `/calibrate`, `/audit`, `/review`, `/resolve` artifact inspection and TTL cleanup             |
+| `Bash(find .reports*)`                | Locate files inside `.reports/` (skill runs)        | `/analyse`, `/calibrate`, `/audit`, `/oss:review`, `/resolve` artifact inspection and TTL cleanup         |
 | `Bash(find .temp*)`                   | Locate files inside `.temp/` (prose output)         | Quality-gates long output inspection and TTL cleanup                                                      |
 | `Bash(grep:*)`                        | Search file content by regex pattern                | Filter command output, find usages across a codebase                                                      |
 | `Bash(head:*)`                        | Read the first N lines of a file                    | Inspect file headers, preview log beginnings                                                              |
@@ -69,18 +69,18 @@ ______________________________________________________________________
 | `Bash(ls:*)`                          | List directory contents                             | Check file existence, inspect directory structure                                                         |
 | `Bash(wc:*)`                          | Count lines, words, or bytes                        | Measure file count, line budget checks                                                                    |
 | `Bash(diff:*)`                        | Compare two files line-by-line                      | Confirm patch outcome, spot drift between config files                                                    |
-| `Bash(cp:*)`                          | Copy files                                          | `/foundry:init` uses this to copy rules and settings to `~/.claude/`                                               |
+| `Bash(cp:*)`                          | Copy files                                          | `/foundry:init` uses this to copy rules and settings to `~/.claude/`                                      |
 | `Bash(ln:*)`                          | Create symlinks                                     | `/foundry:init link` symlinks agents, skills, and rules into `~/.claude/`                                 |
 | `Bash(mkdir:*)`                       | Create directories                                  | Ensure target paths exist before writing                                                                  |
 | `Bash(mkdir -p .cache/*)`             | Create subdirs inside `.cache/`                     | `/analyse` creates `.cache/gh/` for GitHub API response caching                                           |
 | `Bash(mkdir -p .notes/)`              | Create the `.notes/` directory                      | Skills write lessons, diary entries, and guides to `.notes/`                                              |
-| `Bash(mkdir -p .plans/active/)`       | Create `.plans/active/` plan directory              | `/develop plan` creates the active plans directory before writing plan files                              |
+| `Bash(mkdir -p .plans/active/)`       | Create `.plans/active/` plan directory              | `/develop:plan` creates the active plans directory before writing plan files                              |
 | `Bash(mkdir -p .plans/blueprint/)`    | Create `.plans/blueprint/` directory                | `/brainstorm` creates the blueprint directory before writing spec and tree files                          |
 | `Bash(mkdir -p .plans/closed/)`       | Create `.plans/closed/` directory                   | Plans are moved here when completed                                                                       |
 | `Bash(mkdir -p .reports/calibrate/*)` | Create `.reports/calibrate/` skill run subdirs      | `/calibrate` creates a timestamped run dir before spawning pipeline agents                                |
 | `Bash(mkdir -p .reports/resolve/*)`   | Create `.reports/resolve/` skill run subdirs        | `/resolve` creates a run dir for lint+QA gate artifacts                                                   |
 | `Bash(mkdir -p .reports/audit/*)`     | Create `.reports/audit/` skill run subdirs          | `/audit` creates a timestamped run dir before spawning self-mentor agents                                 |
-| `Bash(mkdir -p .reports/review/*)`    | Create `.reports/review/` skill run subdirs         | `/review` creates a run dir for multi-agent review artifacts                                              |
+| `Bash(mkdir -p .reports/review/*)`    | Create `.reports/review/` skill run subdirs         | `/oss:review` creates a run dir for multi-agent review artifacts                                          |
 | `Bash(mkdir -p .reports/analyse/*)`   | Create `.reports/analyse/` skill run subdirs        | `/analyse` creates subdirs for thread, ecosystem, and health modes                                        |
 | `Bash(mkdir -p .experiments/*)`       | Create `.experiments/` skill run subdirs            | `/optimize` creates a run dir for run mode artifacts                                                      |
 | `Bash(mkdir -p .developments/*)`      | Create `.developments/` skill run subdirs           | `/develop` creates a run dir for review-cycle artifacts                                                   |
@@ -113,43 +113,43 @@ ______________________________________________________________________
 
 ## GitHub CLI — primarily read-only
 
-| Permission                | Description                                    | Typical use case                                                          |
-| ------------------------- | ---------------------------------------------- | ------------------------------------------------------------------------- |
-| `Bash(gh auth status:*)`  | Check GitHub CLI authentication state          | Pre-flight check in `/resolve` and any skill that requires `gh` auth      |
-| `Bash(gh pr view:*)`      | Inspect PR metadata, body, and review status   | Used by `/review` and `/develop fix` to understand the PR under review    |
-| `Bash(gh pr checkout:*)`  | Check out a PR branch locally                  | `/resolve` uses this to enter the PR branch state before applying changes |
-| `Bash(gh pr diff:*)`      | Fetch the full diff of a PR                    | `/review` fetches the diff for static analysis                            |
-| `Bash(gh pr list:*)`      | List open or merged PRs                        | `/analyse health` and duplicate-detection modes                           |
-| `Bash(gh pr checks:*)`    | Read CI check status on a PR                   | Verify CI passed before marking a fix complete                            |
-| `Bash(gh repo view:*)`    | Fetch repository metadata (name, owner)        | `/resolve` detects owner/repo slug for constructing API call paths        |
-| `Bash(gh run list:*)`     | List recent workflow runs                      | `/ci-guardian` diagnosis: find the failing run                            |
-| `Bash(gh run view:*)`     | View logs and status of a specific CI run      | Read error output from a failed job                                       |
-| `Bash(gh issue view:*)`   | Read issue body, labels, and comments          | `/analyse` and `/develop fix` read the issue before starting work         |
-| `Bash(gh issue list:*)`   | List issues                                    | `/analyse dupes` and health overview                                      |
-| `Bash(gh release view:*)` | Inspect an existing release's notes and assets | `/release` uses this to read the previous release as a baseline           |
-| `Bash(gh release list:*)` | List releases                                  | Find the most recent tag to set a changelog range                         |
-| `Bash(gh api graphql:*)`  | Execute GitHub GraphQL API queries             | `/analyse discussion` mode fetches Discussion threads via the GraphQL API |
-| `Bash(gh api repos/*)`    | GitHub REST API calls for repo resources       | `/analyse`, `/review`, `/resolve` fetch PR reviews, issue data via REST   |
-| `Bash(gh api search/*)`   | GitHub REST API search endpoint                | `/resolve` searches for downstream usage of changed APIs                  |
+| Permission                | Description                                    | Typical use case                                                            |
+| ------------------------- | ---------------------------------------------- | --------------------------------------------------------------------------- |
+| `Bash(gh auth status:*)`  | Check GitHub CLI authentication state          | Pre-flight check in `/resolve` and any skill that requires `gh` auth        |
+| `Bash(gh pr view:*)`      | Inspect PR metadata, body, and review status   | Used by `/oss:review` and `/develop:fix` to understand the PR under review  |
+| `Bash(gh pr checkout:*)`  | Check out a PR branch locally                  | `/resolve` uses this to enter the PR branch state before applying changes   |
+| `Bash(gh pr diff:*)`      | Fetch the full diff of a PR                    | `/oss:review` fetches the diff for static analysis                          |
+| `Bash(gh pr list:*)`      | List open or merged PRs                        | `/analyse health` and duplicate-detection modes                             |
+| `Bash(gh pr checks:*)`    | Read CI check status on a PR                   | Verify CI passed before marking a fix complete                              |
+| `Bash(gh repo view:*)`    | Fetch repository metadata (name, owner)        | `/resolve` detects owner/repo slug for constructing API call paths          |
+| `Bash(gh run list:*)`     | List recent workflow runs                      | `/ci-guardian` diagnosis: find the failing run                              |
+| `Bash(gh run view:*)`     | View logs and status of a specific CI run      | Read error output from a failed job                                         |
+| `Bash(gh issue view:*)`   | Read issue body, labels, and comments          | `/analyse` and `/develop:fix` read the issue before starting work           |
+| `Bash(gh issue list:*)`   | List issues                                    | `/analyse dupes` and health overview                                        |
+| `Bash(gh release view:*)` | Inspect an existing release's notes and assets | `/release` uses this to read the previous release as a baseline             |
+| `Bash(gh release list:*)` | List releases                                  | Find the most recent tag to set a changelog range                           |
+| `Bash(gh api graphql:*)`  | Execute GitHub GraphQL API queries             | `/analyse discussion` mode fetches Discussion threads via the GraphQL API   |
+| `Bash(gh api repos/*)`    | GitHub REST API calls for repo resources       | `/analyse`, `/oss:review`, `/resolve` fetch PR reviews, issue data via REST |
+| `Bash(gh api search/*)`   | GitHub REST API search endpoint                | `/resolve` searches for downstream usage of changed APIs                    |
 
 ______________________________________________________________________
 
 ## Git — read-only
 
-| Permission              | Description                                          | Typical use case                                                        |
-| ----------------------- | ---------------------------------------------------- | ----------------------------------------------------------------------- |
-| `Bash(git fetch:*)`     | Fetch from a remote without merging                  | `/resolve` fetches remote refs to detect fork divergence before merging |
-| `Bash(git log:*)`       | Browse commit history                                | `/release` reads commits since last tag; general history inspection     |
-| `Bash(git shortlog:*)`  | Summarise history grouped by author                  | Contributor stats for release notes                                     |
-| `Bash(git describe:*)`  | Derive version string from nearest tag               | Determine current version in release automation                         |
-| `Bash(git diff:*)`      | Show unstaged / staged / commit-to-commit changes    | Pre-commit review, diffing a patch before applying                      |
-| `Bash(git show:*)`      | Inspect a specific commit, tag, or blob              | Read the content of a tagged release or a specific file at a ref        |
-| `Bash(git rev-list:*)`  | Enumerate commits in a range                         | Count distance between refs, find commits to include in release notes   |
+| Permission              | Description                                          | Typical use case                                                                        |
+| ----------------------- | ---------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| `Bash(git fetch:*)`     | Fetch from a remote without merging                  | `/resolve` fetches remote refs to detect fork divergence before merging                 |
+| `Bash(git log:*)`       | Browse commit history                                | `/release` reads commits since last tag; general history inspection                     |
+| `Bash(git shortlog:*)`  | Summarise history grouped by author                  | Contributor stats for release notes                                                     |
+| `Bash(git describe:*)`  | Derive version string from nearest tag               | Determine current version in release automation                                         |
+| `Bash(git diff:*)`      | Show unstaged / staged / commit-to-commit changes    | Pre-commit review, diffing a patch before applying                                      |
+| `Bash(git show:*)`      | Inspect a specific commit, tag, or blob              | Read the content of a tagged release or a specific file at a ref                        |
+| `Bash(git rev-list:*)`  | Enumerate commits in a range                         | Count distance between refs, find commits to include in release notes                   |
 | `Bash(git rev-parse:*)` | Resolve refs to hashes; get project root             | Many skills use `--show-toplevel` to locate the project root; MEMORY.md path derivation |
-| `Bash(git ls-files:*)`  | List tracked files in the index                      | `/audit` and `/manage` enumerate tracked config files                   |
-| `Bash(git branch:*)`    | List or inspect local branches                       | Check which branch is active; list branches without touching remote     |
-| `Bash(git tag:*)`       | List or inspect local tags                           | Find the latest release tag without pushing                             |
-| `Bash(git status:*)`    | Show working-tree state: staged, unstaged, untracked | Pre-commit check, verifying clean state before a release                |
+| `Bash(git ls-files:*)`  | List tracked files in the index                      | `/audit` and `/manage` enumerate tracked config files                                   |
+| `Bash(git branch:*)`    | List or inspect local branches                       | Check which branch is active; list branches without touching remote                     |
+| `Bash(git tag:*)`       | List or inspect local tags                           | Find the latest release tag without pushing                                             |
+| `Bash(git status:*)`    | Show working-tree state: staged, unstaged, untracked | Pre-commit check, verifying clean state before a release                                |
 
 ______________________________________________________________________
 
@@ -173,7 +173,7 @@ ______________________________________________________________________
 
 | Permission                          | Description                                     | Typical use case                                                        |
 | ----------------------------------- | ----------------------------------------------- | ----------------------------------------------------------------------- |
-| `Bash(pytest:*)`                    | Run the test suite via the `pytest` entry point | Quick test run during TDD loop in `/develop feature` and `/develop fix` |
+| `Bash(pytest:*)`                    | Run the test suite via the `pytest` entry point | Quick test run during TDD loop in `/develop:feature` and `/develop:fix` |
 | `Bash(pre-commit run:*)`            | Run pre-commit hooks on staged or all files     | Verify formatting and linting before marking a task done                |
 | `Bash(python -m pytest:*)`          | Run tests via the module interface              | Environment-safe alternative when `pytest` binary is not on PATH        |
 | `Bash(python -m doctest:*)`         | Execute doctests embedded in a module           | Validate inline usage examples in docstrings                            |
@@ -211,32 +211,32 @@ ______________________________________________________________________
 
 ## WebFetch — allowed domains
 
-| Permission                                   | Description                              | Typical use case                                                                             |
-| -------------------------------------------- | ---------------------------------------- | -------------------------------------------------------------------------------------------- |
-| `WebFetch(domain:github.com)`                | GitHub web pages and repo content        | Fetch README, release pages, action marketplace entries                                      |
-| `WebFetch(domain:docs.github.com)`           | GitHub documentation                     | GitHub Actions syntax, REST API reference                                                    |
-| `WebFetch(domain:raw.githubusercontent.com)` | Raw file content from GitHub repos       | Read source files, configs, or changelogs directly                                           |
-| `WebFetch(domain:pypi.org)`                  | PyPI package metadata                    | Release history, classifiers, dependency info                                                |
-| `WebFetch(domain:pre-commit.ci)`             | pre-commit.ci run status and badge URLs  | Verify CI badges before adding to README                                                     |
-| `WebFetch(domain:claude.ai)`                 | Claude product pages                     |                                                                                              |
-| `WebFetch(domain:claude.com)`                | Claude Code landing and docs             |                                                                                              |
-| `WebFetch(domain:anthropic.com)`             | Anthropic blog, model cards, policy docs | Research model capabilities, fetch release announcements                                     |
-| `WebFetch(domain:docs.anthropic.com)`        | Claude Code documentation                | Fetch Claude Code docs; redirects to code.claude.com — both domains needed for full coverage |
-| `WebFetch(domain:code.claude.com)`           | Claude Code documentation                | `/audit` fetches hook, agent, and skill schemas for validation                               |
-| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/research` and `scientist` fetch papers                                                     |
-| `WebFetch(domain:developers.openai.com)`     | OpenAI developer documentation           | Codex CLI docs, API reference                                                                |
-| `WebFetch(domain:platform.openai.com)`       | OpenAI platform and API reference        | Model capabilities, pricing, endpoint docs                                                   |
-| `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                                                     |
-| `WebFetch(domain:www.anthropic.com)`         | Anthropic main site                      | Research blog posts, model announcements, policy pages                                       |
-| `WebFetch(domain:support.claude.com)`        | Anthropic support and help centre        | Lookup Claude feature behaviour, plan limits, billing FAQs                                   |
-| `WebFetch(domain:hr.linkedin.com)`           | LinkedIn profile pages                   | Release contributor lookup: confirm a contributor's real name via their profile (see `oss/release/guidelines/writing-rules.md`)   |
-| `WebFetch(domain:scholar.google.com)`        | Google Scholar academic search           | `scientist` and `/research` find papers and citation counts                                  |
+| Permission                                   | Description                              | Typical use case                                                                                                                |
+| -------------------------------------------- | ---------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------- |
+| `WebFetch(domain:github.com)`                | GitHub web pages and repo content        | Fetch README, release pages, action marketplace entries                                                                         |
+| `WebFetch(domain:docs.github.com)`           | GitHub documentation                     | GitHub Actions syntax, REST API reference                                                                                       |
+| `WebFetch(domain:raw.githubusercontent.com)` | Raw file content from GitHub repos       | Read source files, configs, or changelogs directly                                                                              |
+| `WebFetch(domain:pypi.org)`                  | PyPI package metadata                    | Release history, classifiers, dependency info                                                                                   |
+| `WebFetch(domain:pre-commit.ci)`             | pre-commit.ci run status and badge URLs  | Verify CI badges before adding to README                                                                                        |
+| `WebFetch(domain:claude.ai)`                 | Claude product pages                     |                                                                                                                                 |
+| `WebFetch(domain:claude.com)`                | Claude Code landing and docs             |                                                                                                                                 |
+| `WebFetch(domain:anthropic.com)`             | Anthropic blog, model cards, policy docs | Research model capabilities, fetch release announcements                                                                        |
+| `WebFetch(domain:docs.anthropic.com)`        | Claude Code documentation                | Fetch Claude Code docs; redirects to code.claude.com — both domains needed for full coverage                                    |
+| `WebFetch(domain:code.claude.com)`           | Claude Code documentation                | `/audit` fetches hook, agent, and skill schemas for validation                                                                  |
+| `WebFetch(domain:arxiv.org)`                 | ML preprints                             | `/research` and `scientist` fetch papers                                                                                        |
+| `WebFetch(domain:developers.openai.com)`     | OpenAI developer documentation           | Codex CLI docs, API reference                                                                                                   |
+| `WebFetch(domain:platform.openai.com)`       | OpenAI platform and API reference        | Model capabilities, pricing, endpoint docs                                                                                      |
+| `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                                                                                        |
+| `WebFetch(domain:www.anthropic.com)`         | Anthropic main site                      | Research blog posts, model announcements, policy pages                                                                          |
+| `WebFetch(domain:support.claude.com)`        | Anthropic support and help centre        | Lookup Claude feature behaviour, plan limits, billing FAQs                                                                      |
+| `WebFetch(domain:hr.linkedin.com)`           | LinkedIn profile pages                   | Release contributor lookup: confirm a contributor's real name via their profile (see `oss/release/guidelines/writing-rules.md`) |
+| `WebFetch(domain:scholar.google.com)`        | Google Scholar academic search           | `scientist` and `/research` find papers and citation counts                                                                     |
 
 ______________________________________________________________________
 
 ## Skills — pre-approved invocations
 
-Only skills that are invoked **programmatically** (by another skill, hook, or automated workflow) need a `Skill()` entry. Skills invoked directly by the user (`/audit`, `/review`, `/develop`, etc.) never need pre-authorization — the user's own invocation is the approval. Adding all 14 skills to the allow list would be noise.
+Only skills that are invoked **programmatically** (by another skill, hook, or automated workflow) need a `Skill()` entry. Skills invoked directly by the user (`/audit`, `/oss:review`, `/develop:feature`, etc.) never need pre-authorization — the user's own invocation is the approval. Adding all 14 skills to the allow list would be noise.
 
 | Permission         | Description                                        | Why programmatic (not user-invoked)                                                                      |
 | ------------------ | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------- |

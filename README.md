@@ -111,19 +111,25 @@ borda.ai-home/
 │   │   │   └── plugin.json # plugin manifest
 │   │   ├── agents/         # 8 foundry agents (canonical source)
 │   │   ├── skills/         # foundry skills (canonical source)
+│   │   ├── rules/          # rule files (canonical source; symlinked from .claude/rules/)
+│   │   ├── CLAUDE.md       # workflow rules (symlinked from .claude/CLAUDE.md)
+│   │   ├── TEAM_PROTOCOL.md # AgentSpeak v2 protocol (symlinked from .claude/TEAM_PROTOCOL.md)
+│   │   ├── permissions-guide.md # allow-entry reference (symlinked from .claude/permissions-guide.md)
 │   │   └── hooks/
 │   │       └── hooks.json  # task tracking, quality gates, preprocessing
 │   ├── oss/                # OSS plugin: shepherd, ci-guardian + analyse/review/resolve/release
 │   ├── develop/            # Develop plugin: feature/fix/refactor/plan/debug
 │   └── research/           # Research plugin: scientist, data-steward + topic/plan/judge/run/sweep
 ├── .claude/                # Claude Code source of truth
-│   ├── README.md           # full reference: skills, rules, hooks, architecture
-│   ├── CLAUDE.md           # workflow rules and core principles
-│   ├── settings.json       # permissions and model preferences
-│   ├── agents/             # symlinks → foundry plugin agents (+ domain plugin agents when installed)
-│   ├── skills/             # symlinks → foundry plugin skills
-│   ├── rules/              # per-topic coding and config standards (auto-loaded by Claude Code)
-│   └── hooks/              # hook scripts (symlinked into plugin)
+│   ├── README.md           # full reference: restore, skills, rules, hooks, architecture (real file)
+│   ├── CLAUDE.md           # workflow rules and core principles (symlink → plugins/foundry/)
+│   ├── TEAM_PROTOCOL.md    # AgentSpeak v2 inter-agent protocol (symlink → plugins/foundry/)
+│   ├── permissions-guide.md # allow-entry reference (symlink → plugins/foundry/)
+│   ├── settings.json       # deny list + project preferences (real file)
+│   ├── agents/             # symlinks → plugins/foundry/agents/
+│   ├── skills/             # symlinks → plugins/foundry/skills/
+│   ├── rules/              # per-topic coding and config standards (symlinks → plugins/foundry/rules/)
+│   └── hooks/              # symlinks → plugins/foundry/hooks/
 ├── .mcp.json               # MCP server definitions
 ├── .codex/                 # OpenAI Codex CLI
 │   ├── README.md           # full reference: agents, profiles, Claude integration
@@ -212,7 +218,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
 ```
-/develop:plan src/mypackage/dataloader.py       # profile-first: cProfile → pick goal → wizard
+/research:plan src/mypackage/dataloader.py      # profile-first: cProfile → pick goal → wizard
 /develop:refactor src/mypackage/dataloader.py  # extract caching layer
 /develop:review                                # review diff before commit
 ```

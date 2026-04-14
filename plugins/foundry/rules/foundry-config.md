@@ -35,18 +35,18 @@ paths:
 
 ## Distribution
 
-- Source of truth: `plugins/foundry/` (rules, agents, skills, hooks, permissions-guide.md, TEAM_PROTOCOL.md)
+- Source of truth: `plugins/foundry/` (rules, agents, skills, hooks, CLAUDE.md, TEAM_PROTOCOL.md, permissions-guide.md)
 - `.claude/` entries are symlinks into the plugin — edit the plugin files, not the symlinks
 - Rules distribute to `~/.claude/rules/` via `/foundry:init` (copy) or `/foundry:init link` (symlink)
 - `permissions-guide.md` is project-only reference — symlinked from `.claude/`, not copied to `~/.claude/`
-- `settings.local.json` is never distributed; `CLAUDE.md` IS distributed via `/foundry:init`
+- `settings.local.json` is never distributed; `CLAUDE.md` is NOT distributed (reserved file — user owns `~/.claude/CLAUDE.md`); `TEAM_PROTOCOL.md` IS distributed via `/foundry:init`
 
 ## Log File TTL
 
-| Location             | TTL     | Condition                                                                                         |
-| -------------------- | ------- | ------------------------------------------------------------------------------------------------- |
-| `~/.claude/logs/`    | forever | hook audit logs (invocations, compactions, timings) — global across all projects; rotate at 10 MB |
-| `.claude/logs/`      | forever | skill-specific logs (calibrations, session-archive, audit-errors) — project-scoped; rotate at 10 MB |
+| Location          | TTL     | Condition                                                                                           |
+| ----------------- | ------- | --------------------------------------------------------------------------------------------------- |
+| `~/.claude/logs/` | forever | hook audit logs (invocations, compactions, timings) — global across all projects; rotate at 10 MB   |
+| `.claude/logs/`   | forever | skill-specific logs (calibrations, session-archive, audit-errors) — project-scoped; rotate at 10 MB |
 
 ## Cleanup Hook (SessionEnd)
 

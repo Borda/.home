@@ -7,6 +7,14 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdat
 disable-model-invocation: true
 ---
 
+<objective>
+
+Sustained metric-improvement loop — reads a `program.md` file, iterates with specialist ideation agents, commits changes atomically, and auto-rolls back on regression. Designed for long-running automated improvement campaigns.
+
+NOT for: methodology validation before a run (use `/research:judge`); hypothesis generation (use `scientist` agent); one-off feature work (use `/develop:feature`).
+
+</objective>
+
 <constants>
 
 Campaign mode only:
@@ -48,6 +56,8 @@ STATE_DIR:                  .experiments/<run-id>/      (timestamped dir per run
 3. Stop, report progress, surface to user — do not continue looping blindly
 
 </constants>
+
+<workflow>
 
 ## Default Mode (Steps R1–R7)
 
@@ -233,7 +243,7 @@ Then proceed to Step R5.
 
 ### Step R5: Iteration loop
 
-**`--team` mode**: If `--team` is active, Read `.claude/skills/research/run/modes/team.md` and execute Phases A–D in place of the standard iteration loop below.
+**`--team` mode**: If `--team` is active, Read `${CLAUDE_SKILL_DIR}/modes/team.md` and execute Phases A–D in place of the standard iteration loop below.
 
 For each iteration `i` from 1 to `max_iterations`:
 
@@ -649,3 +659,5 @@ ______________________________________________________________________
 - **State persistence enables resume** — if the loop crashes or times out, `resume` picks up exactly where it stopped.
 - **Safety break**: max iterations default is 20; the skill never exceeds MAX_ITERATIONS without a user override in config.
 - **Explicit flags = hard requirements**: any flag the user passes (`--colab`, `--docker`, `--codex`, `--researcher`, `--architect`) must be available at R2 precondition checks. If unavailable, stop immediately — never silently degrade to a mode the user did not request.
+
+</workflow>

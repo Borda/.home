@@ -45,14 +45,14 @@ A completed run always contains `result.jsonl`. Incomplete runs (crashed, timed 
 
 ## TTL policy
 
-| Location                                                                    | TTL     | Condition                                                      |
-| --------------------------------------------------------------------------- | ------- | -------------------------------------------------------------- |
-| `.reports/<skill>/YYYY-MM-DDTHH-MM-SSZ/`, `.<skill>/YYYY-MM-DDTHH-MM-SSZ/` | 30 days | only dirs containing `result.jsonl`                            |
-| `.plans/blueprint/`                                                         | 30 days | keyed on file mtime (flat spec/tree files)                     |
-| `.cache/gh/`                                                                | 30 days | keyed on file mtime (GitHub API response cache)                |
-| `.temp/`                                                                    | 30 days | keyed on file mtime                                            |
-| `.plans/active/`, `.plans/closed/`                                          | manual  | move to `closed/` when done; never auto-delete                 |
-| `.notes/`                                                                   | manual  | human-maintained                                               |
-| `releases/<version>/`                                                       | manual  | release artefacts; archive or delete after shipping            |
+| Location                                                                   | TTL     | Condition                                           |
+| -------------------------------------------------------------------------- | ------- | --------------------------------------------------- |
+| `.reports/<skill>/YYYY-MM-DDTHH-MM-SSZ/`, `.<skill>/YYYY-MM-DDTHH-MM-SSZ/` | 30 days | only dirs containing `result.jsonl`                 |
+| `.plans/blueprint/`                                                        | 30 days | keyed on file mtime (flat spec/tree files)          |
+| `.cache/gh/`                                                               | 30 days | keyed on file mtime (GitHub API response cache)     |
+| `.temp/`                                                                   | 30 days | keyed on file mtime                                 |
+| `.plans/active/`, `.plans/closed/`                                         | manual  | move to `closed/` when done; never auto-delete      |
+| `.notes/`                                                                  | manual  | human-maintained                                    |
+| `releases/<version>/`                                                      | manual  | release artefacts; archive or delete after shipping |
 
 Log file TTL and the SessionEnd cleanup hook script are in `.claude/rules/foundry-config.md` (foundry-infrastructure only).

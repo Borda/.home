@@ -367,9 +367,9 @@ For each blocking question: call `AskUserQuestion` — one at a time, in order. 
 2. For each item, write a ready-to-run invocation:
    - `.claude/` config change → `/manage create <type> <name> "description"` or `/manage update <name> <spec-file>`
    - System install or shell setup → full shell command
-   - Application code change → `/develop feature "<goal>"` or `/develop fix "<symptom>"`
-   - Documentation → `/develop feature "<doc goal>"`
-   - Verification/testing → `/develop feature "<test goal>"` or manual check command
+   - Application code change → `/develop:feature "<goal>"` or `/develop:fix "<symptom>"`
+   - Documentation → `/develop:feature "<doc goal>"`
+   - Verification/testing → `/develop:feature "<test goal>"` or manual check command
 3. Output an ordered task table:
 
 ```

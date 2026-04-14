@@ -200,9 +200,9 @@ End your response with a `## Confidence` block per CLAUDE.md output standards �
 - Don't post responses without explicit user instruction — only draft them
 - **Forked context**: this skill runs with `context: fork` — it operates without access to the current conversation history. All required context must be provided as the skill argument or in your prompt.
 - Follow-up chains:
-  - Issue with confirmed bug → `/develop fix` to diagnose, reproduce with test, and apply targeted fix
-  - Issue is a feature request → `/develop feature` for TDD-first implementation
-  - PR with quality concerns → `/review` for comprehensive multi-agent code review
+  - Issue with confirmed bug → `/develop:fix` to diagnose, reproduce with test, and apply targeted fix
+  - Issue is a feature request → `/develop:feature` for TDD-first implementation
+  - PR with quality concerns → `/oss:review` for comprehensive multi-agent code review
   - Draft responses → use `--reply` to auto-draft via shepherd; or invoke shepherd manually
 
 </notes>

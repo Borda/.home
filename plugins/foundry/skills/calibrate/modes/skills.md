@@ -7,7 +7,7 @@
 Skill domains:
 
 - `/audit` → synthetic `.claude/` config with N injected structural issues
-- `/review` → synthetic Python module with N cross-domain issues (arch + tests + docs + lint)
+- `/oss:review` → synthetic Python module with N cross-domain issues (arch + tests + docs + lint)
 - `/research:plan` → synthetic optimization goal (e.g. "reduce pytest runtime by 30%"); measure whether the plan mode produces a complete, valid `program.md` with all required sections, a plausible `metric_cmd`, correct `direction`, and coherent `scope_files`
 - `/research:judge` → synthetic `program.md` with N injected plan-quality issues (e.g. missing guard command, absent `direction`, non-existent `scope_files` path, invalid `agent_strategy`); measure whether judge correctly identifies each injected issue at the right severity
 
@@ -63,7 +63,7 @@ Modes evaluated for calibration but deferred due to significant barriers. `/audi
 
 - `/resolve` — orchestrates live PR review, lint, push; fully external-service-dependent
 - `/manage` — CRUD on config files; no findings list to score
-- `/develop feature/fix/refactor/debug` — full dev lifecycle; requires git, tests, linting
+- `/develop:feature`/`/develop:fix`/`/develop:refactor`/`/develop:debug` — full dev lifecycle; requires git, tests, linting
 - `/research:topic` — SOTA literature search; depends on live web results; no deterministic ground truth
 - `/brainstorm` — creative ideation; no deterministic ground truth
 - `/investigate` — open-ended diagnosis; output varies completely by symptom

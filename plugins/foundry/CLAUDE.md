@@ -72,8 +72,8 @@ Operations listed in `settings.json` are pre-approved — execute directly. When
 
 Teams are always user-invoked:
 
-- **Models**: lead = session model; reasoning teammates (sw-engineer, qa-specialist, perf-optimizer, researcher) = `opus`; execution teammates (doc-scribe, linting-expert, ci-guardian, data-steward, web-explorer) = `sonnet`; max 3–5
-- **Protocol**: every spawn prompt must include `Read .claude/TEAM_PROTOCOL.md and use AgentSpeak v2`; preserve file paths, errors, test results, task IDs; discard verbose output
+- **Models**: lead = session model; reasoning teammates (sw-engineer, qa-specialist, perf-optimizer, scientist) = `opus`; execution teammates (doc-scribe, linting-expert, ci-guardian, data-steward, web-explorer) = `sonnet`; max 3–5
+- **Protocol**: every spawn prompt must include `Read ~/.claude/TEAM_PROTOCOL.md and use AgentSpeak v2`; preserve file paths, errors, test results, task IDs; discard verbose output
 - **Security**: `qa-specialist` auto-includes OWASP Top 10 — no separate security agent
 - **File-based handoff applies in teams**: teammates writing parallel analysis still follow the §2 file-handoff protocol — compact JSON envelope back to lead, full output to file
 

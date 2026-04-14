@@ -102,6 +102,16 @@ After Codex writes `$RUN_DIR/codex.md`, extract a compact seed list (≤10 items
 
 Replace `$RUN_DIR` in the spawn prompt below with the actual path from Step 2.
 
+Resolve the oss:review checklist path (version-agnostic):
+
+```bash
+OSS_ROOT=$(jq -r 'to_entries[] | select(.key | test("oss@")) | .value.installPath' ~/.claude/plugins/installed_plugins.json 2>/dev/null | head -1)  # timeout: 5000
+REVIEW_CHECKLIST="${OSS_ROOT}/skills/review/checklist.md"
+[ -f "$REVIEW_CHECKLIST" ] && echo "Checklist: $REVIEW_CHECKLIST" || echo "⚠ oss:review checklist not found — Agent 1 will skip checklist patterns"  # timeout: 5000
+```
+
+Replace `$REVIEW_CHECKLIST` in the Agent 1 and consolidator spawn prompts below with the resolved path.
+
 Launch agents simultaneously with the Agent tool (security augmentation is folded into Agent 1 — not a separate spawn; Agent 6 is optional). Every agent prompt must end with:
 
 > "Write your FULL findings (all sections, Confidence block) to `$RUN_DIR/<agent-name>.md` using the Write tool — where `<agent-name>` is e.g. `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:solution-architect`. Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":1,\"medium\":2},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.88}`"
@@ -119,7 +129,7 @@ Flag rules:
 - Caught=Yes + Action=`pass` or bare `except` → **MEDIUM** (swallowed error)
 - Cap at 15 rows. Focus on new/changed paths only, not the entire codebase.
 
-Read the review checklist (use the Read tool to read `.claude/skills/review/checklist.md`) — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
+Read the review checklist (use the Read tool to read `$REVIEW_CHECKLIST`) — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
 
 **Agent 2 — foundry:qa-specialist**: Audit test coverage. Identify untested code paths, missing edge cases, and test quality issues. Check for ML-specific issues (non-deterministic tests, missing seed pinning). List the top 5 tests that should be added. Also check explicitly for missing tests in these patterns (these are GT-level findings, not afterthoughts):
 
@@ -155,7 +165,7 @@ Read and follow the cross-validation protocol from `.claude/skills/_shared/cross
 
 Before constructing the output path, extract the current branch and date: `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')` `DATE=$(date +%Y-%m-%d)`
 
-Spawn a **sw-engineer** consolidator agent with this prompt:
+Spawn a **foundry:sw-engineer** consolidator agent with this prompt:
 
 > "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75. Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
 

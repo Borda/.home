@@ -7,6 +7,16 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdat
 disable-model-invocation: true
 ---
 
+<objective>
+
+Test-first refactoring. Audit test coverage, add characterization tests if missing, then apply changes with a safety net.
+
+NOT for: bug fixes (use `/develop:fix`); new features (use `/develop:feature`); `.claude/` config changes (use `/manage`).
+
+</objective>
+
+<workflow>
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -186,8 +196,10 @@ Read `.claude/skills/_shared/quality-stack.md` and execute the Branch Safety Gua
 
 ```
 You are a [foundry:sw-engineer|foundry:qa-specialist] teammate refactoring: [target].
-Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2. Apply file locking protocol for concurrent edits.
+Read ~/.claude/TEAM_PROTOCOL.md — use AgentSpeak v2. Apply file locking protocol for concurrent edits.
 Your task: [refactoring steps 4 | characterization tests step 3].
 Compact Instructions: preserve file paths, test results, coverage numbers. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal your completion in your final delta message: "Status: complete | blocked — <reason>".
 ```
+
+</workflow>

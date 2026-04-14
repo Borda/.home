@@ -180,3 +180,31 @@ grep -o 'rules/[a-z_-]*\.md' | sort -u # timeout: 5000
 ```
 
 Severity: 18b = **high**; 18a/18c/18d = **medium**.
+
+______________________________________________________________________
+
+## Check 25 — Implicit agent references (missing plugin prefix)
+
+All agent dispatch calls must use the fully-qualified plugin-prefixed form (`foundry:sw-engineer`, `oss:shepherd`, etc.). Bare names like `sw-engineer` are ambiguous: they rely on `~/.claude/agents/` symlinks being present and break if the symlinks are stale, missing, or point to a different plugin's agent.
+
+Scan agent files, skill files, and CLAUDE.md for `subagent_type=` patterns:
+
+```bash
+printf "=== Check 25: Implicit agent references ===\n"
+grep -rn 'subagent_type=' .claude/agents/ .claude/skills/ .claude/CLAUDE.md 2>/dev/null |
+grep -v '^Binary' |
+grep 'subagent_type="[a-z]' |
+grep -v '"[a-z][a-z-]*:[a-z]' |
+grep -v '"general-purpose"\|"Explore"\|"Plan"\|"claude-code-guide"\|"statusline-setup"' || true  # timeout: 5000
+```
+
+Exempt built-in types (no plugin prefix required): `general-purpose`, `Explore`, `Plan`, `claude-code-guide`, `statusline-setup`.
+
+Every non-exempt bare name is a **high** finding:
+
+```
+[high] Implicit agent reference: subagent_type="<name>" in <file>
+fix: use fully-qualified form, e.g. subagent_type="foundry:<name>"
+```
+
+**Report only** — do not auto-fix; the correct prefix depends on which plugin owns the agent.

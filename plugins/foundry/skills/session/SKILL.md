@@ -138,7 +138,7 @@ Read the matched file with the Read tool to extract its `name` field.
 
 Use Bash to remove the matched file:
 
-```example
+```bash
 rm "$MEMORY_DIR/session-open-<matched-slug>-<date>.md"
 echo "deleted"
 ```

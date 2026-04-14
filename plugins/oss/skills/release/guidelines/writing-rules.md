@@ -1,19 +1,19 @@
 Write for the reader, not the commit author.
 
-| Element                      | Rule                                                                       |
-| ---------------------------- | -------------------------------------------------------------------------- |
-| Feature heading              | Bold title, period, then plain-English description — no jargon             |
-| PR numbers (CHANGELOG)       | Full Markdown link — `([#947](https://github.com/owner/repo/pull/947))`    |
-| PR numbers (PUBLIC-NOTES.md) | Short inline ref — `(#947)`                                                |
+| Element                      | Rule                                                                                                                                                                     |
+| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| Feature heading              | Bold title, period, then plain-English description — no jargon                                                                                                           |
+| PR numbers (CHANGELOG)       | Full Markdown link — `([#947](https://github.com/owner/repo/pull/947))`                                                                                                  |
+| PR numbers (PUBLIC-NOTES.md) | Short inline ref — `(#947)`                                                                                                                                              |
 | PR ref + fenced code block   | Place `(#N)` at end of description text **before** the opening fence — never after the closing fence; trailing refs after fenced blocks are invisible in rendered output |
-| Issue refs                   | Never include `closes #N` / `fixes #N` in CHANGELOG or PUBLIC-NOTES.md     |
-| Code examples                | Real usage showing the new surface; not pseudocode                         |
-| Tables                       | Use for option/preset comparisons; skip for single-item features           |
-| Breaking changes             | Rare — use sparingly; false alarms scare users more than the change itself |
-| Fix items                    | Say what was broken and under what condition — not just "fixed X"          |
-| Changed items                | Behaviour changes only — old behaviour → new behaviour                     |
-| Deprecated items             | Name old API and its replacement; omit removal version if unknown          |
-| Removed items                | State deprecated-since version and migration target                        |
+| Issue refs                   | Never include `closes #N` / `fixes #N` in CHANGELOG or PUBLIC-NOTES.md                                                                                                   |
+| Code examples                | Real usage showing the new surface; not pseudocode                                                                                                                       |
+| Tables                       | Use for option/preset comparisons; skip for single-item features                                                                                                         |
+| Breaking changes             | Rare — use sparingly; false alarms scare users more than the change itself                                                                                               |
+| Fix items                    | Say what was broken and under what condition — not just "fixed X"                                                                                                        |
+| Changed items                | Behaviour changes only — old behaviour → new behaviour                                                                                                                   |
+| Deprecated items             | Name old API and its replacement; omit removal version if unknown                                                                                                        |
+| Removed items                | State deprecated-since version and migration target                                                                                                                      |
 
 > **Breaking vs Deprecated**: Normal flow is deprecate → announce removal version → Removed. Breaking Changes is for the rare case where **public API or user-facing behaviour** breaks **immediately** on upgrade with no prior warning and no fallback — including dependency version incompatibilities that affect users directly. Private API and test changes are never Breaking Changes. If the old behaviour still works — even with a deprecation warning — it belongs in Deprecated, not here. When in doubt, it is not Breaking Changes.
 

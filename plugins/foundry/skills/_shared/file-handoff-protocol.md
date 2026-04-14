@@ -93,4 +93,4 @@ Orchestrator handling by status:
 
 `/calibrate` is the canonical example of file-based handoff at scale — agents write to `/tmp/calibrate-<id>/` files; the orchestrator collects one-line summaries; consolidation happens post-collection without flooding main context.
 
-See also `/audit` Step 3 (`self-mentor` agents per file → `<RUN_DIR>/<file-basename>.md`) and `/review` Step 3–6.
+See also `/audit` Step 3 (`self-mentor` agents per file → `<RUN_DIR>/<file-basename>.md`) and `/oss:review` Step 3–6.

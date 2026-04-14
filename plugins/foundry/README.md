@@ -42,13 +42,22 @@ claude plugin install research@borda-ai-home
 
 </details>
 
-**One-time settings merge** — run inside Claude Code:
+**One-time setup** — run inside Claude Code:
 
 ```
-/foundry:init link
+/foundry:init        # settings merge + copy rules and TEAM_PROTOCOL.md to ~/.claude/
+/foundry:init link   # same, but symlinked; also symlinks agents and skills for root-namespace access
 ```
 
-`link` symlinks foundry agents and skills into `~/.claude/` for root-namespace access (`/audit` instead of `/foundry:audit`). Safe to re-run. OSS, develop, and research skills always use their plugin prefix.
+Use `link` to invoke foundry commands without a prefix (`/audit` instead of `/foundry:audit`). Both modes are idempotent — safe to re-run. OSS, develop, and research skills always use their plugin prefix regardless.
+
+**Why the copy/symlink split?**
+
+| What                     | How                                          | Why                                                                                                                                                                                    |
+| ------------------------ | -------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Rules + TEAM_PROTOCOL.md | copied (plain `init`) or symlinked (`+link`) | Rules load at session startup — a stale symlink after a plugin upgrade would silently serve old content. Copies are upgrade-safe; `+link` trades that safety for always-fresh content. |
+| Agents + skills          | symlinked only (`+link`)                     | Resolved dynamically at call time — a stale symlink produces an obvious error, not silent wrong behaviour. Copying large directories would also bloat `~/.claude/`.                    |
+| `hooks/hooks.json`       | automatic (plugin system)                    | Claude Code registers hooks from the plugin manifest automatically when the plugin is enabled. No init step needed.                                                                    |
 
 ## 🔁 How to Use
 
@@ -191,6 +200,10 @@ plugins/foundry/
 │   └── permissions.json     ← allow-list merged by /foundry:init
 ├── agents/                  ← canonical agent files (symlinked from .claude/agents/)
 ├── skills/                  ← canonical skill files (symlinked from .claude/skills/)
+├── rules/                   ← canonical rule files (symlinked from .claude/rules/)
+├── CLAUDE.md                ← workflow rules (symlinked from .claude/CLAUDE.md; distributed via init)
+├── TEAM_PROTOCOL.md         ← AgentSpeak v2 inter-agent protocol (symlinked from .claude/TEAM_PROTOCOL.md)
+├── permissions-guide.md     ← allow-entry reference (symlinked from .claude/permissions-guide.md; project-only)
 └── hooks/
     ├── hooks.json           ← hook registrations (${CLAUDE_PLUGIN_ROOT} paths)
     ├── task-log.js          ← SubagentStart/Stop tracking

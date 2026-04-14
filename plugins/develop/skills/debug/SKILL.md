@@ -7,6 +7,16 @@ allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdat
 disable-model-invocation: true
 ---
 
+<objective>
+
+Investigation-first debugging. Gather evidence, trace the data flow, form a confirmed root-cause hypothesis, write a regression test, then hand off to fix mode.
+
+NOT for: `.claude/` config issues (use `/audit`); general unknown failures without a traceback (use `/investigate`).
+
+</objective>
+
+<workflow>
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -94,7 +104,7 @@ Suspect file(s): <files identified in Steps 1-2>
 Evidence: <key signals that confirmed the hypothesis>
 ```
 
--> Proceed with `/develop fix` from **Step 2** (regression test). The root cause is already known — fix's Step 1 analysis is complete.
+-> Proceed with `/develop:fix` from **Step 2** (regression test). The root cause is already known — fix's Step 1 analysis is complete.
 
 Read `.claude/skills/_shared/quality-stack.md` and execute the Branch Safety Guard, Quality Stack, Codex Pre-pass, Progressive Review Loop, and Codex Mechanical Delegation steps.
 
@@ -115,9 +125,11 @@ Read `.claude/skills/_shared/quality-stack.md` and execute the Branch Safety Gua
 
 ```
 You are a foundry:sw-engineer teammate debugging: [symptom].
-Read .claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
+Read ~/.claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your hypothesis: [hypothesis N]. Investigate ONLY this root cause.
 Report findings to @lead using deltaT# or epsilonT# codes.
 Compact Instructions: preserve file paths, errors, line numbers. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal completion in your final delta message: "Status: complete | blocked — <reason>".
 ```
+
+</workflow>

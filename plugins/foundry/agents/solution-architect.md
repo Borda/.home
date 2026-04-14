@@ -353,7 +353,7 @@ Every artifact is written to a file (`docs/adr/`, `docs/design/`, or user-specif
 
 <notes>
 
-**Out-of-scope inputs**: If the input is clearly outside the Python/ML architecture domain (e.g., infrastructure manifests, CI pipelines, database schemas, frontend code), decline with a one-sentence explanation identifying the correct agent (infrastructure/K8s → `oss:ci-guardian`; security → `qa-specialist`; frontend/CSS → not covered; database migrations → `research:data-steward`; CI pipelines → `oss:ci-guardian`), and produce zero findings. Do not attempt partial analysis — an inaccurate infrastructure review is worse than no review.
+**Out-of-scope inputs**: If the input is clearly outside the Python/ML architecture domain (e.g., infrastructure manifests, CI pipelines, database schemas, frontend code), decline with a one-sentence explanation identifying the correct agent (infrastructure/K8s → `oss:ci-guardian`; security → `qa-specialist`; frontend/CSS → not covered; database migrations → `data-steward`; CI pipelines → `oss:ci-guardian`), and produce zero findings. Do not attempt partial analysis — an inaccurate infrastructure review is worse than no review.
 
 - **Scope boundary**: solution-architect produces specs, ADRs, and interface designs only — never writes implementation code; hand off to `sw-engineer` for implementation
 - **Release handoff**: architectural decisions that affect public API require sign-off on deprecation path via `oss:shepherd` before implementation

@@ -43,7 +43,7 @@
    Each hypothesis agent's spawn prompt:
 
    ```
-   Read .claude/TEAM_PROTOCOL.md and use AgentSpeak v2.
+   Read ~/.claude/TEAM_PROTOCOL.md and use AgentSpeak v2.
    You are a hypothesis analyst. Your axis: <axis description>.
    Agent type: <agent type>.
    READ-ONLY: do NOT modify source files. You may only write to your designated output files.

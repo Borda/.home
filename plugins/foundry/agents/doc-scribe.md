@@ -254,7 +254,7 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
 - **Handoff triggers**:
   - Public API changed → `oss:shepherd` handles deprecation lifecycle and CHANGELOG entry
   - Documentation build fails → `oss:ci-guardian` diagnoses the CI failure; doc-scribe fixes the content
-  - Full release notes from git history → `/release` skill
+  - Full release notes from git history → `/oss:release` skill
   - Documentation content complete → `linting-expert` sanitizes the output (formatting, style, lint errors in code examples); doc-scribe owns content, linting-expert owns the handover cleanup
 - **Docstring style**: follow `.claude/rules/python-code.md` for style
 - **Changelog automation**: if the project uses towncrier or commitizen, do not edit CHANGELOG.md directly — hand off to `oss:shepherd`

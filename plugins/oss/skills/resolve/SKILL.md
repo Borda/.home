@@ -245,7 +245,7 @@ Read every comment, review, and inline code comment. Classify each:
 | `[question]`    | Open question that needs an answer before deciding what code to write                          |
 | `[done]`        | A subsequent commit or reply already addressed this — skip                                     |
 | `[info]`        | Praise, acknowledgement, emoji-only — skip                                                     |
-| `[self-review]` | Finding from the `/review` report — not a GitHub commenter; author = agent name                |
+| `[self-review]` | Finding from the `/oss:review` report — not a GitHub commenter; author = agent name            |
 
 Build `ACTION_ITEMS`: `[{id, type, author, summary, file, line, full_comment_text}]`
 

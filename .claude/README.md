@@ -7,7 +7,8 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 <details>
 <summary><strong>Contents</strong></summary>
 
-- [🔄 Config Sync](#-config-sync)
+- [♻️ Restore This Setup](#%EF%B8%8F-restore-this-setup)
+- [🔄 Distribution](#-distribution)
 - [🔌 MCP Servers](#-mcp-servers)
 - [🧩 Agents](#-agents)
   - [Reference table](#reference-table)
@@ -16,6 +17,7 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
   - [Reference table](#reference-table-1)
   - [Orchestration flow by skill](#orchestration-flow-by-skill)
   - [Skill usage examples](#skill-usage-examples)
+- [🗺️ Plugin dependency matrix](#%EF%B8%8F-plugin-dependency-matrix)
 - [📐 Rules](#-rules)
   - [Reference table](#reference-table-2)
   - [How rules are auto-loaded](#how-rules-are-auto-loaded)
@@ -33,24 +35,53 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 
 </details>
 
+## ♻️ Restore This Setup
+
+`.claude/` is entirely restored from the installed plugins — there is nothing to manually copy or edit. After a fresh clone or machine setup:
+
+**Step 1** — install the plugins (run from the directory containing your clone):
+
+```bash
+claude plugin marketplace add ./Borda-AI-Home
+claude plugin install foundry@borda-ai-home
+claude plugin install oss@borda-ai-home
+claude plugin install develop@borda-ai-home
+claude plugin install research@borda-ai-home
+```
+
+**Step 2** — run inside Claude Code:
+
+```text
+/foundry:init
+```
+
+This merges `statusLine`, `permissions.allow`, and `enabledPlugins` (codex plugin) into `~/.claude/settings.json`; symlinks `rules/*.md` and `TEAM_PROTOCOL.md` into `~/.claude/`. Agents, skills, and hooks are exposed natively by the Claude Code plugin system — no symlinks needed.
+
+**What is restored:** `~/.claude/rules/*.md` and `~/.claude/TEAM_PROTOCOL.md` become symlinks into the installed foundry plugin. `~/.claude/settings.json` is updated in-place. All other plugin files (agents, skills, hooks, CLAUDE.md) are served directly by the plugin system. The only local-machine files are `settings.local.json` and `settings.json` (project prefs + permissions).
+
+Re-run `/foundry:init` after any plugin upgrade — rule symlinks point to versioned cache paths and go stale after reinstall.
+
 ## 🔄 Distribution
 
-`plugins/foundry/` is the **source of truth** for all foundry configuration. `.claude/` entries are symlinks into the plugin; `~/.claude/` receives copies or symlinks via `/foundry:init`.
+`plugins/foundry/` is the **source of truth** for all foundry configuration. The Claude Code plugin system natively exposes agents and skills; `/foundry:init` symlinks rules and `TEAM_PROTOCOL.md` into `~/.claude/` so they load on every session.
 
 ```
-plugins/foundry/           ← source of truth (agents, skills, rules, hooks)
-    agents/*.md            ←── symlinked ──→  .claude/agents/*.md
-    skills/*/SKILL.md      ←── symlinked ──→  .claude/skills/*/SKILL.md
-    rules/*.md             ←── symlinked ──→  .claude/rules/*.md
-    hooks/*.js             ←── symlinked ──→  .claude/hooks/*.js
+plugins/foundry/           ← source of truth
+    rules/*.md             ←── symlinked ──→  ~/.claude/rules/*.md          (init: ln -sf)
+    TEAM_PROTOCOL.md       ←── symlinked ──→  ~/.claude/TEAM_PROTOCOL.md    (init: ln -sf)
+    agents/*.md            ← plugin system exposes as  foundry:<agent>
+    skills/*/SKILL.md      ← plugin system exposes as  foundry:<skill>  and  /<skill>
+    hooks/*.js             ← auto-registered via hooks.json  (no init action)
+    CLAUDE.md              ← loaded by plugin system per session  (no init action)
+    permissions-guide.md   ← in plugin cache; not distributed elsewhere
 ```
 
 **Distributing to `~/.claude/`** — run after install or upgrade:
 
 ```text
-/foundry:init        # copy rules to ~/.claude/rules/; merge settings.json
-/foundry:init link   # same, but symlink agents, skills, and rules into ~/.claude/
-                     # (re-run after plugin upgrade to refresh stale symlinks)
+/foundry:init   # symlink rules/*.md + TEAM_PROTOCOL.md → ~/.claude/;
+                # merge statusLine, permissions.allow, enabledPlugins → ~/.claude/settings.json
+                # (re-run after plugin upgrade to refresh stale rule symlinks)
 ```
 
 **What is NOT distributed:** `settings.local.json` (machine-local overrides — API keys, MCP server activation, local permissions).
@@ -95,7 +126,7 @@ cp .mcp.json ~/.claude/.mcp.json
 
 ### colab-mcp
 
-Used by `/optimize run --colab` for GPU workloads via Google Colab. See the `/optimize` skill examples for usage. Enable by adding `"colab-mcp"` to `enabledMcpjsonServers`.
+Used by `/research:run --colab` for GPU workloads via Google Colab. See the `/research:run` skill examples for usage. Enable by adding `"colab-mcp"` to `enabledMcpjsonServers`.
 
 ## 🧩 Agents
 
@@ -106,7 +137,7 @@ Used by `/optimize run --colab` for GPU workloads via Google Colab. See the `/op
 | **sw-engineer**        | Architecture and implementation               | SOLID principles, type safety, clean architecture, doctest-driven dev                                            |
 | **solution-architect** | System design and API planning                | ADRs, interface specs, migration plans, coupling analysis, API surface audit                                     |
 | **shepherd**           | Project lifecycle management                  | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
-| **researcher**         | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
+| **scientist**          | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
 | **qa-specialist**      | Testing and validation                        | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns; auto-includes OWASP Top 10 in teams      |
 | **linting-expert**     | Code quality and static analysis              | ruff, mypy, pre-commit, rule selection strategy, CI quality gates; runs autonomously (`permissionMode: dontAsk`) |
 | **perf-optimizer**     | Performance engineering                       | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision                                       |
@@ -125,39 +156,47 @@ Key relationships:
 - `linting-expert` is always downstream of `sw-engineer` — never lints code that hasn't been implemented yet
 - `qa-specialist` is often parallel to `sw-engineer` (reviews) or downstream (validates implementation)
 - `doc-scribe` is always downstream — documents finalized code; never shapes design
-- `self-mentor` is orthogonal — audits config files, not user code; spawned by `/distill`, `/audit`, `/brainstorm`
-- `web-explorer` feeds `scientist` — fetches current docs/papers; researcher interprets and designs experiments
+- `self-mentor` is orthogonal — audits config files, not user code; spawned by `/audit` and `/brainstorm`
+- `web-explorer` feeds `scientist` — fetches current docs/papers; scientist interprets and designs experiments
 - `shepherd` is the external interface — PR replies, releases, contributor communication; no code implementation
 
-**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `scientist`, `solution-architect`, `shepherd`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (`opusplan` = plan-gated Opus — uses Opus-level reasoning when plan mode is active, defaulting to a lighter model for simple turns; pays for reasoning only when the task warrants it).
+**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `scientist`) default to `opus`; plan-gated agents (`solution-architect`, `shepherd`, `self-mentor`) use `opusplan` (plan-gated Opus — pays for reasoning only when the task warrants it); execution agents (`doc-scribe`, `linting-expert`, `ci-guardian`, `data-steward`, `web-explorer`) default to `sonnet`.
 
 ## ⚡ Skills
 
 ### Reference table
 
-| Skill           | Command                                                        | What It Does                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
-| --------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| **review**      | `/review [file\|PR#] [--reply]`                                | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                                                                                                                                                                                                                                                                          |
-| **analyse**     | `/analyse <N\|health\|ecosystem\|path/to/report.md> [--reply]` | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                                                                                                                                                                                                                                                                                         |
-| **brainstorm**  | `/brainstorm <idea> \| breakdown <tree-or-spec>`               | Two modes: (1) **idea** — clarifying questions → build divergent branch tree (deepen, close, merge, up to 10 ops) → save tree doc → self-mentor review → gate; (2) **breakdown** — auto-detects input: tree (`Status: tree`) → distillation questions → section-by-section spec; spec (`Status: draft`) → ordered action plan                                                                                                                                      |
-| **develop**     | `/develop feature\|fix\|refactor\|plan\|debug <goal>`          | TDD-first feature dev, reproduce-first bug fixing, test-first refactor, scope analysis (`plan`), or investigation-first debugging (`debug`)                                                                                                                                                                                                                                                                                                                        |
-| **resolve**     | `/resolve <PR#\|URL> [report] \| report \| <comment>`          | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                                                                                                                                                                                                  |
-| **calibrate**   | `/calibrate [target] [fast\|full] [apply]`                     | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                                                                                                                                                                                                                                                                            |
-| **audit**       | `/audit [scope] fix [high\|medium\|all] \| upgrade`            | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                                                                                                                                                                                                                                                                          |
-| **release**     | `/release <mode> [range]`                                      | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                                                                                                                                                                           |
-| **research**    | `/research <topic> \| plan [path]`                             | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                                                                                                                                                                                        |
-| **optimize**    | `/optimize plan\|judge\|run\|resume\|sweep <goal\|file>`       | Five modes: `plan` = config wizard (or `plan <file.py>` for profile-first bottleneck discovery) → `program.md`; `judge` = research-supervisor review of experimental methodology (hypothesis, measurement, controls, scope, strategy fit → APPROVED/NEEDS-REVISION/BLOCKED); `run` = metric-driven iteration loop; `resume` = continue after crash/stop; `sweep` = non-interactive pipeline (auto-plan → judge gate → run); `--team` and `--colab` (GPU) supported |
-| **manage**      | `/manage <op> <type>`                                          | Create, update, delete agents/skills/rules; manage `settings.json` permissions (`add perm`/`remove perm`); auto type-detection and cross-ref propagation                                                                                                                                                                                                                                                                                                           |
-| **sync**        | `/sync [apply]`                                                | Drift-detect and sync project `.claude/` and `.codex/` → home `~/.claude/` and `~/.codex/`                                                                                                                                                                                                                                                                                                                                                                         |
-| **investigate** | `/investigate <symptom>`                                       | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                                                                                                                                                                    |
-| **session**     | `/session [resume\|archive\|summary]`                          | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                                                                                                                                                                    |
-| **distill**     | `/distill`                                                     | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                                                                                                                                                                                                                                                                                  |
+| Skill                | Plugin   | Command                                                            | What It Does                                                                                                                                                                                                                                                                                                                  |
+| -------------------- | -------- | ------------------------------------------------------------------ | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **audit**            | foundry  | `/audit [scope] fix [high\|medium\|all] \| upgrade`                | Config audit: broken refs, inventory drift, docs freshness; `fix` auto-fixes at the requested severity level; `upgrade` applies docs-sourced improvements (mutually exclusive with `fix`)                                                                                                                                     |
+| **manage**           | foundry  | `/manage <op> <type>`                                              | Create, update, delete agents/skills/rules; manage `settings.json` permissions (`add perm`/`remove perm`); auto type-detection and cross-ref propagation                                                                                                                                                                      |
+| **calibrate**        | foundry  | `/calibrate [target] [fast\|full] [apply]`                         | Synthetic benchmarks measuring recall vs confidence bias; `routing` and `communication` modes available                                                                                                                                                                                                                       |
+| **brainstorm**       | foundry  | `/brainstorm <idea> \| breakdown <tree-or-spec>`                   | Two modes: (1) **idea** — clarifying questions → build divergent branch tree (deepen, close, merge, up to 10 ops) → save tree doc → self-mentor review → gate; (2) **breakdown** — auto-detects input: tree (`Status: tree`) → distillation questions → section-by-section spec; spec (`Status: draft`) → ordered action plan |
+| **investigate**      | foundry  | `/investigate <symptom>`                                           | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                               |
+| **session**          | foundry  | `/session [resume\|archive\|summary]`                              | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                               |
+| **distill**          | foundry  | `/distill`                                                         | One-time snapshot: suggest new agents/skills, review roster, prune memory, or consolidate lessons                                                                                                                                                                                                                             |
+| **oss:review**       | oss      | `/oss:review [file\|PR#] [--reply]`                                | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts contributor comment                                                                                                                                                                                                                     |
+| **oss:analyse**      | oss      | `/oss:analyse <N\|health\|ecosystem\|path/to/report.md> [--reply]` | GitHub thread analysis (auto-detects issue/PR/discussion); `health` = repo overview + duplicate clustering                                                                                                                                                                                                                    |
+| **oss:resolve**      | oss      | `/oss:resolve <PR#\|URL> [report] \| report \| <comment>`          | OSS fast-close: conflicts + review comments via Codex; three source modes: `pr` (live GitHub), `report` (/oss:review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                                                         |
+| **oss:release**      | oss      | `/oss:release <mode> [range]`                                      | Notes, changelog, migration, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                                      |
+| **develop:feature**  | develop  | `/develop:feature <goal>`                                          | TDD-first feature dev: codebase analysis, demo test, TDD loop, docs, review                                                                                                                                                                                                                                                   |
+| **develop:fix**      | develop  | `/develop:fix <goal>`                                              | Reproduce-first bug fixing: regression test, minimal fix, quality stack                                                                                                                                                                                                                                                       |
+| **develop:refactor** | develop  | `/develop:refactor <goal>`                                         | Test-first refactor with coverage audit before changing structure                                                                                                                                                                                                                                                             |
+| **develop:plan**     | develop  | `/develop:plan <goal>`                                             | Scope analysis — produces structured plan without writing implementation code                                                                                                                                                                                                                                                 |
+| **develop:debug**    | develop  | `/develop:debug <goal>`                                            | Investigation-first debugging: evidence gathering → hypothesis gate → minimal fix                                                                                                                                                                                                                                             |
+| **develop:review**   | develop  | `/develop:review`                                                  | Six-agent parallel review of local files or current git diff; no GitHub PR needed                                                                                                                                                                                                                                             |
+| **research:topic**   | research | `/research:topic <topic>`                                          | SOTA literature research with codebase-mapped implementation plan                                                                                                                                                                                                                                                             |
+| **research:plan**    | research | `/research:plan <goal\|file.py>`                                   | Config wizard: interactive goal → `program.md`; `plan <file.py>` for profile-first bottleneck discovery                                                                                                                                                                                                                       |
+| **research:judge**   | research | `/research:judge [file]`                                           | Research-supervisor review of experimental methodology (hypothesis, measurement, controls, scope, strategy fit → APPROVED/NEEDS-REVISION/BLOCKED)                                                                                                                                                                             |
+| **research:run**     | research | `/research:run <goal\|file> [--resume] [--team] [--colab]`         | Metric-driven iteration loop; `--resume` continues after crash; `--team` for parallel exploration; `--colab` for GPU workloads                                                                                                                                                                                                |
+| **research:sweep**   | research | `/research:sweep <goal\|file>`                                     | Non-interactive pipeline: auto-plan → judge gate → run                                                                                                                                                                                                                                                                        |
 
 ### Orchestration flow by skill
 
 Each skill follows a defined topology for how it composes agents:
 
-**`/review`** — parallel fan-out, then consolidation:
+<details>
+<summary><strong>`/oss:review`</strong> — parallel fan-out, then consolidation</summary>
 
 ```
 Tier 0: git diff --stat (mechanical gate — skips trivial diffs)
@@ -168,7 +207,10 @@ Tier 2: 6 parallel agents — sw-engineer, qa-specialist, perf-optimizer,
 → shepherd writes --reply output (if flag present)
 ```
 
-**`/develop feature`** — sequential with inner loops:
+</details>
+
+<details>
+<summary><strong>`/develop:feature`</strong> — sequential with inner loops</summary>
 
 ```
 Step 1: sw-engineer (codebase analysis)
@@ -180,7 +222,10 @@ Step 5: doc-scribe (docs update)
 Quality stack: linting-expert → qa-specialist → Codex pre-pass
 ```
 
-**`/develop fix`** — reproduce-first:
+</details>
+
+<details>
+<summary><strong>`/develop:fix`</strong> — reproduce-first</summary>
 
 ```
 Step 1: sw-engineer (root cause analysis)
@@ -191,7 +236,10 @@ Step 4: review+fix loop (max 3 cycles)
 Quality stack: linting-expert → qa-specialist → Codex pre-pass
 ```
 
-**`/develop refactor`** — test-first:
+</details>
+
+<details>
+<summary><strong>`/develop:refactor`</strong> — test-first</summary>
 
 ```
 Step 1: sw-engineer + linting-expert (coverage audit, parallel)
@@ -202,15 +250,21 @@ Step 5: review+fix loop (max 3 cycles)
 Quality stack: linting-expert → qa-specialist → Codex pre-pass
 ```
 
-**`/research`** — research-first:
+</details>
+
+<details>
+<summary><strong>`/research:topic`</strong> — research-first</summary>
 
 ```
-web-explorer (fetch current papers/docs) → researcher (deep analysis, writes to file)
+web-explorer (fetch current papers/docs) → scientist (deep analysis, writes to file)
 → consolidator reads findings → implementation plan
-(--team: multiple researcher instances on competing method families)
+(--team: multiple scientist instances on competing method families)
 ```
 
-**`/brainstorm`** — conversational spec, then task breakdown:
+</details>
+
+<details>
+<summary><strong>`/brainstorm`</strong> — conversational spec, then task breakdown</summary>
 
 ```
 idea mode:
@@ -228,7 +282,10 @@ breakdown mode (triggered by "breakdown <tree-or-spec>"):
   Status: draft → B1 blocking questions → B2 action plan table → B3 post-plan prompt
 ```
 
-**`/audit`** — self-mentor per file, then consolidation:
+</details>
+
+<details>
+<summary><strong>`/audit`</strong> — self-mentor per file, then consolidation</summary>
 
 ```
 per-config-file: self-mentor (reads file, writes findings to /tmp/audit-<ts>/<file>.md)
@@ -236,91 +293,73 @@ per-config-file: self-mentor (reads file, writes findings to /tmp/audit-<ts>/<fi
 (upgrade mode: web-explorer fetches latest Claude Code docs first)
 ```
 
+</details>
+
 ### Skill usage examples
 
-<details>
-<summary><strong>`/optimize` — Profile-first bottleneck discovery and run mode</strong></summary>
+**`/research:plan`, `/research:run`, `/research:judge`, `/research:sweep` — Profile-first bottleneck discovery and metric-improvement loop**
 
 ```text
 # plan mode — interactive config wizard → program.md
-/optimize plan "increase test coverage to 90%"
-/optimize plan src/mypackage/train.py           # profile-first: cProfile → ask what to optimize → wizard
-/optimize plan "improve F1 from 0.82 to 0.87" coverage.md  # write to custom path
+/research:plan "increase test coverage to 90%"
+/research:plan src/mypackage/train.py           # profile-first: cProfile → ask what to optimize → wizard
+/research:plan "improve F1 from 0.82 to 0.87" coverage.md  # write to custom path
 
 # judge mode — pre-flight quality gate before the expensive run loop
-/optimize judge                    # review program.md methodology → APPROVED / NEEDS-REVISION / BLOCKED
-/optimize judge coverage.md        # audit a specific program file
-/optimize judge --skip-validation  # skip local metric/guard validation (cross-machine workflows)
+/research:judge                    # review program.md methodology → APPROVED / NEEDS-REVISION / BLOCKED
+/research:judge coverage.md        # audit a specific program file
+/research:judge --skip-validation  # skip local metric/guard validation (cross-machine workflows)
 
 # run mode — sustained metric-improvement loop
-/optimize run "increase test coverage to 90%"        # run from text goal (20-iteration loop; auto-rollback on regression)
-/optimize run coverage.md                            # run from program.md config file
+/research:run "increase test coverage to 90%"        # run from text goal (20-iteration loop; auto-rollback on regression)
+/research:run coverage.md                            # run from program.md config file
 
 # resume mode — continue after crash or manual stop
-/optimize resume                                         # reads program_file from state.json
-/optimize resume coverage.md                            # resume specific run
+/research:run --resume                               # reads program_file from state.json
+/research:run coverage.md --resume                   # resume specific run
 
 # sweep mode — non-interactive pipeline: auto-plan → judge gate → run
-/optimize sweep "increase test coverage to 90%"         # automated end-to-end; no user gates
-/optimize sweep coverage.md                             # sweep from program.md config
+/research:sweep "increase test coverage to 90%"      # automated end-to-end; no user gates
+/research:sweep coverage.md                          # sweep from program.md config
 
-# flags (plan/run/resume/sweep)
-/optimize run "reduce training time by 20%" --team   # parallel exploration across axes
-/optimize run "improve validation accuracy" --colab  # GPU workloads via Colab MCP (opt-in)
+# flags (run/sweep)
+/research:run "reduce training time by 20%" --team   # parallel exploration across axes
+/research:run "improve validation accuracy" --colab  # GPU workloads via Colab MCP (opt-in)
 ```
 
 > **Colab MCP is opt-in.** `.mcp.json` defines the server but does not start it. To enable: add `"colab-mcp"` to `enabledMcpjsonServers` in `.claude/settings.local.json`, then restart Claude Code.
 
-</details>
-
-<details>
-<summary><strong>`/review` — Parallel code review</strong></summary>
+**`/oss:review` — Parallel PR review; `/develop:review` — local file/diff review**
 
 ```text
-/review 42          # review PR by number
-/review src/mypackage/transforms.py
-/review             # review latest commit
-/review 42 --reply  # review + draft contributor-facing comment
+# PR review (GitHub)
+/oss:review 42          # review PR by number
+/oss:review 42 --reply  # review + draft contributor-facing comment
+
+# Local diff or file review (no GitHub PR needed)
+/develop:review src/mypackage/transforms.py
+/develop:review             # review current git diff
 ```
 
-</details>
-
-<details>
-<summary><strong>`/analyse` — Issue, PR, Discussion and repo health</strong></summary>
+**`/oss:analyse` — Issue, PR, Discussion and repo health**
 
 ```text
-/analyse 123           # auto-detects issue/PR/discussion; wide-net related search
-/analyse health        # repo health overview with duplicate clustering
-/analyse ecosystem     # downstream consumer impact analysis
-/analyse 123 --reply   # analyse + draft contributor reply
+/oss:analyse 123           # auto-detects issue/PR/discussion; wide-net related search
+/oss:analyse health        # repo health overview with duplicate clustering
+/oss:analyse ecosystem     # downstream consumer impact analysis
+/oss:analyse 123 --reply   # analyse + draft contributor reply
 ```
 
-</details>
-
-<details>
-<summary><strong>`/release` — Release notes, changelog, readiness checks</strong></summary>
+**`/oss:release` — Release notes, changelog, readiness checks**
 
 ```text
-/release notes v1.2.0..HEAD
-/release changelog v1.2.0..HEAD
-/release prepare v2.0.0
-/release audit
+/oss:release notes v1.2.0..HEAD
+/oss:release changelog v1.2.0..HEAD
+/oss:release prepare v2.0.0
+/oss:release audit
 ```
 
-</details>
-
-<details>
-<summary><strong>`/sync` — Config drift detection</strong></summary>
-
-```text
-/sync          # dry-run: show what differs between project and home .claude/
-/sync apply    # apply: copy differing files to ~/.claude/
-```
-
-</details>
-
-<details>
-<summary><strong>`/manage` — Agent/skill lifecycle</strong></summary>
+**`/manage` — Agent/skill lifecycle**
 
 ```text
 /manage create agent security-auditor "Security specialist for vulnerability scanning"
@@ -328,10 +367,7 @@ per-config-file: self-mentor (reads file, writes findings to /tmp/audit-<ts>/<fi
 /manage delete agent web-explorer
 ```
 
-</details>
-
-<details>
-<summary><strong>`/audit` — Config health sweep + upgrade</strong></summary>
+**`/audit` — Config health sweep + upgrade**
 
 ```text
 /audit            # full sweep — report only, includes upgrade proposals table
@@ -341,44 +377,35 @@ per-config-file: self-mentor (reads file, writes findings to /tmp/audit-<ts>/<fi
 /audit skills fix # skills only, with auto-fix
 ```
 
-</details>
-
-<details>
-<summary><strong>`/develop` — Unified development orchestrator</strong></summary>
+**`/develop:feature`, `/develop:fix`, `/develop:refactor`, `/develop:plan`, `/develop:debug` — Development workflows**
 
 Each mode enforces a validation gate *before* writing implementation code:
 
-- `plan` — scope analysis; produces structured plan in `.plans/active/plan_<slug>.md`
-- `feature` — TDD demo validation before writing code
-- `fix` — reproduction test before touching anything
-- `refactor` — coverage audit before changing structure
-- `debug` — investigation-first; evidence gathering → hypothesis gate → minimal fix
+- `/develop:plan` — scope analysis; produces structured plan in `.plans/active/plan_<slug>.md`
+- `/develop:feature` — TDD demo validation before writing code
+- `/develop:fix` — reproduction test before touching anything
+- `/develop:refactor` — coverage audit before changing structure
+- `/develop:debug` — investigation-first; evidence gathering → hypothesis gate → minimal fix
 
 ```text
-/develop feature add batched predict() method to Classifier
-/develop fix TypeError when passing None to transform()
-/develop refactor src/mypackage/transforms.py
-/develop plan improve caching in the data loader
-/develop debug why does the validation loss spike at epoch 3?
+/develop:feature add batched predict() method to Classifier
+/develop:fix TypeError when passing None to transform()
+/develop:refactor src/mypackage/transforms.py
+/develop:plan improve caching in the data loader
+/develop:debug why does the validation loss spike at epoch 3?
 ```
 
-</details>
-
-<details>
-<summary><strong>`/resolve` — Resolve a PR end-to-end</strong></summary>
+**`/oss:resolve` — Resolve a PR end-to-end**
 
 ```text
-/resolve 42                                              # pr mode: live GitHub comments → conflict check → semantic resolution → action items
-/resolve https://github.com/org/repo/pull/42             # same as above, URL form
-/resolve report                                          # report mode: latest /review findings as action items; no GitHub re-fetch
-/resolve 42 report                                       # pr + report mode: GitHub comments + /review findings, aggregated and deduplicated
-/resolve "rename foo to bar throughout the auth module"  # single-comment fast path (comment dispatch mode)
+/oss:resolve 42                                              # pr mode: live GitHub comments → conflict check → semantic resolution → action items
+/oss:resolve https://github.com/org/repo/pull/42             # same as above, URL form
+/oss:resolve report                                          # report mode: latest /oss:review findings as action items; no GitHub re-fetch
+/oss:resolve 42 report                                       # pr + report mode: GitHub comments + /oss:review findings, aggregated and deduplicated
+/oss:resolve "rename foo to bar throughout the auth module"  # single-comment fast path (comment dispatch mode)
 ```
 
-</details>
-
-<details>
-<summary><strong>`/investigate` — Systematic failure diagnosis</strong></summary>
+**`/investigate` — Systematic failure diagnosis**
 
 ```text
 /investigate "hooks not firing on Save"
@@ -388,10 +415,7 @@ Each mode enforces a validation gate *before* writing implementation code:
 /investigate "uv run pytest can't find conftest.py"
 ```
 
-</details>
-
-<details>
-<summary><strong>`/session` — Session parking lot</strong></summary>
+**`/session` — Session parking lot**
 
 ```text
 /session            # auto-parks current diverging ideas and open questions
@@ -400,23 +424,93 @@ Each mode enforces a validation gate *before* writing implementation code:
 /session summary    # digest of what happened this session
 ```
 
+## 🗺️ Plugin dependency matrix
+
+<details>
+<summary><strong>Legend</strong></summary>
+
+- **✓** — actively spawned by this skill
+- **°** — scope boundary: "use this agent for X" in the description, never spawns it directly
+- **→** — delegates a subtask at runtime (a real call, not just a boundary mention)
+- **?** — conditional: which agent is selected depends on runtime strategy
+- **—** — no dependency
+
 </details>
+
+<details>
+<summary><strong>Agent short names</strong></summary>
+
+**foundry** 🔨
+- `🔨sm` — self-mentor
+- `🔨sw` — sw-engineer
+- `🔨qa` — qa-specialist
+- `🔨lint` — linting-expert
+- `🔨arch` — solution-architect
+- `🔨perf` — perf-optimizer
+- `🔨doc` — doc-scribe
+- `🔨web` — web-explorer
+
+**oss** 🌐
+- `🌐cig` — ci-guardian
+- `🌐shep` — shepherd
+
+**research** 🔬
+- `🔬sci` — scientist
+- `🔬ds` — data-steward
+
+**ext** 🤖
+- `🤖cx` — codex-rescue
+
+</details>
+
+### Agents (inter-agent dependencies)
+
+_Leaf agents — no outgoing calls: 🔨sw, 🔨qa, 🔨lint, 🔨perf, 🔨arch, 🔨web, 🔨sm_
+
+| Caller ↓ / Called → | 🔨sw | 🔨qa | 🔨lint | 🔨doc | 🔨perf | 🔨web | 🌐cig | 🌐shep | 🔬sci | 🔬ds |
+| ------------------- | ---- | ---- | ------ | ----- | ------ | ----- | ----- | ------ | ----- | ---- |
+| **ci-guardian**     | —    | —    | °      | —     | —      | —     | —     | °      | —     | —    |
+| **shepherd**        | —    | —    | —      | °     | —      | —     | °     | —      | —     | —    |
+| **doc-scribe**      | °    | —    | °      | —     | —      | —     | —     | °      | —     | —    |
+| **scientist**       | °    | °    | —      | —     | °      | °     | —     | —      | —     | °    |
+| **data-steward**    | —    | —    | —      | —     | —      | →     | —     | —      | °     | —    |
+
+### Skills
+
+_Skills with no direct agent calls: init, manage, distill, session (foundry); plan, debug→fix (develop); plan, judge, sweep→run (research)_
+
+| Skill              | plugin   | 🔨sm | 🔨sw | 🔨qa | 🔨lint | 🔨arch | 🔨perf | 🔨doc | 🔨web | 🌐shep | 🔬sci | 🔬ds | 🤖cx |
+| ------------------ | -------- | ---- | ---- | ---- | ------ | ------ | ------ | ----- | ----- | ------ | ----- | ---- | ---- |
+| **brainstorm**     | foundry  | ✓    | —    | —    | —      | —      | —      | —     | —     | —      | —     | —    | —    |
+| **investigate**    | foundry  | —    | —    | —    | —      | —      | —      | —     | —     | —      | —     | —    | ✓    |
+| **audit**          | foundry  | ✓    | —    | —    | —      | —      | —      | —     | ✓     | —      | —     | —    | —    |
+| **calibrate**      | foundry  | ✓    | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     | ✓     | ✓      | ✓     | ✓    | —    |
+| **review**         | oss      | —    | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     | —     | ✓      | —     | —    | ✓    |
+| **analyse**        | oss      | —    | —    | —    | —      | —      | —      | —     | —     | ✓      | —     | —    | —    |
+| **release**        | oss      | —    | —    | —    | —      | —      | —      | —     | ✓     | —      | —     | —    | —    |
+| **resolve**        | oss      | —    | ✓    | ✓    | ✓      | —      | —      | —     | —     | —      | —     | —    | ✓    |
+| **review**         | develop  | —    | ✓    | ✓    | ✓      | —      | —      | —     | —     | —      | —     | —    | ✓    |
+| **feature**        | develop  | —    | ✓    | ✓    | ✓      | —      | —      | ✓     | —     | —      | —     | —    | ✓    |
+| **fix**            | develop  | —    | ✓    | ✓    | ✓      | —      | —      | —     | —     | —      | —     | —    | ✓    |
+| **refactor**       | develop  | —    | ✓    | ✓    | ✓      | —      | —      | —     | —     | —      | —     | —    | ✓    |
+| **topic**          | research | —    | —    | —    | —      | —      | —      | —     | ✓     | —      | ✓     | —    | —    |
+| **run**            | research | —    | ✓    | —    | —      | ?      | ✓      | —     | —     | —      | ✓     | ✓    | ✓    |
 
 ## 📐 Rules
 
 ### Reference table
 
-| Rule file                         | Applies to                                      | What it governs                                                                                                                               |
-| --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `artifact-lifecycle.md`           | (global)                                        | Canonical dot-prefixed artifact layout, run-dir naming, TTL policy                                                                            |
-| `claude-config.md`                | (global)                                        | Universal ops rules: no hardcoded paths, Bash timeouts, two-separate-calls navigation pattern                                                 |
-| `communication.md`                | (global)                                        | Re: anchor format, progress narration, tone, output routing, and terminal color conventions                                                   |
-| `external-data.md`                | (global)                                        | Pagination and completeness rules for REST, GraphQL, and the `gh` CLI — never work on partial result sets                                     |
-| `foundry-config.md`               | `.claude/**`                                    | Plan mode gate for `.claude/` edits, post-edit checklist, XML tag conventions, cleanup hook, settings.json allow entries                      |
-| `git-commit.md`                   | (global)                                        | Commit message format, push safety (explicit confirmation required), branch safety                                                            |
-| `python-code.md`                  | `**/*.py`                                       | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP                                |
-| `quality-gates.md`                | (global)                                        | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                                                          |
-| `testing.md`                      | `tests/**/*.py`, `**/test_*.py`                 | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                                                       |
+| Rule file               | Applies to                      | What it governs                                                                                                          |
+| ----------------------- | ------------------------------- | ------------------------------------------------------------------------------------------------------------------------ |
+| `artifact-lifecycle.md` | (global)                        | Canonical dot-prefixed artifact layout, run-dir naming, TTL policy                                                       |
+| `claude-config.md`      | (global)                        | Universal ops rules: no hardcoded paths, Bash timeouts, two-separate-calls navigation pattern                            |
+| `communication.md`      | (global)                        | Re: anchor format, progress narration, tone, output routing, and terminal color conventions                              |
+| `external-data.md`      | (global)                        | Pagination and completeness rules for REST, GraphQL, and the `gh` CLI — never work on partial result sets                |
+| `foundry-config.md`     | `.claude/**`                    | Plan mode gate for `.claude/` edits, post-edit checklist, XML tag conventions, cleanup hook, settings.json allow entries |
+| `git-commit.md`         | (global)                        | Commit message format, push safety (explicit confirmation required), branch safety                                       |
+| `python-code.md`        | `**/*.py`                       | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP           |
+| `quality-gates.md`      | (global)                        | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                                     |
+| `testing.md`            | `tests/**/*.py`, `**/test_*.py` | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                                  |
 
 ### How rules are auto-loaded
 
@@ -470,31 +564,31 @@ Example: editing `tests/test_transforms.py` auto-loads `testing.md` (matches `te
 - Ephemeral (per-run): `/tmp/<skill>-<timestamp>/` — created once before any spawns
 - Persistent (final reports): `.temp/`
 
-**Reference implementations:** `/calibrate` is canonical; `/audit` Step 3 (`self-mentor` per file → consolidator); `/review` Steps 3–6.
+**Reference implementations:** `/calibrate` is canonical; `/audit` Step 3 (`self-mentor` per file → consolidator); `/oss:review` Steps 3–6.
 
 ______________________________________________________________________
 
 ### Tiered review pipeline
 
-*Most code changes don't need six parallel Opus agents — a cheap diff scan catches obvious issues and gates the expensive tier, saving 10-50x on routine changes without compromising thoroughness on diffs that matter.*
+Every review skill gates cheap work before spawning expensive agents — cheaper tiers short-circuit the pipeline when the diff is trivial or issues are already clear:
 
-Every skill that reviews or validates code uses a three-tier pipeline. Cheaper tiers gate the expensive ones:
+| Tier                     | What it does                                                           | Cost |
+| ------------------------ | ---------------------------------------------------------------------- | ---- |
+| **T0 — Mechanical gate** | `git diff --stat` — skips trivial or empty diffs before any AI work    | Zero |
+| **T1 — Codex pre-pass**  | Focused diff review (~60 s); flags bugs, edge cases, and logic errors  | Low  |
+| **T2 — Claude agents**   | Specialized parallel agents (opus for reasoning, sonnet for execution) | High |
 
-| Tier                          | What                                                                   | Cost | When                               |
-| ----------------------------- | ---------------------------------------------------------------------- | ---- | ---------------------------------- |
-| **0 — Mechanical gate**       | `git diff --stat` — skip trivial diffs                                 | Zero | Always (built into codex-prepass)  |
-| **1 — codex:review pre-pass** | Diff-focused review (~60s) — flags bugs, edge cases, logic errors      | Low  | Before expensive agent spawns      |
-| **2 — Claude agents**         | Specialized parallel agents (opus for reasoning, sonnet for execution) | High | Full review, audit, implementation |
+Which tiers each skill uses:
 
-| Skill                                  | Tier 0 | Tier 1 (codex:review) | Tier 2 (Claude agents) |
-| -------------------------------------- | :----: | :-------------------: | :--------------------: |
-| `/develop` (feature/fix/refactor/plan) |   ✓    |           ✓           |           ✓            |
-| `/review`                              |   ✓    |          ✓ †          |           ✓            |
-| `/optimize`                            |   ✓    |           ✓           |           ✓            |
-| `/audit fix`                           |   ✓    |           ✓           |           ✓            |
-| `/resolve`                             |   —    |           —           |           ✓            |
+| Skill                                                   | T0  | T1  | T2  |
+| ------------------------------------------------------- | :-: | :-: | :-: |
+| `/develop:feature`, `/develop:fix`, `/develop:refactor` |  ✓  |  ✓  |  ✓  |
+| `/oss:review`                                           |  ✓  | ✓ ‡ |  ✓  |
+| `/research:run`                                         |  ✓  |  ✓  |  ✓  |
+| `/audit fix`                                            |  ✓  |  ✓  |  ✓  |
+| `/oss:resolve`                                          |  —  |  —  |  ✓  |
 
-† For `/review`, the codex plugin runs as a full **co-reviewer** alongside Tier 2 agents — its findings are independently consolidated, not used to seed agent prompts (unbiased review).
+‡ For `/oss:review`, Codex runs as a full **co-reviewer** alongside T2 agents — its findings are independently consolidated rather than seeding agent prompts (unbiased review).
 
 ______________________________________________________________________
 
@@ -519,13 +613,12 @@ Agent Teams is Claude Code's experimental multi-agent feature. Teams are always 
 
 | Skill                     | When to use                                                               |
 | ------------------------- | ------------------------------------------------------------------------- |
-| `/develop fix --team`     | Bug spans modules; competing root-cause hypotheses                        |
-| `/develop feature --team` | Cross-layer feature needing impl + QA + docs in parallel                  |
-| `/research --team`        | Multiple competing method families to evaluate                            |
-| `/optimize run --team`    | Goal spans multiple optimization axes (speed = arch + pipeline + compute) |
-| `/optimize plan --team`   | Wizard + parallel exploration: teammates each own a different axis        |
-| `/optimize`               | Directory or system-wide scope → Claude proposes team (heuristic)         |
-| `/develop refactor`       | Directory or system-wide scope → Claude proposes team (heuristic)         |
+| `/develop:fix --team`     | Bug spans modules; competing root-cause hypotheses                        |
+| `/develop:feature --team` | Cross-layer feature needing impl + QA + docs in parallel                  |
+| `/research:topic --team`  | Multiple competing method families to evaluate                            |
+| `/research:run --team`    | Goal spans multiple optimization axes (speed = arch + pipeline + compute) |
+| `/research:plan --team`   | Wizard + parallel exploration: teammates each own a different axis        |
+| `/develop:refactor`       | Directory or system-wide scope → Claude proposes team (heuristic)         |
 
 **Model tiering:** Lead uses `opusplan`/`opus`. Deep reasoning teammates (`sw-engineer`, `qa-specialist`, `scientist`, `perf-optimizer`) use `opus`. Execution teammates (`doc-scribe`, `linting-expert`, `ci-guardian`) use `sonnet`. Keep teams to 3–5 teammates (~7× token cost vs single session).
 
@@ -675,19 +768,19 @@ Skills check availability at runtime: `claude plugin list 2>/dev/null | grep -q 
 
 | Skill                              | Site                          | Purpose                                                                              | Plugin command                            |
 | ---------------------------------- | ----------------------------- | ------------------------------------------------------------------------------------ | ----------------------------------------- |
-| `/develop fix`, `/develop feature` | `_shared/codex-prepass.md`    | Tier 1 pre-pass: review staged diff for bugs before Claude's review cycle            | `codex:review --wait`                     |
-| `/review`                          | Step 2 co-review              | Adversarial diff review seeding agent prompts with pre-flagged issues                | `codex:adversarial-review --wait <focus>` |
-| `/review`, `/optimize run`         | `_shared/codex-delegation.md` | Delegate mechanical follow-up: docstrings, type annotations, test stubs              | `codex:codex-rescue` (agent)              |
-| `/resolve`                         | Step 8 action items           | Apply PR review feedback to the codebase                                             | `codex:codex-rescue` (agent)              |
-| `/resolve`                         | Step 12a comment dispatch     | Apply a specific review comment                                                      | `codex:codex-rescue` (agent)              |
-| `/resolve`                         | Step 12 review loop           | Review applied changes for issues before committing                                  | `codex:review --wait`                     |
-| `/optimize run --codex`            | Phase 2b ideation             | Fallback: generate + apply one atomic optimization when Claude's change was reverted | `codex:codex-rescue` (agent)              |
+| `/develop:fix`, `/develop:feature` | `_shared/codex-prepass.md`    | Tier 1 pre-pass: review staged diff for bugs before Claude's review cycle            | `codex:review --wait`                     |
+| `/oss:review`                      | Step 2 co-review              | Adversarial diff review seeding agent prompts with pre-flagged issues                | `codex:adversarial-review --wait <focus>` |
+| `/oss:review`, `/research:run`     | `_shared/codex-delegation.md` | Delegate mechanical follow-up: docstrings, type annotations, test stubs              | `codex:codex-rescue` (agent)              |
+| `/oss:resolve`                     | Step 8 action items           | Apply PR review feedback to the codebase                                             | `codex:codex-rescue` (agent)              |
+| `/oss:resolve`                     | Step 12a comment dispatch     | Apply a specific review comment                                                      | `codex:codex-rescue` (agent)              |
+| `/oss:resolve`                     | Step 12 review loop           | Review applied changes for issues before committing                                  | `codex:review --wait`                     |
+| `/research:run --codex`            | Phase 2b ideation             | Fallback: generate + apply one atomic optimization when Claude's change was reverted | `codex:codex-rescue` (agent)              |
 | `/calibrate`                       | Phase 1a problem gen          | Generate synthetic calibration problems (JSON array written to run dir)              | `codex:codex-rescue` (agent)              |
 | `/calibrate`                       | Phase 2 scoring               | Score calibration responses against ground truth (JSON written to run dir)           | `codex:codex-rescue` (agent)              |
 
 **What Claude retains:**
 
-- Long-horizon planning and research (`/research`, `/optimize run`, `/develop plan`)
+- Long-horizon planning and research (`/research:topic`, `/research:run`, `/develop:plan`)
 - Orchestration of multiple agents in defined topologies
 - Judgment calls: design decisions, spec approval, test validity assessment
 - Final validation: Claude always verifies Codex output via `git diff HEAD` before accepting changes
@@ -704,11 +797,11 @@ Runtime artifacts live at the project root in dot-prefixed dirs — separate fro
 .plans/closed/           ← completed plans
 .notes/                  ← lessons.md, diary, guides
 .reports/calibrate/      ← /calibrate benchmark runs
-.reports/resolve/        ← /resolve lint+QA gate outputs
+.reports/resolve/        ← /oss:resolve lint+QA gate outputs
 .reports/audit/          ← /audit analysis runs
-.reports/review/         ← /review multi-agent outputs
-.experiments/            ← /optimize skill runs (improve mode)
-.developments/           ← /develop review-cycle handoffs
+.reports/review/         ← /oss:review multi-agent outputs
+.experiments/            ← /research:run skill runs (improve mode)
+.developments/           ← /develop:* review-cycle handoffs
 .temp/                   ← long output from any skill (quality-gates rule)
 ```
 
