@@ -102,8 +102,6 @@ Do NOT enable all rules at once on an existing codebase — add progressively, f
 
 ## pre-commit — enforce at commit time
 
-See `.claude/rules/pre-commit-config.md` for version pinning rules before committing.
-
 ```yaml
 # .pre-commit-config.yaml
 repos:
@@ -140,6 +138,51 @@ pre-commit autoupdate      # bump all hook revs to latest — run this regularly
 ```
 
 > **Tip**: Enable [pre-commit.ci](https://pre-commit.ci) to auto-run and auto-fix hooks on every Pull Request (PR) without any local setup burden.
+
+\<pre_commit_versioning>
+
+### Version Pinning
+
+Two contexts; apply the right one:
+
+**Live project config** (`.pre-commit-config.yaml` already exists and is in use):
+
+- Run `pre-commit autoupdate` — this fetches the latest release tag for every hook
+- Do NOT manually look up versions or use `pip install --upgrade` to determine the rev
+- Commit the result of `pre-commit autoupdate` directly; do not modify the revs it sets
+
+**Template / starter file** (creating a new config for others to copy):
+
+- Use `<CURRENT>` as the rev placeholder — NEVER a real version string like `v0.5.0`
+- Add the autoupdate comment on the same line:
+  ```yaml
+  rev: <CURRENT>  # run `pre-commit autoupdate` to set; verify release at the hook's repo
+  ```
+
+**New live project config** (creating `.pre-commit-config.yaml` for the first time for actual use):
+
+- Create a minimal config with placeholder revs, then immediately run `pre-commit autoupdate` to populate real versions
+- Do NOT manually write version strings; autoupdate sets them correctly from the start
+- To update a single hook rather than all hooks: `pre-commit autoupdate --repo <repo-url>`
+
+Tip: run `pre-commit autoupdate` as part of regular dependency updates (e.g., monthly or when upgrading other deps).
+
+### Version Verification
+
+After running `pre-commit autoupdate`, cross-check the updated revs:
+
+- **ruff**: https://pypi.org/project/ruff (or https://github.com/astral-sh/ruff/releases)
+- **mypy**: https://pypi.org/project/mypy (or https://github.com/pre-commit/mirrors-mypy/tags)
+- **pre-commit-hooks**: https://github.com/pre-commit/pre-commit-hooks/releases
+
+Do NOT check only GitHub releases for ruff/mypy — pypi.org reflects the published package version.
+
+### Prohibited Patterns
+
+- `rev: latest` (not a valid git ref pattern; ambiguous)
+- Using `pip install --upgrade <pkg>` to determine the hook rev (wrong ecosystem)
+
+\</pre_commit_versioning>
 
 ## PyTorch Application Programming Interface (API) Migration
 

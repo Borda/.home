@@ -366,7 +366,7 @@ Hook files are JavaScript — delegate to **sw-engineer** (not self-mentor) for 
 
 ```
 Read `.claude/hooks/<name>.js`.
-Read `.claude/rules/hooks-js.md` for the file-header structure, exit code semantics, stdin pattern, and anti-patterns to avoid.
+Apply the hook authoring standards from the `\<hook_authoring>` section in your agent definition — file-header structure, exit code semantics, stdin pattern, and anti-patterns.
 Apply this change: <directive>
 Rules:
 - Preserve the file header block (PURPOSE, HOW IT WORKS, EXIT CODES) unless the change explicitly modifies that logic
@@ -579,7 +579,7 @@ Output a structured report containing:
 - **Cross-References**: count of files updated, broken refs cleaned (n/a for perm operations)
 - **Current Roster**: agents (N) and skills (N) with comma-separated names (n/a for perm operations)
 - **Audit Result**: audit findings (pass / issues found) (n/a for perm operations)
-- **Follow-up**: run `/sync apply` to propagate to `~/.claude/`; for `create` or `update` of an agent/skill run `/calibrate <name>` to baseline or verify the entity's recall and calibration after changes; for **agent or skill** create/update/delete also run `/calibrate routing fast` — any roster or description change affects routing; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
+- **Follow-up**: for `create` or `update` of an agent/skill run `/calibrate <name>` to baseline or verify the entity's recall and calibration after changes; for **agent or skill** create/update/delete also run `/calibrate routing fast` — any roster or description change affects routing; for perm operations confirm both `settings.json` and `permissions-guide.md` are updated
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 
@@ -600,12 +600,12 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **Type auto-detection**: `update` and `delete` search all four dirs in parallel (agents, skills, rules, hooks); the name is the unique identifier. If two entities share a name (rare), `AskUserQuestion` resolves the ambiguity.
 - **Content-edit vs rename discrimination**: bare kebab-case second arg = rename; quoted string or `.md` path = content-edit. Unambiguous because names never contain spaces or end in `.md`.
 - Follow-up chains:
-  - After any create/update/delete → `/audit` to verify config integrity, then `/sync apply` to propagate
+  - After any create/update/delete → `/audit` to verify config integrity
   - After creating a new agent/skill → `/review` to validate generated content quality; for testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), run `/calibrate routing fast`
   - After updating agent instructions (especially `\<antipatterns_to_flag>`) → `/calibrate <agent>` to measure whether recall and confidence calibration improved
   - **After any agent create/update/delete or content-edit that changes description** → `/calibrate routing fast` to confirm routing accuracy is unaffected
-  - After `add perm`/`remove perm` → `/sync apply` to propagate updated settings.json and permissions-guide.md to `~/.claude/`
-  - Recommended sequence for agent operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/calibrate routing fast` (routing) → `/sync apply`
-  - Recommended sequence for skill/rule operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/calibrate routing fast` (if roster changed) → `/sync apply`
+  - After `add perm`/`remove perm` → confirm both `settings.json` and `permissions-guide.md` are updated; run `/foundry:init` to refresh `~/.claude/` settings
+  - Recommended sequence for agent operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/calibrate routing fast` (routing)
+  - Recommended sequence for skill/rule operations: `/manage <op>` → `/audit` → `/calibrate <name>` (quality) → `/calibrate routing fast` (if roster changed)
 
 </notes>

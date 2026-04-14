@@ -5,6 +5,7 @@ Write for the reader, not the commit author.
 | Feature heading              | Bold title, period, then plain-English description — no jargon             |
 | PR numbers (CHANGELOG)       | Full Markdown link — `([#947](https://github.com/owner/repo/pull/947))`    |
 | PR numbers (PUBLIC-NOTES.md) | Short inline ref — `(#947)`                                                |
+| PR ref + fenced code block   | Place `(#N)` at end of description text **before** the opening fence — never after the closing fence; trailing refs after fenced blocks are invisible in rendered output |
 | Issue refs                   | Never include `closes #N` / `fixes #N` in CHANGELOG or PUBLIC-NOTES.md     |
 | Code examples                | Real usage showing the new surface; not pseudocode                         |
 | Tables                       | Use for option/preset comparisons; skip for single-item features           |
@@ -35,3 +36,13 @@ Bad/good examples:
 - LinkedIn is optional — include only if found via lookup; never construct a URL by guessing
 - New contributors get a welcome sentence above the list
 - Maintainer always listed last with infra / CI / docs scope
+- Precede the Contributors section with a `---` separator
+
+**Last line (required):**
+
+Every release entry must end with:
+
+`**Full changelog**: https://github.com/[org]/[repo]/compare/vPREV...vNEXT`
+
+- This line must be the final line of the entry, after the Contributors section — no notes, annotations, separators, or prose may follow it
+- Never omit it, even for patch releases

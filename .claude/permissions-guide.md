@@ -36,8 +36,8 @@ These entries pre-authorize `Read`, `Glob`, `Grep`, and `Write` on directories t
 | `Write(.notes/**)`      | Write notes and lessons to `.notes/`          | Skills write lessons, diary entries, and guides to `.notes/`                                                                                                     |
 | `Write(.reports/**)`    | Write files into `.reports/` skill run dirs   | Skills and Codex write timestamped run artifacts (result.jsonl, analysis files) to `.reports/<skill>/`                                                           |
 | `Write(.temp/**)`       | Write prose output files to `.temp/`          | Quality-gates long output; research, review, resolve, session, and other skills write findings to `.temp/output-<slug>-<date>.md`                                |
-| `Glob(~/.claude/**)`    | Glob-match files in home `.claude/` directory | `/sync` Bash fallback and `/investigate` probes verify agent/skill/config files exist in `~/.claude/`; scoped to `.claude/` only to avoid broad home-dir timeout |
-| `Read(~/.claude/**)`    | Read files in home `.claude/` directory       | `/sync` Bash fallback reads home copies of config files for comparison; `/investigate` probes read `~/.claude/settings.json` during environment checks           |
+| `Glob(~/.claude/**)`    | Glob-match files in home `.claude/` directory | `/foundry:init link` checks for existing symlinks/files before linking; `/investigate` probes verify agent/skill/config files exist in `~/.claude/`; scoped to `.claude/` only to avoid broad home-dir timeout |
+| `Read(~/.claude/**)`    | Read files in home `.claude/` directory       | `/foundry:init` reads `~/.claude/settings.json` for merging; `/investigate` probes read `~/.claude/settings.json` during environment checks                     |
 
 ______________________________________________________________________
 
@@ -69,7 +69,7 @@ ______________________________________________________________________
 | `Bash(ls:*)`                          | List directory contents                             | Check file existence, inspect directory structure                                                         |
 | `Bash(wc:*)`                          | Count lines, words, or bytes                        | Measure file count, line budget checks                                                                    |
 | `Bash(diff:*)`                        | Compare two files line-by-line                      | Confirm patch outcome, spot drift between config files                                                    |
-| `Bash(cp:*)`                          | Copy files                                          | `/sync` uses this to propagate config files to `~/.claude/`                                               |
+| `Bash(cp:*)`                          | Copy files                                          | `/foundry:init` uses this to copy rules and settings to `~/.claude/`                                               |
 | `Bash(mkdir:*)`                       | Create directories                                  | Ensure target paths exist before writing                                                                  |
 | `Bash(mkdir -p .cache/*)`             | Create subdirs inside `.cache/`                     | `/analyse` creates `.cache/gh/` for GitHub API response caching                                           |
 | `Bash(mkdir -p .notes/)`              | Create the `.notes/` directory                      | Skills write lessons, diary entries, and guides to `.notes/`                                              |
@@ -144,8 +144,8 @@ ______________________________________________________________________
 | `Bash(git diff:*)`      | Show unstaged / staged / commit-to-commit changes    | Pre-commit review, diffing a patch before applying                      |
 | `Bash(git show:*)`      | Inspect a specific commit, tag, or blob              | Read the content of a tagged release or a specific file at a ref        |
 | `Bash(git rev-list:*)`  | Enumerate commits in a range                         | Count distance between refs, find commits to include in release notes   |
-| `Bash(git rev-parse:*)` | Resolve refs to hashes; get project root             | `/sync` uses `--show-toplevel` to locate the project root               |
-| `Bash(git ls-files:*)`  | List tracked files in the index                      | `/sync` uses this inside `cd $PROJECT && git ls-files .claude/`         |
+| `Bash(git rev-parse:*)` | Resolve refs to hashes; get project root             | Many skills use `--show-toplevel` to locate the project root; MEMORY.md path derivation |
+| `Bash(git ls-files:*)`  | List tracked files in the index                      | `/audit` and `/manage` enumerate tracked config files                   |
 | `Bash(git branch:*)`    | List or inspect local branches                       | Check which branch is active; list branches without touching remote     |
 | `Bash(git tag:*)`       | List or inspect local tags                           | Find the latest release tag without pushing                             |
 | `Bash(git status:*)`    | Show working-tree state: staged, unstaged, untracked | Pre-commit check, verifying clean state before a release                |
@@ -228,7 +228,7 @@ ______________________________________________________________________
 | `WebFetch(domain:openai.com)`                | OpenAI blog and model release notes      | Track new model releases                                                                     |
 | `WebFetch(domain:www.anthropic.com)`         | Anthropic main site                      | Research blog posts, model announcements, policy pages                                       |
 | `WebFetch(domain:support.claude.com)`        | Anthropic support and help centre        | Lookup Claude feature behaviour, plan limits, billing FAQs                                   |
-| `WebFetch(domain:hr.linkedin.com)`           | LinkedIn profile pages                   | `release-notes.md` contributor lookup: confirm a contributor's real name via their profile   |
+| `WebFetch(domain:hr.linkedin.com)`           | LinkedIn profile pages                   | Release contributor lookup: confirm a contributor's real name via their profile (see `oss/release/guidelines/writing-rules.md`)   |
 | `WebFetch(domain:scholar.google.com)`        | Google Scholar academic search           | `scientist` and `/research` find papers and citation counts                                  |
 
 ______________________________________________________________________

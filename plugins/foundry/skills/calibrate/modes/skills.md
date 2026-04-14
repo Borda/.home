@@ -68,7 +68,6 @@ Modes evaluated for calibration but deferred due to significant barriers. `/audi
 - `/brainstorm` — creative ideation; no deterministic ground truth
 - `/investigate` — open-ended diagnosis; output varies completely by symptom
 - `/session` — session lifecycle management; no quality signal to measure
-- `/sync` — drift detection; deterministic but trivially correct (diff-based, no findings to score)
 - `/calibrate` itself — meta-calibration is circular
 - `/research:run` — sustained iteration loop with live metric commands and git state
 - `/research:run --resume` — continuation of run; same barriers as run

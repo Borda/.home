@@ -33,38 +33,33 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 
 </details>
 
-## 🔄 Config Sync
+## 🔄 Distribution
 
-This repo is the **source of truth** for all `.claude/` configuration. Home (`~/.claude/`) is a downstream copy kept in sync via the `/sync` skill.
+`plugins/foundry/` is the **source of truth** for all foundry configuration. `.claude/` entries are symlinks into the plugin; `~/.claude/` receives copies or symlinks via `/foundry:init`.
 
 ```
-.claude/   (source)       →   ~/.claude/   (downstream)
-  agents/                       agents/
-  skills/                       skills/
-  rules/                        rules/
-  hooks/statusline.js           hooks/statusline.js
-  settings.json                 settings.json  (statusLine path rewritten to absolute)
-  CLAUDE.md                     CLAUDE.md
+plugins/foundry/           ← source of truth (agents, skills, rules, hooks)
+    agents/*.md            ←── symlinked ──→  .claude/agents/*.md
+    skills/*/SKILL.md      ←── symlinked ──→  .claude/skills/*/SKILL.md
+    rules/*.md             ←── symlinked ──→  .claude/rules/*.md
+    hooks/*.js             ←── symlinked ──→  .claude/hooks/*.js
 ```
 
-**What is NOT synced:** `settings.local.json` (machine-local overrides — API keys, MCP server activation, local permissions).
-
-**Workflow:**
+**Distributing to `~/.claude/`** — run after install or upgrade:
 
 ```text
-/sync          # dry-run: show drift report (MISSING / DIFFERS / IDENTICAL per file)
-/sync apply    # apply: copy all differing files and verify outcome
+/foundry:init        # copy rules to ~/.claude/rules/; merge settings.json
+/foundry:init link   # same, but symlink agents, skills, and rules into ~/.claude/
+                     # (re-run after plugin upgrade to refresh stale symlinks)
 ```
 
-Run `/sync` after editing any agent, skill, hook, or `settings.json` in this repo to propagate the change to home config.
+**What is NOT distributed:** `settings.local.json` (machine-local overrides — API keys, MCP server activation, local permissions).
 
-**Why not symlinks?** Symlinks would skip path rewriting (statusLine hooks need `$HOME`-prefixed paths in home `settings.json`) and can't selectively exclude `settings.local.json`; drift-detection lets you review what changed before applying.
-
-**Path rewriting:** `statusLine` and hook paths in home `settings.json` use `$HOME` prefix (`node $HOME/.claude/hooks/statusline.js`) — portable, avoids hardcoded usernames. The `/sync` skill applies this rewrite automatically.
+**statusLine path:** home `settings.json` uses `$HOME` prefix (`node $HOME/.claude/hooks/statusline.js`) — `/foundry:init` sets this automatically.
 
 ## 🔌 MCP Servers
 
-Two optional MCP servers are defined in `.mcp.json` at the repo root (synced to `~/.claude/.mcp.json` via `/sync apply`). Both are **disabled by default** and must be enabled per-machine.
+Two optional MCP servers are defined in `.mcp.json` at the repo root. Both are **disabled by default** and must be enabled per-machine. Copy to home manually: `cp .mcp.json ~/.claude/.mcp.json`.
 
 ### openspace
 
@@ -83,9 +78,7 @@ pipx install https://github.com/HKUDS/OpenSpace/archive/refs/heads/main.zip --py
 
 # 3. Make the server available globally (user-level config):
 cp .mcp.json ~/.claude/.mcp.json
-# Note: /sync apply syncs .claude/ contents only; .mcp.json at the repo root
-# must be copied manually. The project-level .mcp.json already loads when
-# Claude Code runs inside this repo.
+# The project-level .mcp.json already loads when Claude Code runs inside this repo.
 
 # 4. Enable for the current session
 # Add "openspace" to enabledMcpjsonServers in .claude/settings.local.json:
@@ -415,25 +408,21 @@ Each mode enforces a validation gate *before* writing implementation code:
 
 | Rule file                         | Applies to                                      | What it governs                                                                                                                               |
 | --------------------------------- | ----------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
-| `artifact-lifecycle.md`           | `.claude/**`                                    | Canonical dot-prefixed artifact layout, run-dir naming, TTL policy, SessionEnd cleanup hook, settings.json entries                            |
-| `ci-workflows.md`                 | `.github/workflows/**/*.yml`                    | Semantic version tags preferred over SHA pins; Python matrix ≥3.10; fail-fast rules                                                           |
-| `claude-config.md`                | `.claude/**`                                    | Checklist for editing `.claude/` files: cross-refs, MEMORY.md roster, README, sync                                                            |
+| `artifact-lifecycle.md`           | (global)                                        | Canonical dot-prefixed artifact layout, run-dir naming, TTL policy                                                                            |
+| `claude-config.md`                | (global)                                        | Universal ops rules: no hardcoded paths, Bash timeouts, two-separate-calls navigation pattern                                                 |
 | `communication.md`                | (global)                                        | Re: anchor format, progress narration, tone, output routing, and terminal color conventions                                                   |
 | `external-data.md`                | (global)                                        | Pagination and completeness rules for REST, GraphQL, and the `gh` CLI — never work on partial result sets                                     |
+| `foundry-config.md`               | `.claude/**`                                    | Plan mode gate for `.claude/` edits, post-edit checklist, XML tag conventions, cleanup hook, settings.json allow entries                      |
 | `git-commit.md`                   | (global)                                        | Commit message format, push safety (explicit confirmation required), branch safety                                                            |
-| `hooks-js.md`                     | `.claude/hooks/*.js`                            | Hook writing standards: state files, age-out patterns, tool activity tracking                                                                 |
-| `pre-commit-config.md`            | `.pre-commit-config.yaml`                       | Version pinning rules, hook ordering, CI integration via pre-commit.ci                                                                        |
 | `python-code.md`                  | `**/*.py`                                       | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP                                |
 | `quality-gates.md`                | (global)                                        | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                                                          |
-| `release-notes.md`                | `CHANGELOG.md`, `PUBLIC-NOTES.md`               | Release note structure, SemVer decision criteria, deprecation notice format                                                                   |
-| `optimize-hypothesis-protocol.md` | `.experiments/**`, `.claude/skills/optimize/**` | JSONL schema for `hypotheses.jsonl` and `checkpoint.json`; `diary.md` entry format; feasibility filter rules for `/optimize run --researcher` |
 | `testing.md`                      | `tests/**/*.py`, `**/test_*.py`                 | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                                                       |
 
 ### How rules are auto-loaded
 
 Each rule file has `paths:` frontmatter listing glob patterns. Claude Code loads matching rule files automatically when you open or edit a file that matches — no explicit invocation needed. Global rules (no `paths:` restriction, or `paths: "*"`) load in every session. Rules are additive: multiple rules can apply to the same file.
 
-Example: editing `tests/test_transforms.py` auto-loads `testing.md` (matches `tests/**/*.py`) and `python-code.md` (matches `**/*.py`). Editing `.claude/agents/sw-engineer.md` loads `claude-config.md` (matches `.claude/**`).
+Example: editing `tests/test_transforms.py` auto-loads `testing.md` (matches `tests/**/*.py`) and `python-code.md` (matches `**/*.py`). Editing `.claude/agents/sw-engineer.md` loads `foundry-config.md` (matches `.claude/**`).
 
 ## 🏗️ Architecture
 

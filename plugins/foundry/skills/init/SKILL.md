@@ -1,6 +1,6 @@
 ---
 name: init
-description: 'Post-install setup for foundry plugin. Merges statusLine, permissions.allow, and enabledPlugins into ~/.claude/settings.json. With "link": additionally symlinks foundry agents and skills into ~/.claude/ for root-namespace invocation.'
+description: 'Post-install setup for foundry plugin. Merges statusLine, permissions.allow, and enabledPlugins into ~/.claude/settings.json; copies rules to ~/.claude/rules/. With "link": additionally symlinks foundry agents, skills, and rules into ~/.claude/ for root-namespace invocation.'
 argument-hint: '[link]'
 allowed-tools: Read, Write, Bash, AskUserQuestion
 effort: low
@@ -11,8 +11,8 @@ model: sonnet
 
 Set up foundry on a new machine. Two modes:
 
-- **No argument**: merge `statusLine`, `permissions.allow`, and `enabledPlugins` into `~/.claude/settings.json`. Idempotent — safe to re-run.
-- **`link`**: same as above, then create symlinks from `~/.claude/agents/` and `~/.claude/skills/` into the installed plugin cache, making all foundry agents and skills available at root namespace (`/review`, `/develop`, etc). Presents any conflicts for user approval before overwriting.
+- **No argument**: merge `statusLine`, `permissions.allow`, and `enabledPlugins` into `~/.claude/settings.json`; copy rules to `~/.claude/rules/`. Idempotent — safe to re-run.
+- **`link`**: same as above, but rules are symlinked (not copied), then also create symlinks from `~/.claude/agents/` and `~/.claude/skills/` into the installed plugin cache, making all foundry agents and skills available at root namespace (`/review`, `/develop`, etc). Presents any conflicts for user approval before overwriting.
 
 Re-run after any `claude plugin install foundry@borda-ai-home` upgrade to refresh stale symlinks.
 
@@ -22,8 +22,8 @@ NOT for: editing project `.claude/settings.json`; merging hooks (plugin's `hooks
 
 <inputs>
 
-- No argument — settings merge only
-- `link` — settings merge + symlink creation with conflict review
+- No argument — settings merge + rules copy to `~/.claude/rules/`
+- `link` — settings merge + rules symlink + agent/skill symlink creation with conflict review
 
 </inputs>
 
@@ -128,6 +128,30 @@ jq empty ~/.claude/settings.json  # timeout: 5000
 
 If `jq` exits non-zero: restore from backup (`cp ~/.claude/settings.json.bak ~/.claude/settings.json`), report the error, and stop. If valid: continue.
 
+## Step 6b: Copy rules to ~/.claude/rules/ (no-arg mode only)
+
+**Skip this step if argument is `link`** — in link mode Step 10 places rules as symlinks; running the copy here first would create real files that Step 8 then misidentifies as user-owned conflicts.
+
+Rule files cannot be distributed via `claude plugin install` — they must be copied explicitly on install. This step ensures all universal rules are available on a fresh install.
+
+```bash
+mkdir -p ~/.claude/rules  # timeout: 5000
+```
+
+For each `.md` file found in `$PLUGIN_ROOT/rules/`, copy it to `~/.claude/rules/` — skip files that are already present AND have the same content (use `diff -q` to compare; overwrite stale copies):
+
+```bash
+for src in "$PLUGIN_ROOT/rules/"*.md; do
+    dest="$HOME/.claude/rules/$(basename "$src")"
+    if [ ! -f "$dest" ] || ! diff -q "$src" "$dest" >/dev/null 2>&1; then
+        cp "$src" "$dest"
+        echo "  copied: $(basename "$src")"
+    fi
+done  # timeout: 10000
+```
+
+Report: "Rules: N copied, M already up to date → ~/.claude/rules/"
+
 ## Step 7: Final report (settings merge)
 
 Print summary:
@@ -137,18 +161,25 @@ Print summary:
 - enabledPlugins: set / skipped
 - Backup at: ~/.claude/settings.json.bak
 
-If argument is not `link`: suggest "Run `/foundry:init link` to also expose foundry agents and skills at root namespace." Then stop.
+If argument is not `link`: report "Rules copied to `~/.claude/rules/`." and suggest "Run `/foundry:init link` to also expose foundry agents and skills at root namespace via symlinks." Then stop.
 
 ## Step 8: Link — scan for conflicts (only when argument is `link`)
+
+Ensure target directories exist (fresh-machine safety):
+
+```bash
+mkdir -p ~/.claude/agents ~/.claude/skills ~/.claude/rules  # timeout: 5000
+```
 
 Enumerate what the plugin provides:
 
 ```bash
 PLUGIN_AGENTS=$(ls "$PLUGIN_ROOT/agents/"*.md 2>/dev/null | xargs -I{} basename {})  # timeout: 5000
 PLUGIN_SKILLS=$(ls -d "$PLUGIN_ROOT/skills/"*/ 2>/dev/null | xargs -I{} basename {})  # timeout: 5000
+PLUGIN_RULES=$(ls "$PLUGIN_ROOT/rules/"*.md 2>/dev/null | xargs -I{} basename {})  # timeout: 5000
 ```
 
-For each agent (`~/.claude/agents/<name>.md`) and skill (`~/.claude/skills/<name>`):
+For each agent (`~/.claude/agents/<name>.md`), skill (`~/.claude/skills/<name>`), and rule (`~/.claude/rules/<name>.md`):
 
 - Does not exist → **safe** (no conflict)
 - Exists and is already a symlink pointing into this `$PLUGIN_ROOT` → **already linked** (skip)
@@ -170,6 +201,9 @@ Agents:
 
 Skills:
   - <name>/  (currently: real file / symlink to <other path>)
+
+Rules:
+  - <name>.md  (currently: real file / symlink to <other path>)
 ```
 
 Use `AskUserQuestion` with:
@@ -195,12 +229,19 @@ rm -rf ~/.claude/skills/<name>  # timeout: 5000
 ln -s "$PLUGIN_ROOT/skills/<name>" ~/.claude/skills/<name>  # timeout: 5000
 ```
 
+For each approved or safe rule file — individual `.md` files are replaced atomically by `ln -sf` (no prior `rm` needed):
+
+```bash
+ln -sf "$PLUGIN_ROOT/rules/<name>.md" ~/.claude/rules/<name>.md  # timeout: 5000
+```
+
 ## Step 11: Link report
 
 Print summary:
 
 - Agents linked: N (M skipped)
 - Skills linked: N (M skipped)
+- Rules linked: N (M skipped)
 
 Suggest: "Restart Claude Code to pick up the new root-namespace commands. Re-run `/foundry:init link` after any future plugin upgrade to refresh symlinks."
 
@@ -210,7 +251,7 @@ Suggest: "Restart Claude Code to pick up the new root-namespace commands. Re-run
 
 **Testing init changes**: The init skill has no `.claude/skills/init` entry — it is only reachable as `/foundry:init` after the plugin is installed. To test changes: bump `version` in `plugins/foundry/.claude-plugin/plugin.json`, then run `claude plugin install foundry@borda-ai-home` from the repo root to refresh the cache, then invoke `/foundry:init`.
 
-**Why `rm` is not in permissions.json**: `Bash(rm:*)` is intentionally excluded — it is too broad. Agent `.md` replacements use `ln -sf` (no rm needed). Skill directory replacements do require `rm -rf`, but only after explicit user approval in Step 9; the resulting permission prompt is a second confirmation gate, which is appropriate for a destructive directory removal.
+**Why `rm` is not in permissions.json**: `Bash(rm:*)` is intentionally excluded — it is too broad. Agent `.md` and rule `.md` replacements use `ln -sf` (no rm needed). Skill directory replacements do require `rm -rf`, but only after explicit user approval in Step 9; the resulting permission prompt is a second confirmation gate, which is appropriate for a destructive directory removal.
 
 **Upgrade path**: After `claude plugin install foundry@borda-ai-home` upgrades the version, symlinks created by `foundry:init link` will point to the old cache path and silently break. Re-run `/foundry:init link` — Step 8 detects stale-pointing symlinks as conflicts and replaces them. Use `/audit setup` to check link health via Check I3.
 

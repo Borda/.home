@@ -59,7 +59,7 @@ Triggered by `run <goal|file.md>`.
 
 If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
-> **Research run directory**: Research outputs (`hypotheses.jsonl`, `checkpoint.json`, `journal.md`) go to `.experiments/<run-id>/` — a timestamped directory created at the start of R0, distinct from the main state directory `.experiments/state/<run-id>/`. Referred to as `<RUN_DIR>` throughout this step. See `.claude/rules/optimize-hypothesis-protocol.md` for the full layout.
+> **Research run directory**: Research outputs (`hypotheses.jsonl`, `checkpoint.json`, `journal.md`) go to `.experiments/<run-id>/` — a timestamped directory created at the start of R0, distinct from the main state directory `.experiments/state/<run-id>/`. Referred to as `<RUN_DIR>` throughout this step. See `./protocol.md` for the full layout.
 
 1. **Build hypothesis queue** — if `--hypothesis <path>` is provided, read that file as the pre-built queue (skip oracle phase). Otherwise, spawn oracle agents based on active flags — agents run in parallel if both flags are set:
 
@@ -85,7 +85,7 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
    Note: when `--architect` is the only flag (no `--researcher`), skip the feasibility annotation pass — the architect already validated feasibility during hypothesis generation. Set `feasible: true` on all entries implicitly.
 
-   Both agents follow the handoff envelope protocol (see CLAUDE.md §2). Schema: `.claude/rules/optimize-hypothesis-protocol.md`.
+   Both agents follow the handoff envelope protocol (see CLAUDE.md §2). Schema: `./protocol.md`.
 
 2. **Filter and sort** — load the annotated queue. Infeasible entries (`feasible: false`) remain in the file for audit but are excluded from execution. Sort by `priority` ascending (1 = first to run).
 
@@ -95,9 +95,9 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
 **Per-iteration hypothesis selection** (active when `--researcher` or `--architect` is set, inside Step R5's loop): pop the next hypothesis from `RESEARCH_QUEUE` as the iteration's direction. Append to the Phase 2 ideation prompt: "Focus this iteration on testing this hypothesis: `<hypothesis text>`."
 
-**Per-iteration journal hook** (inside Step R5, after Phase 7 keep-decision): if `--journal` is active, append a journal entry to `<RUN_DIR>/journal.md` after EVERY iteration — regardless of outcome. Entry format: see `.claude/rules/optimize-hypothesis-protocol.md`. Journals record both kept and reverted iterations so the ideation agent can learn what approaches failed and avoid repeating them.
+**Per-iteration journal hook** (inside Step R5, after Phase 7 keep-decision): if `--journal` is active, append a journal entry to `<RUN_DIR>/journal.md` after EVERY iteration — regardless of outcome. Entry format: see `./protocol.md`. Journals record both kept and reverted iterations so the ideation agent can learn what approaches failed and avoid repeating them.
 
-**Per-iteration checkpoint write** (after Phase 7, keep or rollback): if `--researcher` or `--architect` is active, append one line to `<RUN_DIR>/checkpoint.json` per the schema in `.claude/rules/optimize-hypothesis-protocol.md`: `{iteration, hypothesis_id, metric_before, metric_after, status: "passed"|"rolled_back"}`.
+**Per-iteration checkpoint write** (after Phase 7, keep or rollback): if `--researcher` or `--architect` is active, append one line to `<RUN_DIR>/checkpoint.json` per the schema in `./protocol.md`: `{iteration, hypothesis_id, metric_before, metric_after, status: "passed"|"rolled_back"}`.
 
 ### Step R1: Load / build config
 

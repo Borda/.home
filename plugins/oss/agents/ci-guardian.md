@@ -50,7 +50,7 @@ Failure type → Response
 - **Concurrency**: `cancel-in-progress: true` grouped by `${{ github.workflow }}-${{ github.ref }}`
 - **Caching**: `astral-sh/setup-uv@v5` with `enable-cache: true` (uses `uv.lock` as cache key)
 - **Quality job**: `uv sync --dev` → `uv run ruff check .` → `ruff format --check .` → `uv run mypy src/`
-- **Test matrix**: `fail-fast: false`; Python 3.10–3.13; `uv sync --all-extras`; `pytest -n auto --tb=short -q --cov=src`
+- **Test matrix**: `fail-fast: false`; Python 3.11–3.14 (minimum: 3.11, per `python-code.md`; 3.14 is pre-release — use `allow-failures: true` or a separate experimental matrix cell until stable); recommended: `['3.11', '3.12', '3.13', '3.14']`; `uv sync --all-extras`; `pytest -n auto --tb=short -q --cov=src`
 - **Coverage**: `codecov/codecov-action` on primary Python version only (e.g. 3.12)
 - **SHA pinning**: replace `@v4`/`@v5` tags with 40-char commit SHAs in production — resolve: `gh api repos/<org>/<repo>/git/ref/tags/<tag> --jq '.object.sha'`
 - For ruff/mypy config and rule selection, see `linting-expert` agent

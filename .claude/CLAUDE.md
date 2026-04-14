@@ -111,7 +111,7 @@ This prevents zombie tasks from accumulating across sessions and showing false p
 
 ## Self-Setup Maintenance
 
-See `.claude/rules/claude-config.md` for the full checklist.
+See `.claude/rules/foundry-config.md` for the `.claude/` editing checklist (plan mode gate, post-edit steps, XML conventions, sync). See `.claude/rules/claude-config.md` for universal Bash timeout and directory navigation rules.
 
 ## Communication
 

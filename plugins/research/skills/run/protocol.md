@@ -1,8 +1,8 @@
 ---
-description: JSONL schema for hypotheses.jsonl, checkpoint.json, and journal.md entry format used by /optimize run --researcher and --architect
+description: JSONL schema for hypotheses.jsonl, checkpoint.json, and journal.md entry format used by research:run --researcher and --architect
 paths:
   - .experiments/**
-  - .claude/skills/optimize/**
+  - plugins/research/skills/run/**
 ---
 
 ## Run Directory Layout
@@ -119,7 +119,7 @@ Rules:
 
 - `Avoid repeating: yes` signals the ideation agent in Phase 2 to skip similar approaches (same file, same technique, same abstraction)
 - `Pattern` emerges after 3+ entries — synthesize what is / isn't working across the run
-- At exactly iteration 3, Pattern is required if a cross-iteration trend is observable (e.g., "regularization changes consistently improve val_acc; architecture changes cause instability"). Write "n/a" only if fewer than 3 entries exist — not as a placeholder when entries exist but no trend is apparent; if no trend is yet visible at 3+ entries, write "insufficient signal — no consistent pattern across N iterations".
+- At exactly iteration 3, Pattern is required if a cross-iteration trend is observable. Write "n/a" only if fewer than 3 entries exist — not as a placeholder when entries exist but no trend is apparent; if no trend is yet visible at 3+ entries, write "insufficient signal — no consistent pattern across N iterations".
 - Do NOT use threshold filtering — all iterations are recorded regardless of delta magnitude
 - `Why kept / why reverted` must be substantive — not "it worked" or "it failed"; name the specific mechanism or failure mode
 
@@ -133,17 +133,17 @@ Rules:
 
 ## Team Mode Extensions
 
-When `--team` is active, hypothesis agents in Phase A produce entries with `source: "team"` and three additional optional fields that are absent from oracle/journal entries:
+When `--team` is active, hypothesis agents in Phase A produce entries with `source: "team"` and three additional fields that are **required** (not merely allowed):
 
-For `source: "team"` entries, `axis`, `agent_type`, and `change_scope` are **required** (not merely allowed) — a team-mode entry missing any of these three fields is a schema violation analogous to a missing `blocker` on an infeasible entry.
-
-| Field          | Type  | Description                                                                                                                                                |
+| Field          | Type  | Description                                                                                                                                                                |
 | -------------- | ----- | ---------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | `axis`         | `str` | The optimization axis the hypothesis belongs to (e.g., `"model architecture"`)                                                                             |
 | `agent_type`   | `str` | Specialist agent type to use for implementation (e.g., `"perf-optimizer"`, `"researcher"`)                                                                 |
 | `change_scope` | `str` | Estimated blast radius: `"small"` (1–2 files), `"medium"` (3–5 files), `"large"` (6+ files or architectural) (primary Phase B sort key — small runs first) |
 
-**Backfill rule** (for R0 `--researcher`/`--architect` entries merged into a team queue): see Phase A Step 5 in `.claude/skills/optimize/modes/team.md` for the full backfill logic.
+A team-mode entry missing any of these three fields is a schema violation analogous to a missing `blocker` on an infeasible entry.
+
+**Backfill rule** (for R0 `--researcher`/`--architect` entries merged into a team queue): see Phase A Step 5 in `./modes/team.md` for the full backfill logic.
 
 **Team-mode output files** (in `<RUN_DIR>/`, alongside `hypotheses.jsonl`):
 
