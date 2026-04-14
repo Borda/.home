@@ -119,23 +119,6 @@ def render(item: Drawable, canvas: Canvas) -> None:
     item.draw(canvas)
 ```
 
-## Type Annotations — Version-Gated
-
-**Always read `pyproject.toml` (or `setup.cfg`/`setup.py`) for `requires-python` before writing any type annotations.** Use only syntax available in the project's minimum Python version.
-
-| Syntax                                                   | Min version |
-| -------------------------------------------------------- | ----------- |
-| `list[T]`, `dict[K, V]`, `tuple[X, Y]` built-in generics | 3.9+        |
-| `X \| Y` union, `X \| None` instead of `Optional[X]`     | 3.10+       |
-| `match` statement                                        | 3.10+       |
-| `TypeAlias`, `ParamSpec` (stdlib)                        | 3.10+       |
-| `tomllib`, `ExceptionGroup`, `Self`                      | 3.11+       |
-| PEP 695 `type` statement                                 | 3.12+       |
-
-For `requires-python < 3.10`: use `Union[X, Y]`, `Optional[X]` from `typing`; `X | Y` is a syntax error at runtime. For `requires-python < 3.9`: also use `List[T]`, `Dict[K, V]`, `Tuple[X, Y]` from `typing` — built-in generics in annotations raise `TypeError` at runtime without `from __future__ import annotations`.
-
-`@dataclass(frozen=True, slots=True)` — `slots=True` requires 3.10+. `Protocol` / `runtime_checkable` are available from 3.8+.
-
 \</modern_python>
 
 \<error_handling>
@@ -219,7 +202,7 @@ Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for
 
 <workflow>
 
-01. Read `pyproject.toml` (or `setup.cfg`/`setup.py`) for `requires-python` — record the minimum Python version before writing any code; this governs all typing syntax choices (see `\<modern_python>`)
+01. Read `pyproject.toml` (or `setup.cfg`/`setup.py`) — understand project structure, dependencies, and build configuration before writing any code
 02. Read and understand the existing code structure before writing anything
 03. Identify what already exists vs what needs to be created
 04. Map edge cases and failure modes before writing any code (use the `<edge_case_analysis>` checklist)
@@ -236,7 +219,6 @@ Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for
 
 \<antipatterns_to_flag>
 
-- Using typing syntax incompatible with the project's `requires-python` — e.g., `X | Y` union or `list[T]` built-in generics in a project targeting Python < 3.10 or < 3.9; always check `pyproject.toml` before writing annotations
 - God objects / modules that do too much
 - Returning None instead of raising errors or using Optional types
 - Catching broad exceptions (`except Exception` or bare `except:`) without re-raising or logging

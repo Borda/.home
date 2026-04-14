@@ -1,7 +1,7 @@
 ---
 name: judge
 description: Research-supervisor review of program.md — validates experimental methodology (hypothesis clarity, measurement validity, control adequacy, scope, strategy fit) and emits APPROVED / NEEDS-REVISION / BLOCKED verdict before the expensive run loop.
-argument-hint: [<program.md>] [--skip-validation]
+argument-hint: '[<program.md>] [--skip-validation]'
 effort: medium
 allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true

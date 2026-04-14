@@ -1,7 +1,7 @@
 ---
 name: review
-description: Multi-agent code review covering architecture, tests, performance, docs, lint, security, and Application Programming Interface (API) design.
-argument-hint: '[PR number|file|dir|path/to/report.md] [--reply]'
+description: Multi-agent code review of GitHub Pull Requests covering architecture, tests, performance, docs, lint, security, and API design.
+argument-hint: '[PR number|path/to/report.md] [--reply]'
 allowed-tools: Read, Write, Bash, Grep, Agent, TaskCreate, TaskUpdate
 context: fork
 model: opus
@@ -16,12 +16,11 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
 
 <inputs>
 
-- **$ARGUMENTS**: optional file path, directory, or Pull Request (PR) number to review.
+- **$ARGUMENTS**: PR number or report path.
   - If a number is given (e.g. `42`): review the PR diff
-  - If a path is given: review those files
-  - If omitted: review recently changed files
   - `--reply`: after review, spawn shepherd to draft a contributor-facing PR comment from the findings. When the argument is a path ending in `.md`, spawns shepherd directly from that report without running a new review.
   - **Scope**: this skill reviews Python source code only. If the input is a non-Python file (YAML, JSON, shell script, etc.), state that it is out of scope and suggest the appropriate tool — do not produce findings.
+  - **Local files**: use `/develop:review` to review local files or the current git diff without a GitHub PR.
 
 </inputs>
 
@@ -63,16 +62,11 @@ fi
 ```
 
 ```bash
-# If $CLEAN_ARGS is a PR number — run all four in parallel:
+# $CLEAN_ARGS must be a PR number — run all four in parallel:
 gh pr diff $CLEAN_ARGS --name-only                     # files changed in PR                    # timeout: 6000
 gh pr view $CLEAN_ARGS                                 # PR description and metadata             # timeout: 6000
 gh pr checks $CLEAN_ARGS                               # CI status — don't review if CI is red  # timeout: 15000
 gh pr view $CLEAN_ARGS --json reviews,labels,milestone # timeout: 6000
-
-# If $CLEAN_ARGS is a path: use it directly
-
-# If no argument: find recently changed files
-git diff --name-only HEAD~1 HEAD # timeout: 3000
 ```
 
 If Continuous Integration (CI) is red, report that without full review.

@@ -21,7 +21,7 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 
 ## 🎯 Why
 
-Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 12 specialist agents and 15 slash-command skill workflows in a version-controlled, continuously benchmarked setup optimized for:
+Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 12 specialist agents and 20+ slash-command skill workflows across four focused plugins, in a version-controlled, continuously benchmarked setup optimized for:
 
 - Python/ML OSS libraries requiring SemVer discipline and deprecation cycles
 - ML training and inference codebases needing GPU profiling and data pipeline validation
@@ -41,27 +41,36 @@ Managing AI coding workflows for Python/ML OSS is complex — you need domain-aw
 ## ⚡ Quick Start
 
 ```bash
-# Install Claude Code and Codex CLI
-npm install -g @anthropic-ai/claude-code && npm install -g @openai/codex
+# Install Claude Code
+npm install -g @anthropic-ai/claude-code
 
-# 1. Clone
+# 1. Clone (run from the directory that will CONTAIN the clone)
 git clone https://github.com/Borda/.ai-home Borda-AI-Home
 
 # 2. Register as a local marketplace
 claude plugin marketplace add ./Borda-AI-Home
 
-# 3. Install agents, skills, hooks
-claude plugin install foundry@borda-ai-home
-
-# 4. One-time settings merge — run inside Claude Code
-# /foundry:init
+# 3. Install all four plugins
+claude plugin install foundry@borda-ai-home   # base agents + audit, manage, calibrate, brainstorm, …
+claude plugin install oss@borda-ai-home       # OSS workflow: analyse, review, resolve, release
+claude plugin install develop@borda-ai-home   # development: feature, fix, refactor, plan, debug
+claude plugin install research@borda-ai-home  # ML research: topic, plan, judge, run, sweep
 ```
 
-`/foundry:init` sets `statusLine`, merges `permissions.allow`, and enables `codex@openai-codex` in `~/.claude/settings.json`. Backs up first; safe to re-run.
+> [!NOTE] **Safe to install alongside any existing Claude Code setup.** Plugins live in a private cache (`~/.claude/plugins/cache/<plugin>/`) under their own namespace. Your existing `~/.claude/agents/`, `~/.claude/skills/`, and `settings.json` are never modified or overwritten — custom agents and skills you have created remain fully independent. See the [Claude Code plugin reference](https://code.claude.com/docs/en/plugins-reference) for details.
 
-> [!IMPORTANT] **Codex CLI** — separate step; the plugin installs Claude Code agents and skills only:
+**4. One-time settings merge** — run inside Claude Code:
+
+```
+/foundry:init link
+```
+
+`link` symlinks foundry agents and skills into `~/.claude/` so you can type `/audit`, `/manage`, `/brainstorm`, etc. without a `foundry:` prefix. OSS, develop, and research skills always use their plugin prefix (`/oss:review`, `/develop:fix`, `/research:run`). Safe to re-run.
+
+> [!IMPORTANT] **Codex CLI** — optional companion; the plugins install Claude Code agents and skills only:
 >
 > ```bash
+> npm install -g @openai/codex
 > cp -r Borda-AI-Home/.codex/ ~/.codex/   # Codex agents and profiles
 > ```
 
@@ -73,22 +82,21 @@ A typical maintainer morning — 15 new issues, 3 PRs waiting, a release due:
 
 ```text
 # 1. Morning triage — what needs attention?
-/analyse health                    # repo overview, duplicate issue clustering, stale PR detection
+/oss:analyse health                # repo overview, duplicate issue clustering, stale PR detection
 
 # 2. Review incoming PRs
-/review 55 --reply                 # 7-agent review + welcoming contributor comment
-/resolve 55                        # apply review feedback, resolve conflicts
+/oss:review 55 --reply             # 7-agent review + welcoming contributor comment
 
 # — or: full review first, then apply every finding in one automated pass
-/review 55                         # 7-agent review → saved findings report
-/resolve 55 report                 # Codex reads the report and applies every comment
+/oss:review 21                     # 7-agent review → saved findings report
+/oss:resolve 21 report             # Codex reads the report and applies every comment
 
 # 3. Fix the critical bug from overnight
-/analyse 42                        # understand the issue
-/develop fix 42                    # reproduce → regression test → minimal fix → quality stack
+/oss:analyse 42                    # understand the issue
+/develop:fix 42                    # reproduce → regression test → minimal fix → quality stack
 
 # 4. Ship the release
-/release prepare v2.1.0            # changelog, notes, migration guide, readiness audit
+/oss:release prepare v2.1.0        # changelog, notes, migration guide, readiness audit
 ```
 
 Each command chains agents in a defined topology — see [Common Workflow Sequences](#common-workflow-sequences) below for more patterns.
@@ -98,19 +106,22 @@ Each command chains agents in a defined topology — see [Common Workflow Sequen
 ```
 borda.ai-home/
 ├── plugins/
-│   └── foundry/            # Claude Code plugin (install with: claude plugin marketplace add .)
-│       ├── .claude-plugin/
-│       │   └── plugin.json # plugin manifest
-│       ├── agents/         # real files (canonical source)
-│       ├── skills/         # real files (canonical source)
-│       └── hooks/
-│           └── hooks.json  # native plugin hooks (task tracking, quality gates, preprocessing)
+│   ├── foundry/            # Base plugin: agents, hooks, audit/manage/calibrate/brainstorm/…
+│   │   ├── .claude-plugin/
+│   │   │   └── plugin.json # plugin manifest
+│   │   ├── agents/         # 8 foundry agents (canonical source)
+│   │   ├── skills/         # foundry skills (canonical source)
+│   │   └── hooks/
+│   │       └── hooks.json  # task tracking, quality gates, preprocessing
+│   ├── oss/                # OSS plugin: shepherd, ci-guardian + analyse/review/resolve/release
+│   ├── develop/            # Develop plugin: feature/fix/refactor/plan/debug
+│   └── research/           # Research plugin: scientist, data-steward + topic/plan/judge/run/sweep
 ├── .claude/                # Claude Code source of truth
 │   ├── README.md           # full reference: skills, rules, hooks, architecture
 │   ├── CLAUDE.md           # workflow rules and core principles
 │   ├── settings.json       # permissions and model preferences
-│   ├── agents/             # reverse symlinks → plugins/foundry/agents/
-│   ├── skills/             # reverse symlinks → plugins/foundry/skills/
+│   ├── agents/             # symlinks → foundry plugin agents (+ domain plugin agents when installed)
+│   ├── skills/             # symlinks → foundry plugin skills
 │   ├── rules/              # per-topic coding and config standards (auto-loaded by Claude Code)
 │   └── hooks/              # hook scripts (symlinked into plugin)
 ├── .mcp.json               # MCP server definitions
@@ -130,20 +141,20 @@ borda.ai-home/
 
 Specialist roles with deep domain knowledge — requested by name, or auto-selected by Claude Code and Codex CLI.
 
-| Agent                  | Claude | Codex | Purpose                                                       |
-| ---------------------- | ------ | ----- | ------------------------------------------------------------- |
-| **ai-researcher**      | ✓      | —     | Paper analysis, hypothesis generation, experiment design      |
-| **ci-guardian**        | ✓      | ✓     | GitHub Actions, test matrices, flaky test detection, caching  |
-| **data-steward**       | ✓      | ✓     | Dataset versioning, split validation, leakage detection       |
-| **doc-scribe**         | ✓      | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references     |
-| **linting-expert**     | ✓      | ✓     | ruff, mypy, pre-commit, type annotations                      |
-| **oss-shepherd**       | ✓      | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
-| **perf-optimizer**     | ✓      | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
-| **qa-specialist**      | ✓      | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
-| **self-mentor**        | ✓      | ✓     | Config quality review, duplication detection, cross-ref audit |
-| **solution-architect** | ✓      | ✓     | System design, ADRs, API surface, migration plans             |
-| **sw-engineer**        | ✓      | ✓     | Architecture, implementation, SOLID principles, type safety   |
-| **web-explorer**       | ✓      | ✓     | API version comparison, migration guides, PyPI tracking       |
+| Agent                  | Plugin   | Claude | Codex | Purpose                                                       |
+| ---------------------- | -------- | ------ | ----- | ------------------------------------------------------------- |
+| **doc-scribe**         | foundry  | ✓      | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references     |
+| **linting-expert**     | foundry  | ✓      | ✓     | ruff, mypy, pre-commit, type annotations                      |
+| **perf-optimizer**     | foundry  | ✓      | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
+| **qa-specialist**      | foundry  | ✓      | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
+| **self-mentor**        | foundry  | ✓      | ✓     | Config quality review, duplication detection, cross-ref audit |
+| **solution-architect** | foundry  | ✓      | ✓     | System design, ADRs, API surface, migration plans             |
+| **sw-engineer**        | foundry  | ✓      | ✓     | Architecture, implementation, SOLID principles, type safety   |
+| **web-explorer**       | foundry  | ✓      | ✓     | API version comparison, migration guides, PyPI tracking       |
+| **ci-guardian**        | oss      | ✓      | ✓     | GitHub Actions, test matrices, flaky test detection, caching  |
+| **shepherd**           | oss      | ✓      | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
+| **data-steward**       | research | ✓      | ✓     | Dataset versioning, split validation, leakage detection       |
+| **scientist**          | research | ✓      | —     | Paper analysis, hypothesis generation, experiment design      |
 
 ## 🤖 Claude Code
 
@@ -153,23 +164,32 @@ Agents and skills for [Claude Code](https://claude.ai/code) (Anthropic's AI codi
 
 Skills are multi-agent workflows invoked via slash commands. Each skill composes several agents in a defined topology.
 
-| Skill            | What It Does                                                                                                                                                                                                                                                                                                                                                                                   |
-| ---------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| **review**       | Parallel review across arch, tests, perf, docs, lint, security, API; `--reply` drafts welcoming contributor comments that cite project conventions and suggest next steps                                                                                                                                                                                                                      |
-| **analyse**      | GitHub thread analysis; `health` = repo overview + duplicate issue clustering (a major time-saver for popular projects with redundant reports)                                                                                                                                                                                                                                                 |
-| **brainstorm**   | `/brainstorm <idea>` — clarifying questions → approaches → spec (saved to `.plans/blueprint/`) → self-mentor review → approval gate; `/brainstorm breakdown <spec>` — read approved spec → ordered task table with per-task skill/command tags                                                                                                                                                 |
-| **develop**      | TDD-first features, reproduce-first fixes, test-first refactors, scope analysis, debugging                                                                                                                                                                                                                                                                                                     |
-| **resolve**      | OSS fast-close: reduces PR round-trips (the #1 bottleneck for external contributors) by resolving conflicts + applying review comments via codex-plugin-cc; three source modes: `pr` (live GitHub), `report` (/review findings), `pr + report` (aggregated + deduplicated in one pass)                                                                                                         |
-| **calibrate**    | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                                                                                                                                                                                       |
-| **audit**        | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements (mutually exclusive)                                                                                                                                                                                                                 |
-| **release**      | SemVer-disciplined release pipeline: notes, changelog with deprecation tracking, migration guides, full prepare pipeline, or readiness `audit`                                                                                                                                                                                                                                                 |
-| **research**     | SOTA literature research with implementation plan; `plan` mode produces a phased, codebase-mapped implementation plan (auto-detects latest research output)                                                                                                                                                                                                                                    |
-| **optimize**     | Five modes: `plan` = config wizard (or `plan <file.py>` for profile-first bottleneck discovery) → `program.md`; `judge` = research-supervisor review of experimental methodology (APPROVED/NEEDS-REVISION/BLOCKED); `run` = metric-driven iteration loop; `resume` = continue after crash; `sweep` = non-interactive pipeline (auto-plan → judge gate → run); `--team` and `--colab` supported |
-| **manage**       | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                                                                                                                                                                                                                  |
-| **foundry:init** | Post-plugin-install settings merge: `statusLine`, `permissions.allow`, `codex@openai-codex`. `link` arg additionally symlinks agents/skills to `~/.claude/` for root-namespace access. Idempotent.                                                                                                                                                                                             |
-| **investigate**  | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                                                                                                                                                                                                |
-| **session**      | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                                                                                                                                                                                                |
-| **distill**      | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                                                                                                                                                                                                                                        |
+After running `/foundry:init link`, foundry skills are available without a prefix. OSS, develop, and research skills always use their plugin prefix.
+
+| Skill               | Plugin   | What It Does                                                                                                                                                           |
+| ------------------- | -------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/audit`            | foundry  | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements              |
+| `/manage`           | foundry  | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                          |
+| `/calibrate`        | foundry  | Synthetic benchmarks measuring recall vs confidence bias                                                                                                               |
+| `/brainstorm`       | foundry  | `/brainstorm <idea>` — clarifying questions → approaches → spec → self-mentor review → approval gate; `breakdown <spec>` — ordered task table with per-task skill tags |
+| `/investigate`      | foundry  | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                        |
+| `/distill`          | foundry  | Suggest new agents/skills, prune memory, consolidate lessons into rules                                                                                                |
+| `/session`          | foundry  | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session        |
+| `/oss:review`       | oss      | Tiered parallel review of GitHub PRs; `--reply` drafts welcoming contributor comments                                                                                  |
+| `/oss:analyse`      | oss      | GitHub thread analysis; `health` = repo overview + duplicate issue clustering                                                                                          |
+| `/oss:resolve`      | oss      | OSS fast-close: resolving conflicts + applying review comments via codex-plugin-cc; three source modes: `pr`, `report`, `pr + report`                                  |
+| `/oss:release`      | oss      | SemVer-disciplined release pipeline: notes, changelog with deprecation tracking, migration guides, full prepare pipeline                                               |
+| `/develop:feature`  | develop  | TDD-first feature implementation: codebase analysis, demo test, TDD loop, docs, review                                                                                 |
+| `/develop:fix`      | develop  | Reproduce-first bug fixes: regression test, minimal fix, quality stack                                                                                                 |
+| `/develop:refactor` | develop  | Test-first refactors with scope analysis                                                                                                                               |
+| `/develop:plan`     | develop  | Scope analysis and implementation planning without code changes                                                                                                        |
+| `/develop:debug`    | develop  | Systematic debugging for known test failures                                                                                                                           |
+| `/develop:review`   | develop  | Six-agent parallel review of local files or current git diff; no GitHub PR needed                                                                                      |
+| `/research:topic`   | research | SOTA literature research with codebase-mapped implementation plan                                                                                                      |
+| `/research:plan`    | research | Config wizard: profile-first bottleneck discovery → `program.md`                                                                                                       |
+| `/research:judge`   | research | Research-supervisor review of experimental methodology (APPROVED/NEEDS-REVISION/BLOCKED)                                                                               |
+| `/research:run`     | research | Metric-driven iteration loop; `--resume` continues after crash; `--team` for parallel exploration; `--colab` for GPU workloads                                         |
+| `/research:sweep`   | research | Non-interactive pipeline: auto-plan → judge gate → run                                                                                                                 |
 
 → Full command reference, orchestration flows, rules (13 auto-loaded rule files), architecture internals, status line — see [`.claude/README.md` → Skills](.claude/README.md#-skills)
 
@@ -181,9 +201,9 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Bug report → fix → validate</strong></summary>
 
 ```
-/analyse 42            # understand the issue, extract root cause hypotheses
-/develop fix 42        # reproduce with test, apply targeted fix
-/review                # validate the fix meets quality standards
+/oss:analyse 42            # understand the issue, extract root cause hypotheses
+/develop:fix 42            # reproduce with test, apply targeted fix
+/oss:review                # validate the fix meets quality standards
 ```
 
 </details>
@@ -192,9 +212,9 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Performance investigation → optimize → refactor</strong></summary>
 
 ```
-/optimize plan src/mypackage/dataloader.py     # profile-first: cProfile → pick goal → wizard
-/develop refactor src/mypackage/dataloader.py  # extract caching layer
-/review                                        # full quality pass on changes
+/develop:plan src/mypackage/dataloader.py       # profile-first: cProfile → pick goal → wizard
+/develop:refactor src/mypackage/dataloader.py  # extract caching layer
+/develop:review                                # review diff before commit
 ```
 
 </details>
@@ -203,9 +223,9 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Code review → fix blocking issues</strong></summary>
 
 ```
-/review 55                                           # 7 agent dimensions + Codex co-review
-/develop fix "race condition in cache invalidation"  # fix blocking issue from review
-/review 55                                           # re-review after fix
+/oss:review 55                                           # 7 agent dimensions + Codex co-review
+/develop:fix "race condition in cache invalidation"      # fix blocking issue from review
+/oss:review 55                                           # re-review after fix
 ```
 
 </details>
@@ -214,20 +234,21 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>New feature → implement → release</strong></summary>
 
 ```
-/analyse 87            # understand the issue, clarify acceptance criteria
-/develop feature 87    # codebase analysis, demo test, TDD, docs, review
-/release               # generate CHANGELOG entry and release notes
+/oss:analyse 87            # understand the issue, clarify acceptance criteria
+/develop:feature 87        # codebase analysis, demo test, TDD, docs, review
+/oss:release               # generate CHANGELOG entry and release notes
 ```
 
 </details>
 
 <details>
-<summary><strong>New capability → research → implement</strong></summary>
+<summary><strong>New OSS capability → research → implement → review</strong></summary>
 
 ```
-/research "efficient attention for long sequences"        # find SOTA methods
-/develop feature "implement FlashAttention in encoder"    # TDD-first implementation
-/review                                                   # validate implementation
+/research:topic "efficient attention for long sequences"  # find SOTA methods
+/develop:feature "implement FlashAttention in encoder"    # TDD-first implementation
+/develop:review                                           # review diff before commit
+# push + open PR → /oss:review 42 for PR review
 ```
 
 </details>
@@ -236,10 +257,9 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Autonomous metric improvement campaign</strong></summary>
 
 ```
-/optimize plan "increase test coverage to 90%"      # interactive config wizard → program.md
-/optimize run "increase test coverage to 90%"   # run 20-iteration loop; auto-rollback on regression
-/optimize resume                                    # resume after crash or manual stop
-/review                                             # validate kept commits
+/research:plan "increase test coverage to 90%"      # interactive config wizard → program.md
+/research:run "increase test coverage to 90%"       # run 20-iteration loop; auto-rollback on regression
+/research:run --resume                              # resume after crash or manual stop
 ```
 
 </details>
@@ -253,10 +273,10 @@ Skills chain naturally — the output of one becomes the input for the next.
 
 /brainstorm breakdown .plans/blueprint/2026-03-31-openspace-mcp-integration.md
 # reads spec → ordered task table with per-task skill/command tags:
-#   | 1 | Install OpenSpace venv         | bash                  |
-#   | 2 | Add .mcp.json config entry      | /manage update / Write |
-#   | 3 | Copy bootstrap skills           | bash + /manage        |
-#   | 4 | Enable in settings.local.json   | /manage update        |
+#   | 1 | Install OpenSpace venv         | bash                    |
+#   | 2 | Add .mcp.json config entry      | /manage update / Write  |
+#   | 3 | Copy bootstrap skills           | bash + /manage          |
+#   | 4 | Enable in settings.local.json   | /manage update          |
 
 # then execute each row in the breakdown table using its tagged skill
 ```
@@ -267,23 +287,21 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>Research SOTA → optimize toward metric</strong></summary>
 
 ```
-/research "knowledge distillation for small models"           # find best approach
-/optimize plan "improve F1 from 0.82 to 0.87"                 # configure metric + guard + agent
-/optimize run --team                                      # parallel exploration across axes
-/review                                                       # quality pass on kept changes
+/research:topic "knowledge distillation for small models"  # find best approach
+/research:plan "improve F1 from 0.82 to 0.87"              # configure metric + guard + agent
+/research:run --team                                       # parallel exploration across axes
 ```
 
 </details>
 
 <details>
-<summary><strong>Distill → create → audit → sync</strong></summary>
+<summary><strong>Distill → create → audit → calibrate</strong></summary>
 
 ```
 /distill                             # analyze work patterns, suggest new agents/skills
 /manage create agent my-agent "..."  # scaffold suggested agent
 /audit                               # verify config integrity — catch broken refs, dead loops
 /calibrate routing                   # confirm new agent description doesn't confuse routing
-# agents, skills, hooks available via foundry plugin
 ```
 
 </details>
@@ -292,8 +310,8 @@ Skills chain naturally — the output of one becomes the input for the next.
 <summary><strong>PR review feedback → resolve → verify</strong></summary>
 
 ```
-/resolve 42   # auto-detect conflicts → resolve semantically → apply review comments via codex-plugin-cc
-/review       # full quality pass on all applied changes
+/oss:resolve 42   # auto-detect conflicts → resolve semantically → apply review comments via codex-plugin-cc
+/develop:review   # full quality pass on all applied changes
 ```
 
 </details>
@@ -304,17 +322,17 @@ Skills chain naturally — the output of one becomes the input for the next.
 Preferred flow for maintainers responding to external contributions:
 
 ```
-/analyse 42 --reply      # assess PR readiness + draft contributor reply in one step
+/oss:analyse 42 --reply      # assess PR readiness + draft contributor reply in one step
 
 # or if you need the full deep review first:
-/review 42 --reply        # 7-agent + Codex co-review + draft overall comment + inline comments table
-                          # output: .temp/output-reply-pr-42-dev-<date>.md
+/oss:review 42 --reply        # 7-agent + Codex co-review + draft overall comment + inline comments table
+                              # output: .temp/output-reply-pr-42-dev-<date>.md
 
 # post when ready:
 gh pr comment 42 --body "$(cat .temp/output-reply-pr-42-dev-<date>.md)"
 ```
 
-Both `--reply` flags produce the same two-part oss-shepherd output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/analyse` path is faster for routine triage; `/review` path gives deeper findings for complex PRs.
+Both `--reply` flags produce the same two-part shepherd output: an overall PR comment (prose, warm, decisive) and an inline comments table (file | line | 1–2 sentence fix). The `/oss:analyse` path is faster for routine triage; `/oss:review` path gives deeper findings for complex PRs.
 
 </details>
 
@@ -325,7 +343,6 @@ Both `--reply` flags produce the same two-part oss-shepherd output: an overall P
 /distill                        # analyze work patterns, surface what agents are missing or miscalibrated
 /calibrate all fast ab apply    # benchmark all agents vs general-purpose baseline, apply improvement proposals
 /audit fix                      # structural sweep after calibrate changed instruction files
-# agents, skills, hooks available via foundry plugin
 ```
 
 </details>
@@ -351,7 +368,6 @@ Run `/calibrate routing fast` after any agent description change. Thresholds: ro
 /audit                 # inspect findings + docs-sourced upgrade proposals — report only, no changes
 /audit upgrade         # apply upgrade proposals: config changes verified, capability changes A/B tested
 /audit fix             # full sweep + auto-fix critical and high findings
-# agents, skills, hooks available via foundry plugin
 ```
 
 </details>
@@ -364,7 +380,6 @@ MEMORY.md is injected into every message in every session. As it grows, so does 
 ```
 /distill lessons    # promote recurring corrections into durable rules/agents/skills
 /distill prune      # trim MEMORY.md — drop entries now covered by rules, stale facts, or superseded decisions
-# agents, skills, hooks available via foundry plugin
 ```
 
 Run after any session with significant corrections, or monthly as routine hygiene.
@@ -378,7 +393,6 @@ Run after any session with significant corrections, or monthly as routine hygien
 /audit                 # fetches latest Claude Code docs, surfaces applicable improvements as upgrade proposals
 /audit upgrade         # applies config proposals (correctness check) and capability proposals (calibrate A/B)
 /calibrate all fast    # re-benchmark all agents to confirm no regression from applied changes
-
 ```
 
 </details>
@@ -387,14 +401,14 @@ Run after any session with significant corrections, or monthly as routine hygien
 <summary><strong>Release preparation</strong></summary>
 
 ```
-/release notes v1.2.0..HEAD  # generate release notes from git history
+/oss:release notes v1.2.0..HEAD  # generate release notes from git history
 ```
 
 </details>
 
 ## 🤖 Codex CLI
 
-Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex) (Rust implementation). Default session model is `gpt-5.4`, with 12 specialist roles and a mirrored codex-native skill backbone (`review/develop/resolve/audit` + `calibrate/release/investigate/manage/analyse/optimize/research`).
+Multi-agent configuration for [OpenAI Codex CLI](https://github.com/openai/codex) (Rust implementation). Default session model is `gpt-5.4`, with 12 specialist roles and a mirrored codex-native skill backbone (`review/develop/resolve/audit` + `calibrate/release/investigate/manage/analyse/research`).
 
 ### Usage
 
@@ -474,15 +488,15 @@ Every skill that reviews or validates code uses a three-tier pipeline: **Tier 0*
 
    Claude identifies what needs to change and delegates execution to the plugin agent. Claude keeps its context clean and validates the output via `git diff HEAD`.
 
-   Dispatched automatically by `/review`, `/resolve`, `/calibrate`, and `/optimize run` via `codex-delegation.md`. The plugin agent has full working-tree access.
+   Dispatched automatically by `/oss:review`, `/oss:resolve`, `/calibrate`, and `/research:run` via `codex-delegation.md`. The plugin agent has full working-tree access.
 
 2. **Codex reviewing staged work**
 
-   After Claude stages changes, `codex:review --wait` serves as a second pass — examining the diff, applying review comments, or resolving PR conflicts. The `/resolve` skill automates this: it resolves conflicts semantically (Claude) then applies review comments (plugin agent).
+   After Claude stages changes, `codex:review --wait` serves as a second pass — examining the diff, applying review comments, or resolving PR conflicts. The `/oss:resolve` skill automates this: it resolves conflicts semantically (Claude) then applies review comments (plugin agent).
 
    ```text
-   /resolve 42   # Claude resolves conflicts → plugin agent applies review comments
-   /resolve "rename the `fit` method to `train` throughout the module"
+   /oss:resolve 42   # Claude resolves conflicts → plugin agent applies review comments
+   /oss:resolve "rename the `fit` method to `train` throughout the module"
    ```
 
 <details>
@@ -496,7 +510,7 @@ Install the Codex plugin in Claude Code:
 /reload-plugins
 ```
 
-Without the plugin: pre-pass review is skipped gracefully (skills check with `claude plugin list | grep 'codex@openai-codex'`); `/resolve`'s review-comment step is skipped (conflict resolution works with Claude alone).
+Without the plugin: pre-pass review is skipped gracefully (skills check with `claude plugin list | grep 'codex@openai-codex'`); `/oss:resolve`'s review-comment step is skipped (conflict resolution works with Claude alone).
 
 </details>
 
@@ -507,7 +521,7 @@ Two optional MCP servers are defined in `.mcp.json` (defined at the repo root; e
 | Server        | Purpose                                                                                                                                   | Enable                                       |
 | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------- |
 | **openspace** | Skill auto-evolution — reduces token consumption on repeated tasks via `execute_task`, `search_skills`, `fix_skill`, `upload_skill` tools | add `"openspace"` to `enabledMcpjsonServers` |
-| **colab-mcp** | GPU workloads via Google Colab (used by `/optimize run --colab`)                                                                          | add `"colab-mcp"` to `enabledMcpjsonServers` |
+| **colab-mcp** | GPU workloads via Google Colab (used by `/research:run --colab`)                                                                          | add `"colab-mcp"` to `enabledMcpjsonServers` |
 
 → New-machine setup and full reference: [`.claude/README.md` → MCP Servers](.claude/README.md#-mcp-servers)
 
@@ -543,7 +557,7 @@ rtk gain --history # per-command savings history
 
 **Scope**: RTK only compresses **Bash tool output** — shell commands like `git`, `cargo`, `pytest`, etc. It does not affect Claude Code's native tools (Read, Grep, Glob, Edit, Write), which run inside Claude's own engine and are already token-efficient by design.
 
-> [!TIP] **Context reset between heavy skills**: large skills (`/audit`, `/resolve`, `/review`) are loaded into context on invocation and stay there for every subsequent message in that session — `/audit` alone adds ~19K tokens. Use `/clear` between heavy skill invocations or before switching topics. Unlike terminating the session, `/clear` is instant and keeps all config (CLAUDE.md, rules, hooks) intact.
+> [!TIP] **Context reset between heavy skills**: large skills (`/audit`, `/oss:resolve`, `/oss:review`) are loaded into context on invocation and stay there for every subsequent message in that session — `/audit` alone adds ~19K tokens. Use `/clear` between heavy skill invocations or before switching topics. Unlike terminating the session, `/clear` is instant and keeps all config (CLAUDE.md, rules, hooks) intact.
 
 RTK is optional — removing it leaves all functionality intact.
 
@@ -554,6 +568,9 @@ RTK is optional — removing it leaves all functionality intact.
 ```bash
 cd Borda-AI-Home && git pull
 claude plugin install foundry@borda-ai-home   # reinstalls from updated source
+claude plugin install oss@borda-ai-home
+claude plugin install develop@borda-ai-home
+claude plugin install research@borda-ai-home
 ```
 
 Re-run `/foundry:init` only if permissions or `enabledPlugins` changed. Re-run `/foundry:init link` if you previously used the link mode — symlinks point to the old plugin cache after an upgrade.
@@ -568,6 +585,9 @@ claude --plugin-dir ./Borda-AI-Home/plugins/foundry
 
 ```bash
 claude plugin uninstall foundry
+claude plugin uninstall oss
+claude plugin uninstall develop
+claude plugin uninstall research
 ```
 
 Settings added by `/foundry:init` remain in `~/.claude/settings.json`; remove manually if desired. If `/foundry:init link` was run, symlinks in `~/.claude/agents/` and `~/.claude/skills/` also persist and will be broken after uninstall — remove with `rm ~/.claude/agents/<name>.md` and `rm -rf ~/.claude/skills/<name>` for each.

@@ -172,8 +172,32 @@ def __init__(self) -> None:
 
 \</common_fixes>
 
+\<version_compatibility>
+
+## Python Version — Annotation Syntax Gate
+
+**Always read `pyproject.toml` (or `setup.cfg`/`setup.py`) for `requires-python` before validating or writing type annotations.** Flag any annotation syntax that is incompatible with the project's minimum Python version.
+
+| Syntax                                                   | Min version |
+| -------------------------------------------------------- | ----------- |
+| `list[T]`, `dict[K, V]`, `tuple[X, Y]` built-in generics | 3.9+        |
+| \`X                                                      | Y`union,`X  |
+| `match` statement                                        | 3.10+       |
+| `TypeAlias`, `ParamSpec` (stdlib)                        | 3.10+       |
+| `tomllib`, `ExceptionGroup`, `Self`                      | 3.11+       |
+| PEP 695 `type` statement                                 | 3.12+       |
+
+For `requires-python < 3.10`: use `Union[X, Y]`, `Optional[X]` from `typing`; `X | Y` is a syntax error at runtime. For `requires-python < 3.9`: also use `List[T]`, `Dict[K, V]`, `Tuple[X, Y]` from `typing` — built-in generics in annotations raise `TypeError` at runtime without `from __future__ import annotations`.
+
+`@dataclass(frozen=True, slots=True)` — `slots=True` requires 3.10+. `Protocol` / `runtime_checkable` available from 3.8+.
+
+ruff `UP` rules (pyupgrade) automatically flag old-style annotations — enable `UP` and set `target-version` to match `requires-python`.
+
+\</version_compatibility>
+
 \<antipatterns_to_flag>
 
+- **Using annotation syntax incompatible with `requires-python`** — e.g., `X | Y` union or `list[T]` built-in generics in a project targeting Python < 3.10 or < 3.9; always read `pyproject.toml` first. ruff `UP` + `target-version` flags this automatically; `mypy` with `python_version` set to the minimum version will also catch it.
 - **Suppressing S-category (security) rules without justification**: adding `# noqa: S603` or similar on security violations without a comment explaining the specific safe context — security rules exist precisely because the pattern is dangerous; the comment must explain why this call is safe (e.g., `# noqa: S603 — subprocess input is a hardcoded constant, not user-supplied`)
 - **Blanket `# type: ignore` without an error code**: using `# type: ignore` instead of `# type: ignore[import-untyped]` — the error code allows mypy to report when the ignore becomes stale; blanket suppression hides unrelated new errors silently
 - **Downgrading mypy strictness to silence errors**: removing `strict = true`, adding `ignore_errors = true`, or setting `disallow_untyped_defs = false` globally instead of fixing the underlying type gaps — these hide real bugs; tighten gradually with `per-module` overrides rather than globally relaxing

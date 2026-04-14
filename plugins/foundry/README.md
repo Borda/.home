@@ -1,145 +1,203 @@
 # foundry — Claude Code Plugin
 
-Production-grade Claude Code configuration: 12 specialist agents, 15+ slash-command skill workflows, and event-driven hooks — packaged as an installable plugin for Python/ML OSS development.
+Base plugin for Python/ML OSS development: 8 specialist agents, config-management skills, event-driven hooks, and a continuous self-improvement loop.
 
-## Install
+> [!TIP] For OSS workflows, install the `oss` plugin (`/oss:review`, `/oss:release`, …). For development workflows, install the `develop` plugin (`/develop:feature`, `/develop:fix`, …). For ML research, install the `research` plugin (`/research:run`, `/research:topic`, …).
 
-### Requirements
+## 🎯 Why
 
-- Claude Code CLI installed
-- Repo cloned locally
+Generic Claude Code is a generalist. It will help with code, but it does not know your project's release conventions, does not enforce SemVer, does not benchmark itself for accuracy drift, and will not catch when its own agent descriptions start conflicting with each other.
 
-### Steps
+`foundry` packages the infrastructure that makes specialised AI-assisted development sustainable:
+
+- **Specialist agents** with deep, non-overlapping domain knowledge — routing accuracy benchmarked with `/calibrate`
+- **Config lifecycle tools** — create, rename, and delete agents/skills with full cross-reference propagation
+- **Quality gates** — hooks enforce lint-on-save, teammate output quality, and task tracking
+- **Self-improvement loop** — `/audit` catches structural drift; `/calibrate` catches behavioural drift; `/distill` surfaces patterns from your corrections; together they close the feedback loop
+
+## 💡 Key Principles
+
+- **Profile-first on everything** — `/calibrate` measures before and after any agent change; `/audit upgrade` A/B tests capability proposals before applying
+- **No duplication** — agents reference each other instead of repeating content; `/audit` Check 16 detects ≥40% overlap
+- **Routing accuracy is a first-class metric** — agent descriptions are precise enough that `routing accuracy ≥90%` is a failing gate, not a suggestion
+- **File-based handoff** — agents producing >500 tokens of findings write to a file and return a compact JSON envelope; the orchestrator never accumulates raw agent output in context
+- **Hooks are transparent** — `rtk-rewrite.js` compresses CLI output without modifying commands; `lint-on-save.js` runs pre-commit after every write; both are no-ops when the tools are absent
+
+## ⚡ Install
 
 ```bash
-# Run steps 1–3 from the directory that CONTAINS your clone (not inside it)
-
-# 1. Clone the repo (if not already done)
-git clone https://github.com/Borda/.ai-home Borda-AI-Home
-
-# 2. Register as a local marketplace  (run from the parent of Borda-AI-Home/)
+# Run from the directory that CONTAINS your Borda-AI-Home clone
 claude plugin marketplace add ./Borda-AI-Home
-
-# 3. Install the plugin
 claude plugin install foundry@borda-ai-home
 ```
 
-**4. One-time settings merge** — run inside Claude Code:
-
-```
-/foundry:init
-```
-
-Sets `statusLine`, merges `permissions.allow`, and enables `codex@openai-codex` in `~/.claude/settings.json`. Safe to re-run.
-
-> [!TIP] Add `link` to also expose all commands at root namespace (`/review` instead of `/foundry:review`):
->
-> ```
-> /foundry:init link
-> ```
-
-## What gets installed
-
-| Component  | What it is                                                              |
-| ---------- | ----------------------------------------------------------------------- |
-| **Agents** | 12 specialist roles (sw-engineer, qa-specialist, shepherd, …)           |
-| **Skills** | 15+ slash-command workflows (/develop, /review, /release, /audit, …)    |
-| **Hooks**  | Task tracking, teammate quality gates, lint-on-save, tool preprocessing |
-
-The plugin is self-contained — agents, skills, and hooks all live here. `.claude/agents/*.md` and `.claude/skills/*/` are symlinks pointing into the plugin, so edits in either location update the canonical source.
-
-## Use
-
-Once installed, all commands are available under the `foundry:` namespace:
-
-```
-/foundry:develop feature "add retry logic to the API client"
-/foundry:review 42 --reply
-/foundry:release prepare v1.2.0
-/foundry:audit
-```
-
-> [!TIP] To make all commands available at root namespace (`/review` instead of `/foundry:review`), run `/foundry:init link` — symlinks foundry agents and skills into `~/.claude/` with conflict review before any overwrite.
-
-See the [root README](../../README.md) for the full command reference.
-
-## Upgrade
-
-When the repo has updates:
+<details>
+<summary>Install companion plugins for the full workflow suite</summary>
 
 ```bash
-cd Borda-AI-Home
-git pull
-claude plugin install foundry@borda-ai-home   # reinstalls from updated source
+claude plugin install oss@borda-ai-home
+claude plugin install develop@borda-ai-home
+claude plugin install research@borda-ai-home
 ```
 
-Re-run `/foundry:init` only if new permissions or `enabledPlugins` were added (check the git diff for `plugins/foundry/.claude-plugin/permissions.json` or `plugins/foundry/.claude-plugin/plugin.json`). If you previously ran `/foundry:init link`, re-run it — symlinks point to the versioned cache path and go stale after an upgrade.
+</details>
 
-## Develop / Debug
+**One-time settings merge** — run inside Claude Code:
 
-### Edit hooks
+```
+/foundry:init link
+```
 
-Hook JS files live in `plugins/foundry/hooks/`. Edit them directly — because `.claude/hooks/*.js` are symlinks pointing here, changes are reflected immediately in the source repo without any reinstall.
+`link` symlinks foundry agents and skills into `~/.claude/` for root-namespace access (`/audit` instead of `/foundry:audit`). Safe to re-run. OSS, develop, and research skills always use their plugin prefix.
+
+## 🔁 How to Use
+
+### Config management
 
 ```bash
-# Verify symlinks resolve correctly after editing
-ls -la .claude/hooks/
+/manage create agent security-auditor "Vulnerability scanning specialist for OWASP Top 10 and supply chain threats"
+/manage update my-agent "add a section on error handling patterns"
+/manage delete old-agent-name
+/manage add perm "Bash(safety:*)" "Python dependency safety scanner" "Check deps before release"
 ```
 
-### Test before installing (session-only mode)
-
-Activate the plugin for a single session without touching `~/.claude/`:
+### Quality sweep
 
 ```bash
-claude --plugin-dir ./Borda-AI-Home/plugins/foundry
+/audit                    # report only — lists all findings + upgrade proposals
+/audit fix                # auto-fix critical + high findings
+/audit fix medium         # auto-fix critical + high + medium
+/audit upgrade            # apply docs-sourced improvements (A/B tested for capability changes)
+/audit agents             # agents only
+/audit setup              # system config only: settings.json, hooks, plugin integration
 ```
 
-Agents, skills, and hooks from the plugin will be active. Exit and restart Claude Code to return to normal.
-
-### Validate the manifest
+### Calibration
 
 ```bash
-claude plugin validate ./Borda-AI-Home/plugins/foundry
+/calibrate all fast       # quick benchmark across all modes
+/calibrate routing fast   # routing accuracy only — run after any agent description change
+/calibrate agents full    # deep agent accuracy benchmark with AB comparison
+/calibrate all fast apply # benchmark + apply improvement proposals
 ```
 
-Reports missing files, broken symlinks, and manifest errors — run this after any structural change.
+> [!NOTE] Thresholds: routing accuracy ≥90%, hard-problem accuracy ≥80%.
 
-### Install from local path (upgrade in place)
-
-After iterating on hooks or config locally:
+### Brainstorm → spec → action plan
 
 ```bash
-claude plugin install foundry@borda-ai-home   # reinstalls from the registered marketplace path
+/brainstorm "add caching layer to the data pipeline"
+# clarifying questions (max 10) → build divergent branch tree (deepen, close, merge, max 10 ops)
+# → self-mentor review → save .plans/blueprint/YYYY-MM-DD-<slug>.md (Status: tree)
+
+/brainstorm breakdown .plans/blueprint/2026-04-01-caching-layer.md
+# Status: tree → distillation questions → section-by-section spec (Status: draft)
+# Status: draft → blocking questions → ordered action plan with tagged invocations
 ```
 
-No need to re-run `/foundry:init` unless `plugin.json` or `settings.json` permissions changed.
+### Failure diagnosis
 
-## Uninstall
+```bash
+/investigate "hooks not firing on Save"
+/investigate "CI fails but passes locally"
+/investigate "codex agent exits 127 on this machine"
+```
+
+### Self-improvement loop
+
+```bash
+/distill                        # surface patterns from corrections, suggest new agents/skills
+/calibrate all fast ab apply    # benchmark + apply improvement proposals
+/audit fix                      # structural sweep: catch anything calibrate changed
+```
+
+Run after any burst of corrections or monthly as routine hygiene.
+
+## 🗺️ Overview
+
+### 8 Specialist Agents
+
+| Agent                  | Role                                                                                        | Model    |
+| ---------------------- | ------------------------------------------------------------------------------------------- | -------- |
+| **sw-engineer**        | Architecture, implementation, SOLID principles, type safety                                 | opus     |
+| **solution-architect** | ADRs, interface specs, migration plans, coupling analysis                                   | opusplan |
+| **qa-specialist**      | pytest, hypothesis, mutation testing, ML test patterns; auto-includes OWASP Top 10 in teams | opus     |
+| **linting-expert**     | ruff, mypy, pre-commit, rule selection, CI quality gates; runs autonomously                 | haiku    |
+| **perf-optimizer**     | Profile-first CPU/GPU/memory/I/O optimisation, torch.compile, mixed precision               | opus     |
+| **doc-scribe**         | Google/Napoleon docstrings, Sphinx/mkdocs, API references                                   | sonnet   |
+| **web-explorer**       | API version comparison, migration guides, PyPI tracking                                     | sonnet   |
+| **self-mentor**        | Agent/skill auditing, cross-ref validation, duplication detection                           | opusplan |
+
+**Model tiering**: reasoning agents (`sw-engineer`, `qa-specialist`, `perf-optimizer`, `solution-architect`) default to `opus`; execution agents (`doc-scribe`, `linting-expert`, `web-explorer`) default to `sonnet`; `self-mentor` uses `opusplan` (plan-gated Opus — pays for reasoning only when the task warrants it).
+
+### Agent Relationships
+
+Agents are not independent — they form a directed pipeline:
+
+- `linting-expert` is always **downstream** of `sw-engineer` — never lints code that hasn't been implemented
+- `doc-scribe` is always **downstream** — documents finalised code, never shapes design
+- `qa-specialist` runs **parallel** to `sw-engineer` during review, or downstream after implementation
+- `self-mentor` is **orthogonal** — audits `.claude/` config files, not user code
+- `web-explorer` **feeds** `research:scientist` — fetches current docs/papers, scientist interprets
+
+### Skills
+
+| Skill          | What It Does                                                                                                                                  |
+| -------------- | --------------------------------------------------------------------------------------------------------------------------------------------- |
+| `/audit`       | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes; `upgrade` applies docs-sourced improvements |
+| `/manage`      | Create, update, delete agents/skills/rules with full cross-reference propagation; add/remove permissions                                      |
+| `/calibrate`   | Synthetic benchmarks measuring recall vs confidence bias across all agent modes                                                               |
+| `/brainstorm`  | Idea → divergent branch tree → spec → action plan; two modes: `idea` and `breakdown`                                                          |
+| `/investigate` | Systematic failure diagnosis — env, tools, hooks, CI divergence; ranks hypotheses                                                             |
+| `/distill`     | Surface patterns from corrections, suggest new agents/skills, prune MEMORY.md                                                                 |
+| `/session`     | Parking lot for diverging ideas — auto-parks unanswered questions across sessions                                                             |
+
+### Hooks
+
+| Hook                  | Event                  | What It Does                                                       |
+| --------------------- | ---------------------- | ------------------------------------------------------------------ |
+| `task-log.js`         | SubagentStart/Stop     | Tracks background agents to `/tmp/claude-state-<session>/`         |
+| `statusline.js`       | SessionStart           | Reads agent state for the status bar                               |
+| `teammate-quality.js` | PostToolUse            | Gates teammate output quality before it reaches the orchestrator   |
+| `lint-on-save.js`     | PostToolUse:Write/Edit | Runs pre-commit hooks after every file change                      |
+| `rtk-rewrite.js`      | PreToolUse:Bash        | Transparently rewrites CLI calls through RTK for token compression |
+| `md-compress.js`      | PreToolUse:Read        | Compresses large markdown files before they enter context          |
+
+## 📦 Plugin details
+
+### Upgrade
+
+```bash
+cd Borda-AI-Home && git pull
+claude plugin install foundry@borda-ai-home
+```
+
+> [!IMPORTANT] Re-run `/foundry:init link` after upgrading — symlinks point to the versioned cache path and go stale after reinstall.
+
+### Uninstall
 
 ```bash
 claude plugin uninstall foundry
 ```
 
-> [!NOTE] Settings merged by `/foundry:init` (`statusLine`, `permissions.allow` entries) remain in `~/.claude/settings.json` after uninstall — remove manually if desired. If `/foundry:init link` was run, symlinks in `~/.claude/agents/` and `~/.claude/skills/` also remain — remove with `rm ~/.claude/agents/<name>.md` and `rm -rf ~/.claude/skills/<name>` as needed.
+> [!NOTE] Settings merged by `/foundry:init` (`statusLine`, `permissions.allow` entries) remain in `~/.claude/settings.json` — remove manually if desired. Symlinks from `/foundry:init link` in `~/.claude/agents/` and `~/.claude/skills/` also persist after uninstall.
 
-## Structure
+### Structure
 
 ```
 plugins/foundry/
 ├── .claude-plugin/
 │   ├── plugin.json          ← manifest
-│   └── permissions.json     ← allow-list merged into ~/.claude/settings.json by /foundry:init
-├── agents/                  ← real files (canonical source)
-├── skills/                  ← real files (canonical source)
+│   └── permissions.json     ← allow-list merged by /foundry:init
+├── agents/                  ← canonical agent files (symlinked from .claude/agents/)
+├── skills/                  ← canonical skill files (symlinked from .claude/skills/)
 └── hooks/
     ├── hooks.json           ← hook registrations (${CLAUDE_PLUGIN_ROOT} paths)
-    ├── task-log.js          ← real file (canonical source)
-    ├── statusline.js        ← real file
-    ├── teammate-quality.js  ← real file
-    ├── lint-on-save.js      ← real file
-    ├── rtk-rewrite.js       ← real file
-    ├── md-compress.js       ← real file
-    └── stats-reader.js      ← CLI utility (not a hook; invoke directly: node stats-reader.js)
+    ├── task-log.js          ← SubagentStart/Stop tracking
+    ├── statusline.js        ← status bar agent counts
+    ├── teammate-quality.js  ← teammate output quality gate
+    ├── lint-on-save.js      ← pre-commit on write/edit
+    ├── rtk-rewrite.js       ← CLI token compression
+    ├── md-compress.js       ← large markdown compression
+    └── stats-reader.js      ← CLI utility (invoke directly: node stats-reader.js)
 ```
-
-`.claude/hooks/*.js` are reverse symlinks pointing here (`../../plugins/foundry/hooks/xxx.js`). Edit hook JS files directly in `plugins/foundry/hooks/` — changes are live immediately in the source repo.
