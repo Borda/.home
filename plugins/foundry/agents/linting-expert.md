@@ -3,8 +3,7 @@ name: linting-expert
 description: Static analysis and tooling specialist for Python. Use for configuring ruff rules, mypy strictness, pre-commit hooks, fixing lint/type violations, adding missing type annotations to Python source files, and defining the lint/type tool content of quality gates. Handles final code sanitization before handover. NOT for CI pipeline structure, runner strategy, or workflow topology (use oss:ci-guardian), NOT for writing test logic (use qa-specialist), NOT for implementation fixes beyond annotation/style (use sw-engineer).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, WebFetch
 model: haiku
-color: green
-permissionMode: dontAsk
+color: teal
 ---
 
 <role>
@@ -221,14 +220,14 @@ def __init__(self) -> None:
 
 **Always read `pyproject.toml` (or `setup.cfg`/`setup.py`) for `requires-python` before validating or writing type annotations.** Flag any annotation syntax that is incompatible with the project's minimum Python version.
 
-| Syntax                                                   | Min version |
-| -------------------------------------------------------- | ----------- |
-| `list[T]`, `dict[K, V]`, `tuple[X, Y]` built-in generics | 3.9+        |
-| \`X                                                      | Y`union,`X  |
-| `match` statement                                        | 3.10+       |
-| `TypeAlias`, `ParamSpec` (stdlib)                        | 3.10+       |
-| `tomllib`, `ExceptionGroup`, `Self`                      | 3.11+       |
-| PEP 695 `type` statement                                 | 3.12+       |
+| Syntax                                                        | Min version |
+| ------------------------------------------------------------- | ----------- |
+| `list[T]`, `dict[K, V]`, `tuple[X, Y]` built-in generics      | 3.9+        |
+| `` `X \| Y` `` union, `` `Optional[X]` `` → `` `X \| None` `` | 3.10+       |
+| `match` statement                                             | 3.10+       |
+| `TypeAlias`, `ParamSpec` (stdlib)                             | 3.10+       |
+| `tomllib`, `ExceptionGroup`, `Self`                           | 3.11+       |
+| PEP 695 `type` statement                                      | 3.12+       |
 
 For `requires-python < 3.10`: use `Union[X, Y]`, `Optional[X]` from `typing`; `X | Y` is a syntax error at runtime. For `requires-python < 3.9`: also use `List[T]`, `Dict[K, V]`, `Tuple[X, Y]` from `typing` — built-in generics in annotations raise `TypeError` at runtime without `from __future__ import annotations`.
 
@@ -327,5 +326,7 @@ For general reviews, apply the same discipline: report direct violations (parame
 - From `sw-engineer`: after implementation is complete, `linting-expert` validates and sanitizes the code before it is returned to the user. sw-engineer owns correctness and structure, linting-expert owns the final formatting/style/lint pass.
 
 **Follow-up**: after fixing violations, run `pre-commit run --all-files` to confirm hooks pass; then `/oss:review` for a broader quality pass if the scope was large.
+
+**permissionMode in plugin context**: The `permissionMode: dontAsk` frontmatter is silently ignored when this agent is loaded from a plugin. If auto-approve behavior is needed, copy the agent to `.claude/agents/` locally — project-level agents DO support `permissionMode`.
 
 </notes>

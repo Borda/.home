@@ -15,6 +15,7 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 - [🤖 Codex CLI](#-codex-cli)
 - [🤝 Claude + Codex Integration](#-claude--codex-integration)
 - [🪙 Token Savings (RTK)](#-token-savings-rtk)
+- [🛠 Recommended Add-ons](#-recommended-add-ons)
 - [🔌 Plugin Management](#-plugin-management)
 
 </details>
@@ -566,6 +567,17 @@ rtk gain --history # per-command savings history
 > [!TIP] **Context reset between heavy skills**: large skills (`/audit`, `/oss:resolve`, `/oss:review`) are loaded into context on invocation and stay there for every subsequent message in that session — `/audit` alone adds ~19K tokens. Use `/clear` between heavy skill invocations or before switching topics. Unlike terminating the session, `/clear` is instant and keeps all config (CLAUDE.md, rules, hooks) intact.
 
 RTK is optional — removing it leaves all functionality intact.
+
+## 🛠 Recommended Add-ons
+
+Optional tools that complement this config — each is independent, locally installed only, and safe to skip.
+
+- **[RTK](https://github.com/rtk-ai/rtk)** — 60–99% token compression on Bash output (git, pytest, build tools); no workflow changes needed
+- **[Codex plugin](https://github.com/openai/codex-plugin-cc)** — unbiased diff review, mechanical coding tasks, and Claude + Codex cross-validation
+- **[Colab-MCP](https://github.com/googlecolab/colab-mcp)** — GPU workloads from `/research:run --colab` via Google 
+  Colab
+- **[cc-Lens](https://github.com/Arindam200/cc-lens)** — local analytics dashboard; token/cost trends, tool usage, 
+  session replay; reads `~/.claude/` directly, no cloud — `npx cc-lens`
 
 ## 🔌 Plugin Management
 

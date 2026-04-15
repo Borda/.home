@@ -160,7 +160,7 @@ Stop when one hypothesis is confirmed with clear evidence, or all top-3 are rule
   - `/develop:fix` — code regression confirmed (application code only — NOT for `.claude/` changes)
   - `/manage update <name> "<change directive>"` — `.claude/` agent/skill/rule content needs updating (use this, NOT `/develop`, for any proposed change to `.claude/`)
   - `/audit fix` — structural/quality issue in `.claude/` config confirmed
-  - `/foundry:init link` — propagate project `.claude/` to `~/.claude/` (foundry plugin is the distribution path)
+  - `/foundry:init` — propagate project `.claude/` to `~/.claude/` (foundry plugin is the distribution path)
   - Manual step: <exact command to run>
   - Further investigation needed: <what additional info would resolve it>
 ```

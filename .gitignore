@@ -8,6 +8,7 @@
 # Hook runtime state and invocation logs
 .claude/state/
 .claude/logs/
+.claude/worktrees/
 
 # Skill run artifacts and temp outputs (ephemeral, TTL-managed)
 docs/

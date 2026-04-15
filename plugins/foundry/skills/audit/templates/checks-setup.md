@@ -150,8 +150,8 @@ else
     if [ ! -f "$MANIFEST" ]; then
         printf "${RED}! CRITICAL${NC}: Check 8a — manifest not found: %s\n" "$MANIFEST"
         FAIL=$((FAIL + 1))
-    elif ! python3 -c "import json,sys; d=json.load(open('$MANIFEST')); [sys.exit(1) for k in ('name','version','description','hooks') if k not in d]" 2>/dev/null; then # timeout: 5000
-        printf "${RED}! CRITICAL${NC}: Check 8a — manifest invalid JSON or missing required fields (name, version, description, hooks)\n"
+    elif ! python3 -c "import json,sys; d=json.load(open('$MANIFEST')); [sys.exit(1) for k in ('name','version','description') if k not in d]" 2>/dev/null; then # timeout: 5000
+        printf "${RED}! CRITICAL${NC}: Check 8a — manifest invalid JSON or missing required fields (name, version, description)\n"
         FAIL=$((FAIL + 1))
     else
         PLUGIN_NAME=$(python3 -c "import json; print(json.load(open('$MANIFEST'))['name'])" 2>/dev/null) # timeout: 5000
@@ -253,10 +253,10 @@ else
     fi
 
 
-    # 8f — permissions.json vs settings.json drift (skipped on marketplace install if no .claude/)
-    PERM_JSON="$PLUGIN_DIR/.claude-plugin/permissions.json"
+    # 8f — permissions-allow.json vs settings.json drift (skipped on marketplace install if no .claude/)
+    PERM_JSON="$PLUGIN_DIR/.claude-plugin/permissions-allow.json"
     if [ ! -f "$PERM_JSON" ]; then
-        printf "${YEL}\u26a0 SKIPPED${NC}: Check 8f \u2014 permissions.json not found at %s\n" "$PERM_JSON"
+        printf "${YEL}\u26a0 SKIPPED${NC}: Check 8f \u2014 permissions-allow.json not found at %s\n" "$PERM_JSON"
     elif ! command -v jq &>/dev/null; then # timeout: 5000
         printf "${YEL}\u26a0 SKIPPED${NC}: Check 8f \u2014 jq not available\n"
     elif [ ! -f ".claude/settings.json" ]; then
@@ -270,17 +270,17 @@ else
             <(jq -r '.permissions.allow[]' .claude/settings.json 2>/dev/null | sort)) # timeout: 10000
         if [ -n "$MISSING_FROM_PLUGIN" ]; then
             COUNT=$(echo "$MISSING_FROM_PLUGIN" | wc -l | tr -d ' ')
-            printf "${YEL}\u26a0 MEDIUM${NC}: Check 8f \u2014 %d allow entries in settings.json absent from permissions.json (plugin users won't get them)\n" "$COUNT"
+            printf "${YEL}\u26a0 MEDIUM${NC}: Check 8f \u2014 %d allow entries in settings.json absent from permissions-allow.json (plugin users won't get them)\n" "$COUNT"
             echo "$MISSING_FROM_PLUGIN" | sed 's/^/    /'
             FAIL=$((FAIL + 1))
         fi
         if [ -n "$MISSING_FROM_SETTINGS" ]; then
             COUNT=$(echo "$MISSING_FROM_SETTINGS" | wc -l | tr -d ' ')
-            printf "${YEL}\u26a0 LOW${NC}: Check 8f \u2014 %d permissions.json entries absent from .claude/settings.json\n" "$COUNT"
+            printf "${YEL}\u26a0 LOW${NC}: Check 8f \u2014 %d permissions-allow.json entries absent from .claude/settings.json\n" "$COUNT"
             echo "$MISSING_FROM_SETTINGS" | sed 's/^/    /'
         fi
         if [ -z "$MISSING_FROM_PLUGIN" ] && [ -z "$MISSING_FROM_SETTINGS" ]; then
-            printf "${GRN}\u2713${NC}: Check 8f \u2014 permissions.json and .claude/settings.json in sync\n"
+            printf "${GRN}\u2713${NC}: Check 8f \u2014 permissions-allow.json and .claude/settings.json in sync\n"
         fi
     fi
 
@@ -317,7 +317,7 @@ else
 fi
 ```
 
-**Severity**: manifest missing or invalid JSON → **critical**; broken symlink, hooks.json invalid, or `claude plugin validate` fails → **high**; .js file not a symlink → **medium**; 8f permissions.json entries missing from settings.json → **medium**; settings.json entries missing from permissions.json → **low**; setup-foundry SKILL.md missing → **high**; missing required keyword coverage → **medium**. **Report only** — never auto-fix.
+**Severity**: manifest missing or invalid JSON → **critical**; broken symlink, hooks.json invalid, or `claude plugin validate` fails → **high**; .js file not a symlink → **medium**; 8f permissions-allow.json entries missing from settings.json → **medium**; settings.json entries missing from permissions-allow.json → **low**; setup-foundry SKILL.md missing → **high**; missing required keyword coverage → **medium**. **Report only** — never auto-fix.
 
 ______________________________________________________________________
 

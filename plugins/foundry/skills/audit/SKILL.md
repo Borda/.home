@@ -215,8 +215,8 @@ Do not leave overlap findings as vague "potential duplication" notes. The audit 
 
 **Scope filter**: when `$SCOPE` is set, run only the checks listed for that scope; skip all others silently.
 
-- `agents` — Checks 14, 15, 19, 20, 17, 12, 13, 25, 22
-- `skills` — Checks 14, 15, 21, 17, 12, 23, 22, 13, 24, 25
+- `agents` — Checks 14, 15, 19, 20, 17, 12, 13, 25, 22, 26
+- `skills` — Checks 14, 15, 21, 17, 12, 23, 22, 13, 24, 25, 26
 - `rules` — Checks 18, 12, 13
 - `communication` — Checks 15, 16, 12, 13
 - `setup` — Checks 1, 2, 3, 4, 5, 9, 10, 11, 7, 6, 8, I1, I2, I3 (Step 3: one self-mentor spawn for `init` SKILL.md only; I1–I3 read `~/.claude/`)
@@ -255,6 +255,7 @@ Do not leave overlap findings as vague "potential duplication" notes. The audit 
 | 23  | Bash misuse / native tool substitution | medium            | agents/skills | cat/grep/find/echo>/sed replaceable by native tools                                                               |
 | 24  | Skill sequence compatibility           | high/medium       | skills        | 24a target skill not on disk; 24b argument absent from argument-hint; scans skills, agents, READMEs               |
 | 25  | Implicit agent references              | high              | agents/skills | subagent_type without plugin prefix (e.g. "sw-engineer" instead of "foundry:sw-engineer"); exempt: built-in types |
+| 26  | Symbol and shortcut consistency       | medium/low        | agents/skills | 26a same-concept emoji conflict, 26b slash notation mixed, 26c body contradicts legend |
 
 ### Claude Code docs freshness (within Step 4)
 
@@ -458,7 +459,7 @@ Output the complete audit summary: List each audited file by name in the `### Fi
 Low-confidence files re-audited: N | Still uncertain after retry: N (see gaps above)
 
 ### Next Step
-Run `/foundry:init link` to propagate clean config to ~/.claude/
+Run `/foundry:init` to propagate clean config to ~/.claude/
 ```
 
 ## Mode: upgrade
@@ -556,12 +557,12 @@ Mark "A/B test capability proposals" completed.
 | 2 | ... | agents/sw-engineer.md | −0.02 | +0.01 | ✗ reverted |
 
 ### Next Steps
-- `/foundry:init link` — propagate accepted changes to ~/.claude/
+- `/foundry:init` — propagate accepted changes to ~/.claude/
 - `/audit` — confirm clean baseline after upgrades
 - Reverted items: run `/calibrate <agent> full` for deeper A/B signal (N=10 vs N=3 used here)
 ```
 
-Propose `/foundry:init link` to the user after upgrade completes — do not auto-execute. Print: `→ Run \`/foundry:init link\` to propagate accepted changes to ~/.claude/\`
+Propose `/foundry:init` to the user after upgrade completes — do not auto-execute. Print: `→ Run \`/foundry:init\` to propagate accepted changes to ~/.claude/\`
 
 </workflow>
 
@@ -585,7 +586,7 @@ Propose `/foundry:init link` to the user after upgrade completes — do not auto
 - **Token cost**: Step 3 (self-mentor spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
 - **Skill-creator complement**: For testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official skill-creator utility from Anthropic. `/audit` checks structural quality; `skill-creator` validates that the right skill is selected by Claude Code's dispatcher when the user types a command.
 - Follow-up chains:
-  - Audit clean → `/foundry:init link` to propagate verified config to `~/.claude/`
+  - Audit clean → `/foundry:init` to propagate verified config to `~/.claude/`
   - Audit found structural issues → review flagged files manually before syncing
   - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop:refactor` for a targeted cleanup pass
   - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration

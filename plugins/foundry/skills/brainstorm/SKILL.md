@@ -77,6 +77,7 @@ Rules:
 - After question 3 (and on every subsequent question), always include an **escape hatch option**: `x) Enough questions — let's start building the tree` so the user can move on if the problem is already well-defined
 - No solution proposals during this step — only gather information
 - After each answer, briefly restate the updated problem understanding in 1–2 sentences before asking the next question or proceeding — a simple acknowledgment ("Got it", "Understood") does not count; the restatement must name what is now known about the problem (e.g., "So the goal is X and the constraint is Y.")
+- After the restatement, add the skill's own perspective in a blockquote labelled **Skill's read:** — 1–2 sentences on what direction(s) this answer opens up, what it makes more or less likely, or what tension it surfaces. This is an active hypothesis, not a neutral summary (e.g., `> **Skill's read:** This makes me think the core challenge is X, which points toward approaches like Y`). Write it as the skill speaking.
 
 **Gate**: do not proceed to Step 3 until the problem is well-defined or the maximum question count is reached. Aim for at least 3 questions to build enough context for a rich tree.
 
@@ -100,8 +101,11 @@ Present **3–5 initial branches** (top-level directions). For each include:
 - **Core idea**: 2–3 sentences — what makes this branch distinct
 - **Tension it resolves**: which aspect of the problem does this branch prioritise?
 - **What it trades away**: what gets harder or is left unsolved?
+- **Skill's lean**: a short honest opinion — what makes this branch interesting or worth exploring, and any reservation the skill has about it (e.g., "Interesting because it sidesteps the auth problem entirely, but risky if the data model isn't flexible.")
 
-After presenting all initial branches, call `AskUserQuestion` with one letter per branch (labelled by name), plus:
+After presenting all initial branches, write an **Opening framing** paragraph (2–3 sentences) sharing the skill's initial read on the problem space: what it sees as the core tension, which branch(es) it finds most promising and why, and one thing it's uncertain about. This is not a recommendation to converge — divergence is still the goal — but an honest perspective to spark reaction.
+
+Then call `AskUserQuestion` with one letter per branch (labelled by name), plus:
 
 - f) None of these — describe what you're thinking
 - g) Add more initial branches — I want more angles
@@ -115,7 +119,8 @@ User may select **1–3 branches** to mark as initial focus. All other branches 
 After seeding, enter the operations loop. Each iteration:
 
 1. Show the current **tree summary** (see format below)
-2. Call `AskUserQuestion` with the available operations:
+2. Write a **Skill's moment** — 2–3 sentences of the skill's current read: which open branches look most interesting and why, what the closed branches revealed about the problem, and what the skill would explore next if it had a vote. Make it specific to the current tree state (refer to actual branch names by their labels in the tree). This gives the user something to react to before choosing an operation.
+3. Call `AskUserQuestion` with the available operations:
    - a) Deepen a branch — add sub-branches to [branch name]
    - b) Close a branch — mark [branch name] as closed with a reason
    - c) Merge two branches — combine [branch name] + [branch name]
@@ -125,11 +130,11 @@ After seeding, enter the operations loop. Each iteration:
 
 **Operations**:
 
-- **Deepen**: generate 2–3 sub-branches under the named branch. Sub-branches use the same format as top-level branches. Ask which one(s) to focus on.
-- **Close**: mark the named branch as `[closed — <user's reason>]`. Add a one-line entry to the pruning log. Ask if the reason captures it correctly before proceeding.
-- **Merge**: synthesise two named branches into a single hybrid branch; present the merged description; mark the original two as `[merged into <new name>]` immediately in the tree summary shown after the merge, and in all subsequent tree summaries.
-- **Add**: generate 1–2 fresh top-level branches with directions not yet represented in the tree.
-- **Reopen**: change `[closed]` to `[open]` on the named branch; note the re-opening reason.
+- **Deepen**: generate 2–3 sub-branches under the named branch. Sub-branches use the same format as top-level branches. Ask which one(s) to focus on. After executing, write 1–2 sentences reacting to what deepening this branch opens up — what new tensions or opportunities the sub-branches reveal.
+- **Close**: mark the named branch as ⛔ (closed) with the user's reason shown after `—`. Add a one-line entry to the pruning log. Ask if the reason captures it correctly before proceeding. After executing, write 1–2 sentences reacting to what closing this branch reveals — what it tells us about where the exploration is actually headed.
+- **Merge**: synthesise two named branches into a single hybrid branch; present the merged description; mark the original two as 🔗 with `[merged -> <number>: <new-branch-name>]` immediately in the tree summary shown after the merge, and in all subsequent tree summaries. After executing, write 1–2 sentences on what the merge suggests about where the idea is heading — what the synthesis makes clearer or harder.
+- **Add**: generate 1–2 fresh top-level branches with directions not yet represented in the tree. After executing, write 1–2 sentences on why this new angle matters — what gap it fills or what it challenges in the existing branches.
+- **Reopen**: change ⛔ (closed) to 💭 (open) on the named branch; note the re-opening reason. After executing, write 1–2 sentences on what reopening this branch might change — what it puts back on the table.
 - **Ready**: exit the loop, proceed to Step 4.
 
 ### Tree summary format
@@ -138,19 +143,20 @@ Always show the tree summary **before** calling `AskUserQuestion`:
 
 ```
 Tree: <title>
-├─ Branch 1: <name> [open]
-│  ├─ 1.1: <name> [open]
-│  └─ 1.2: <name> [closed — <reason>]
-├─ Branch 2: <name> [open]
-│  ├─ 2.1: <name> [open]
-│  │  ├─ 2.1.1: <name> [open]
-│  │  └─ 2.1.2: <name> [closed — <reason>]
-│  └─ 2.2: <name> [closed — <reason>]
-└─ Branch 3: <name> [closed — <reason>]
-Open: N | Closed: N | Merged: N
+├─ ▶️ Branch 1: <name>
+│  ├─ 💭 1.1: <name>
+│  └─ ⛔ 1.2: <name> — <reason>
+├─ 💭 Branch 2: <name>
+│  ├─ ▶️ 2.1: <name>
+│  │  ├─ 💭 2.1.1: <name>
+│  │  └─ ⛔ 2.1.2: <name> — <reason>
+│  └─ ⛔ 2.2: <name> — <reason>
+└─ 🔗 Branch 3: <name> [merged -> <number>: <new-branch-name>]
+Open: N · Closed: N · Merged: N
+Legend: ▶️ active focus · 💭 open · ⛔ closed · 🔗 merged
 ```
 
-Use `├─`, `│  ├─`, `└─` for tree rendering. Show sub-branches indented one level per depth. Sub-branches use hierarchical dot notation: branch 2 splits into 2.1, 2.2, …; those can further split into 2.1.1, 2.1.2, … Closed branches show their reason inline.
+Use `├─`, `│  ├─`, `└─` for tree rendering. Show sub-branches indented one level per depth. Sub-branches use hierarchical dot notation: branch 2 splits into 2.1, 2.2, …; those can further split into 2.1.1, 2.1.2, … Prefix each branch with its status emoji: ▶️ for the branch currently being operated on (most recently deepened, or selected as initial focus during seeding), 💭 for all other open branches, ⛔ for closed branches (show reason after `—`), 🔗 for merged branches (show merge target as `[merged -> <number>: <new-branch-name>]`). The legend line is always the last line.
 
 ### Loop bounds
 

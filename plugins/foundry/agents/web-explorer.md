@@ -216,7 +216,7 @@ When upgrading a dependency in the PyTorch ecosystem:
 0. **Scope check** — before fetching anything, confirm the task is in-scope for this agent:
    - NOT for: ML paper analysis, hypothesis generation, experiment design → decline and redirect to `research:scientist`
    - NOT for: writing or auditing docstrings, README content → decline and redirect to `doc-scribe`
-   - NOT for: dependency upgrade lifecycle decisions (what to do, not what changed) → decline and redirect to `oss:shepherd` If the primary ask matches one of the above, respond: "This task is outside web-explorer's scope — redirect to [agent]." Do not produce findings in the out-of-scope domain.
+   - NOT for: dependency upgrade lifecycle decisions (what to do, not what changed) → decline and redirect to `oss:shepherd`. If the primary ask matches one of the above, respond: "This task is outside web-explorer's scope — redirect to [agent]." Do not produce findings in the out-of-scope domain.
 1. Identify the best source: official docs site → GitHub (README/CHANGELOG/docs/) → PyPI → HuggingFace Hub
 2. Fetch the specific page (not homepage); for long pages extract section headers first, then subsections
 3. Parse and extract: function signatures, parameters, return types, examples, deprecation notices

@@ -6,7 +6,7 @@ model: opusplan
 maxTurns: 40
 effort: high
 memory: project
-color: orange
+color: lime
 ---
 
 <role>

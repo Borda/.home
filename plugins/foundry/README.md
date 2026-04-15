@@ -197,13 +197,14 @@ claude plugin uninstall foundry
 plugins/foundry/
 ├── .claude-plugin/
 │   ├── plugin.json          ← manifest
-│   └── permissions.json     ← allow-list merged by /foundry:init
+│   ├── permissions-allow.json ← allow-list merged by /foundry:init
+│   └── permissions-deny.json  ← deny-list merged by /foundry:init
 ├── agents/                  ← canonical agent files (symlinked from .claude/agents/)
 ├── skills/                  ← canonical skill files (symlinked from .claude/skills/)
 ├── rules/                   ← canonical rule files (symlinked from .claude/rules/)
 ├── CLAUDE.md                ← workflow rules (symlinked from .claude/CLAUDE.md; distributed via init)
 ├── TEAM_PROTOCOL.md         ← AgentSpeak v2 inter-agent protocol (symlinked from .claude/TEAM_PROTOCOL.md)
-├── permissions-guide.md     ← allow-entry reference (symlinked from .claude/permissions-guide.md; project-only)
+├── permissions-guide.md     ← allow/deny annotated reference (copied to .claude/ by init if absent; edited project-locally)
 └── hooks/
     ├── hooks.json           ← hook registrations (${CLAUDE_PLUGIN_ROOT} paths)
     ├── task-log.js          ← SubagentStart/Stop tracking
@@ -211,6 +212,5 @@ plugins/foundry/
     ├── teammate-quality.js  ← teammate output quality gate
     ├── lint-on-save.js      ← pre-commit on write/edit
     ├── rtk-rewrite.js       ← CLI token compression
-    ├── md-compress.js       ← large markdown compression
-    └── stats-reader.js      ← CLI utility (invoke directly: node stats-reader.js)
+    └── md-compress.js       ← large markdown compression
 ```

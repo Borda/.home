@@ -4,6 +4,7 @@ description: Post-install setup for foundry plugin. Merges statusLine, permissio
 allowed-tools: Read, Write, Bash, AskUserQuestion
 effort: low
 model: sonnet
+argument-hint: '[--approve]'
 ---
 
 <objective>
@@ -30,11 +31,18 @@ NOT for: editing project `.claude/settings.json`.
 
 <inputs>
 
-No arguments. Run `/foundry:init` — that's it.
+- **No arguments** — interactive mode; prompts on conflicts.
+- **`--approve`** — non-interactive mode; automatically accepts all recommended answers without prompting. Use for scripted or CI-style setups.
 
 </inputs>
 
 <workflow>
+
+## Flag detection
+
+Parse `$ARGUMENTS` for the presence of `--approve` (case-insensitive). If found, set `APPROVE_ALL=true`; otherwise `APPROVE_ALL=false`.
+
+When `APPROVE_ALL=true`, every `AskUserQuestion` call below is **skipped** and the ★ recommended option is applied automatically. Print `[--approve] auto-accepting recommended option` in place of the question.
 
 ## Step 1: Locate the installed plugin
 
@@ -73,7 +81,11 @@ Report: "Backed up ~/.claude/settings.json → ~/.claude/settings.json.bak"
 jq -e 'has("hooks")' ~/.claude/settings.json >/dev/null 2>&1  # timeout: 5000
 ```
 
-If the `hooks` key exists, the user has a pre-plugin-migration settings block that will cause hooks to fire twice. Use `AskUserQuestion`:
+If the `hooks` key exists, the user has a pre-plugin-migration settings block that will cause hooks to fire twice.
+
+If `APPROVE_ALL=true`: print `[--approve] auto-accepting: remove stale hooks block` and proceed directly to removing it (apply option a below).
+
+Otherwise, use `AskUserQuestion`:
 
 - a) Remove the stale `hooks` block now ★ recommended (backup already in place from Step 2)
 - b) Skip — I'll handle it manually
@@ -98,17 +110,40 @@ jq --arg cmd "node \"$PLUGIN_ROOT/hooks/statusline.js\"" \
 
 Write `/tmp/foundry_init_tmp.json` content back to `~/.claude/settings.json` using the Write tool.
 
-## Step 4: Merge permissions.allow
+## Step 4: Merge permissions.allow and permissions.deny
 
-Read `$PLUGIN_ROOT/.claude-plugin/permissions.json` using the Read tool. Merge into `~/.claude/settings.json` — add only entries not already present (exact string match):
+Read `$PLUGIN_ROOT/.claude-plugin/permissions-allow.json` using the Read tool. Merge into `~/.claude/settings.json` — add only entries not already present (exact string match):
 
 ```bash
-jq --slurpfile perms "$PLUGIN_ROOT/.claude-plugin/permissions.json" \
+jq --slurpfile perms "$PLUGIN_ROOT/.claude-plugin/permissions-allow.json" \
     '.permissions.allow = ((.permissions.allow // []) + $perms[0] | unique)' \
     ~/.claude/settings.json > /tmp/foundry_init_tmp.json  # timeout: 5000
 ```
 
 Write back with the Write tool. Report: "Added N new permissions.allow entries (M already present)."
+
+Check whether `$PLUGIN_ROOT/.claude-plugin/permissions-deny.json` exists. If it does, read it using the Read tool and merge into `~/.claude/settings.json` — add only entries not already present:
+
+```bash
+jq --slurpfile deny "$PLUGIN_ROOT/.claude-plugin/permissions-deny.json" \
+    '.permissions.deny = ((.permissions.deny // []) + $deny[0] | unique)' \
+    ~/.claude/settings.json > /tmp/foundry_init_tmp.json  # timeout: 5000
+```
+
+Write back with the Write tool. Report: "Added N new permissions.deny entries (M already present)."
+
+## Step 4b: Copy permissions-guide.md
+
+Copy `$PLUGIN_ROOT/permissions-guide.md` to `.claude/permissions-guide.md` — only if the destination does not already exist (preserves project-local edits made via `/manage`):
+
+```bash
+if [ ! -f ".claude/permissions-guide.md" ]; then  # timeout: 5000
+    cp "$PLUGIN_ROOT/permissions-guide.md" ".claude/permissions-guide.md"
+    printf "  copied: permissions-guide.md\n"
+else
+    printf "  permissions-guide.md already present — skipping\n"
+fi
+```
 
 ## Step 5: Merge enabledPlugins
 
@@ -165,7 +200,11 @@ elif [ -f "$dest" ]; then
 fi  # timeout: 5000
 ```
 
-If conflicts exist, use `AskUserQuestion`:
+If conflicts exist:
+
+If `APPROVE_ALL=true`: print `[--approve] auto-accepting: replace all symlink conflicts` and proceed with replacing all (apply option a below).
+
+Otherwise, use `AskUserQuestion`:
 
 ```
 These entries in ~/.claude/ would be replaced with symlinks to the foundry plugin:

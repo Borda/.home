@@ -8,14 +8,5 @@
   "fastModePerSessionOptIn": false,
   "model": "opusplan",
   "ordering": "auto",
-  "permissions": {
-    "deny": [
-      "Bash(git branch -D:*)",
-      "Bash(git branch -d:*)",
-      "Bash(git tag -d:*)",
-      "Bash(curl -X DELETE:*)",
-      "Bash(curl --request DELETE:*)"
-    ]
-  },
   "teammateMode": "in-process"
 }

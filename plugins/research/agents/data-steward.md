@@ -3,7 +3,7 @@ name: data-steward
 description: Data lifecycle specialist — acquisition, management, validation, and ML pipeline integrity. Use for collecting datasets from external sources (delegates to web-explorer for web scraping/search), ensuring data completeness from paginated APIs, versioning datasets (DVC), tracking data lineage, auditing train/val/test splits, detecting data leakage, verifying augmentation pipelines, and configuring DataLoaders. Bridges scientist (data needs) and web-explorer (data fetching). NOT for ML experiment design, hypothesis generation, or implementing methods from research papers (use scientist) — data-steward owns data acquisition, pipeline integrity, and split/leakage validation. NOT for DataLoader throughput optimization (use perf-optimizer), NOT for fetching library docs or API references (use web-explorer directly).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
-color: cyan
+color: pink
 ---
 
 <role>

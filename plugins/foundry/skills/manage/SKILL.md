@@ -156,7 +156,7 @@ Branch into one of these modes:
 
 1. Fetch the latest Claude Code agent frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/sub-agents` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-schema-$(date +%s).md` using the Write tool. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"/tmp/manage-schema-<ts>.md\",\"fields\":N,\"new\":N,\"deprecated\":N,\"confidence\":0.N,\"summary\":\"N fields, N new, N deprecated\"}`" <!-- URL spot-checked 2026-04-05 — resolves -->
+   - Spawn **foundry:web-explorer** to fetch `https://code.claude.com/docs/en/sub-agents` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-schema-$(date +%s).md` using the Write tool. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"/tmp/manage-schema-<ts>.md\",\"fields\":N,\"new\":N,\"deprecated\":N,\"confidence\":0.N,\"summary\":\"N fields, N new, N deprecated\"}`" <!-- URL spot-checked 2026-04-05 — resolves -->
      <!-- Health monitoring (CLAUDE.md §8): create checkpoint after spawn:
           LAUNCH_AT=$(date +%s); touch /tmp/manage-check-web-explorer
           Every 5 min: find /tmp -newer /tmp/manage-check-web-explorer -name "manage-schema-*.md" | wc -l
@@ -169,11 +169,11 @@ Branch into one of these modes:
 3. Choose model based on role complexity:
 
    - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, self-mentor): long-horizon reasoning + plan mode
-   - `opus` — complex implementation roles (sw-engineer, qa-specialist, scientist, perf-optimizer): deep reasoning without plan mode
+   - `opus` — complex implementation roles (sw-engineer, qa-specialist, research:scientist, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (data-steward, web-explorer, doc-scribe): pattern-matching, structured output
    - `haiku` — high-frequency diagnostics roles (linting-expert, oss:ci-guardian): rule-application, structured lint output
 
-4. Spawn **self-mentor** subagent to generate and write the agent file — generating 200–400 lines of domain content inline inflates the main context:
+4. Spawn **foundry:self-mentor** subagent to generate and write the agent file — generating 200–400 lines of domain content inline inflates the main context:
 
 ```
 Read the agent scaffold template at `.claude/skills/manage/templates/agent-scaffold.md`.
@@ -194,7 +194,7 @@ Return ONLY: {"status":"done","file":".claude/agents/<name>.md","lines":N,"confi
 
 1. Fetch the latest Claude Code skill frontmatter schema to ensure the template is current:
 
-   - Spawn **web-explorer** to fetch `https://code.claude.com/docs/en/skills` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-skill-schema-$(date +%s).md` using the Write tool. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"/tmp/manage-skill-schema-<ts>.md\",\"fields\":N,\"new\":N,\"deprecated\":N,\"confidence\":0.N,\"summary\":\"N fields, N new, N deprecated\"}`" <!-- URL spot-checked 2026-04-05 — resolves -->
+   - Spawn **foundry:web-explorer** to fetch `https://code.claude.com/docs/en/skills` with instruction: "Write your full findings (schema fields, new fields, deprecated fields) to `/tmp/manage-skill-schema-$(date +%s).md` using the Write tool. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"/tmp/manage-skill-schema-<ts>.md\",\"fields\":N,\"new\":N,\"deprecated\":N,\"confidence\":0.N,\"summary\":\"N fields, N new, N deprecated\"}`" <!-- URL spot-checked 2026-04-05 — resolves -->
      <!-- Health monitoring (CLAUDE.md §8): create checkpoint after spawn:
           LAUNCH_AT=$(date +%s); touch /tmp/manage-check-web-explorer-skill
           Every 5 min: find /tmp -newer /tmp/manage-check-web-explorer-skill -name "manage-skill-schema-*.md" | wc -l
@@ -202,7 +202,7 @@ Return ONLY: {"status":"done","file":".claude/agents/<name>.md","lines":N,"confi
    - Read the returned summary and use it to extract: valid frontmatter fields (`name`, `description`, `argument-hint`, `disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`, `effort`, `shell`, `paths`, `context`, `agent`, `hooks`), and any new fields
    - Note any new fields worth including in the generated template Adjust the template generated in step 3 to reflect the current schema. Include `model` or `context: fork` only when the skill's described purpose clearly benefits from them.
 
-2. Spawn **self-mentor** subagent to create the directory and generate the skill file — content generation is non-trivial and should not inflate the main context:
+2. Spawn **foundry:self-mentor** subagent to create the directory and generate the skill file — content generation is non-trivial and should not inflate the main context:
 
 ```
 Run: `mkdir -p .claude/skills/<name>` using the Bash tool.
@@ -270,7 +270,7 @@ rm -r .claude/skills/<name>  # timeout: 5000
 1. Determine the change directive:
    - Quoted description → use as-is
    - Spec file path → Read the spec file; use its content as the directive
-2. Spawn **self-mentor** subagent — agent files run 200–600 lines; reading and editing inline inflates the main context, and self-mentor has domain knowledge of `.claude/` file conventions:
+2. Spawn **foundry:self-mentor** subagent — agent files run 200–600 lines; reading and editing inline inflates the main context, and self-mentor has domain knowledge of `.claude/` file conventions:
 
 ```
 Read `.claude/agents/<name>.md`.
@@ -289,7 +289,7 @@ Use `description_changed` from the returned JSON to decide whether Steps 5–7 n
 ### Mode: Content-Edit Skill
 
 1. Determine the change directive (same as Content-Edit Agent).
-2. Spawn **self-mentor** subagent — skill files run 100–600 lines; reading and editing inline inflates the main context, and self-mentor has domain knowledge of `.claude/` file conventions:
+2. Spawn **foundry:self-mentor** subagent — skill files run 100–600 lines; reading and editing inline inflates the main context, and self-mentor has domain knowledge of `.claude/` file conventions:
 
 ```
 Read `.claude/skills/<name>/SKILL.md`.
@@ -354,7 +354,7 @@ Atomic update — write new file before deleting old:
 ### Mode: Delete Rule
 
 ```bash
-rm .claude/rules/ <name >.md # timeout: 5000
+rm .claude/rules/<name>.md # timeout: 5000
 ```
 
 ### Mode: Content-Edit Hook
@@ -362,7 +362,7 @@ rm .claude/rules/ <name >.md # timeout: 5000
 Hook files are JavaScript — delegate to **sw-engineer** (not self-mentor) for implementation-quality edits:
 
 1. Determine the change directive (same as Content-Edit Agent).
-2. Spawn **sw-engineer** subagent — hook files contain Node.js logic with security-sensitive patterns (stdin handling, subprocess calls, exit codes); sw-engineer has the implementation domain knowledge to edit them safely:
+2. Spawn **foundry:sw-engineer** subagent — hook files contain Node.js logic with security-sensitive patterns (stdin handling, subprocess calls, exit codes); sw-engineer has the implementation domain knowledge to edit them safely:
 
 ```
 Read `.claude/hooks/<name>.js`.
@@ -382,7 +382,7 @@ Return ONLY: {"status":"done","file":".claude/hooks/<name>.js","edits":N,"confid
 ### Mode: Delete Hook
 
 ```bash
-rm .claude/hooks/ <name >.js # timeout: 5000
+rm .claude/hooks/<name>.js # timeout: 5000
 ```
 
 > After deleting a hook, also remove its entry from `.claude/settings.json` hooks configuration so Claude Code does not try to invoke a missing file.
@@ -507,7 +507,7 @@ Use Glob (`agents/*.md`, path `.claude/`) for agents, Glob (`skills/*/`, path `.
 
 Use the Edit tool with the **absolute auto-memory path** from the conversation context to update these roster lines in MEMORY.md — they must stay in sync with disk state:
 
-- `- Agents: shepherd, sw-engineer, ...` (the roster line, not the path line)
+- `- Agents: doc-scribe, sw-engineer, ...` (the roster line, not the path line)
 - `- Skills: review, research, ...`
 - `- Rules (N): artifact-lifecycle, ...` (update count N when rules are created or deleted)
 

@@ -26,8 +26,8 @@
 //   6. SubagentStart: write agent metadata (type, model, color, timestamp) to state/agents/<id>.json
 //   7. SubagentStop: delete the per-agent file; append completion entry (with last_assistant_message)
 //      to invocations.jsonl; also clean up codex tracking if the agent was a codex:* type
-//   8. PreCompact: log to compactions.jsonl; scan transcript tail for Write/Edit tool_use blocks
-//      and write modified file paths to state/session-context.md as a compaction breadcrumb
+//   8. PreCompact: scan transcript tail for Write/Edit tool_use blocks and write modified
+//      file paths to state/session-context.md as a compaction breadcrumb
 //   9. UserPromptSubmit: write a queue marker to state/queue/ (deduplicated via 500ms lock)
 //  10. Stop: clear state/tools/ and remove oldest queue marker (deduplicated); agents left intact;
 //      delete any orphaned timing start markers (tool calls that never got a PostToolUse)
@@ -68,7 +68,6 @@
 //       for post-mortem debugging.
 //
 //   PreCompact
-//     • Appends a compaction event to compactions.jsonl.
 //     • Scans the tail of the transcript for Write/Edit tool_use blocks, extracts
 //       modified file paths, and writes state/session-context.md — a lightweight
 //       breadcrumb that survives context compaction and is re-read at session resume.
@@ -95,7 +94,6 @@
 //
 // STATE FILES
 //   ~/.claude/logs/invocations.jsonl    — append-only audit log (agents + skills); global across all projects; includes project field
-//   ~/.claude/logs/compactions.jsonl    — compaction events log; global across all projects; includes project field
 //   ~/.claude/logs/timings.jsonl        — append-only per-tool timing log {ts, project, tool, args, tool_use_id, session_id, duration_ms, status, model}
 //   /tmp/claude-state-<session_id>/agents/<id>.json     — one file per active subagent
 //   /tmp/claude-state-<session_id>/codex/<id>.json      — one file per active codex plugin session
@@ -134,7 +132,6 @@ process.stdin.on("end", () => {
     // Global logs dir — audit logs accumulate across all projects and sessions
     const globalLogsDir = path.join(os.homedir(), ".claude", "logs");
     const logFile = path.join(globalLogsDir, "invocations.jsonl");
-    const compactFile = path.join(globalLogsDir, "compactions.jsonl");
     const timingsFile = path.join(globalLogsDir, "timings.jsonl");
     // Project slug used to tag log entries so they can be filtered by project
     const projectSlug = root.replace(/[/.]/g, "-");
@@ -311,7 +308,6 @@ process.stdin.on("end", () => {
         ...(lastMsg && { last_msg: lastMsg }),
       });
     } else if (hook_event_name === "PreCompact") {
-      appendLog(compactFile, globalLogsDir, { ts, project: projectSlug, event: "pre_compact" });
       // Extract modified files from transcript and write context snapshot
       const transcriptPath = data.transcript_path;
       if (transcriptPath) {

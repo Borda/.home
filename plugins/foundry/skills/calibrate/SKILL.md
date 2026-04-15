@@ -22,7 +22,7 @@ Calibration data drives the improvement loop: systematic gaps become instruction
   - **Target** (first token — defaults to `all`):
     - `all` — all agents + relevant skills + routing + communication + all rules (i.e., everything)
     - `agents` — all agents only
-    - `skills` — calibratable skills only (`/audit`, `/oss:review`)
+    - `skills` — calibratable skills only (`/audit`, `/oss:review` *(requires oss plugin)*)
     - `routing` — routing accuracy test: measures how accurately a `general-purpose` orchestrator selects the correct `subagent_type` for synthetic task prompts (not a per-agent quality benchmark; included in `all`)
     - `communication` — handover + team protocol compliance: runs `self-mentor` against synthetic agent responses and team transcripts with injected protocol violations (missing JSON envelope, missing `summary`, AgentSpeak v2 breaches); included in `all`
     - `rules` — rule adherence test: for each global rule file (no `paths:`) and each path-scoped rule when a matching file is in context, generates synthetic tasks that should trigger the rule's key directives, measures whether a `general-purpose` agent with the rule loaded correctly applies them; reports rules that are ignored, misapplied, or redundant with each other; included in `all`

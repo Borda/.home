@@ -251,7 +251,7 @@ Produce a structured proposal table. Do not apply anything yet — report first.
 | # | Cluster | Lesson (condensed) | Disposition | Target |
 |---|---------|-------------------|-------------|--------|
 | 1 | Git | Never use git add -A; stage specific files | → already covered | rules/git-commit.md |
-| 2 | Agent config | Agent description must include NOT-for clause | → rule | new: rules/agent-descriptions.md |
+| 2 | Agent config | Agent description must include NOT-for clause | → rule | add to existing rule: rules/foundry-config.md |
 | 3 | Communication | Flag blockers before starting, not mid-task | → already covered | rules/communication.md |
 
 ### New Rule Files Proposed (N)
@@ -347,6 +347,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
   - Suggestion to enhance existing → edit the agent/skill directly, then `/foundry:init`
   - `lessons` proposals applied → `/foundry:init` to propagate; `/audit rules` to verify new rule files are structurally sound
 
-- **OpenSpace integration**: when OpenSpace MCP is active (`~/.claude/openspace/skills.db` exists), distill detects evolved skill variants by diffing `~/.claude/skills/` against `.claude/skills/`. Graduation = manual `cp -r ~/.claude/skills/<name> .claude/skills/<name>` + git commit; discard evolved variants that don't meet quality bar. See `docs/specs/2026-03-31-openspace-mcp-integration.md` for the full graduation flow. <!-- path is project-local (Borda.local/docs/specs/) — not synced to ~/.claude/ -->
+- **OpenSpace integration**: when OpenSpace MCP is active (`~/.claude/openspace/skills.db` exists), distill detects evolved skill variants by diffing `~/.claude/skills/` against `.claude/skills/`. Graduation = manual `cp -r ~/.claude/skills/<name> .claude/skills/<name>` + git commit; discard evolved variants that don't meet quality bar. If `docs/specs/2026-03-31-openspace-mcp-integration.md` exists (Borda.local project), see it for the full graduation flow.
 
 </notes>

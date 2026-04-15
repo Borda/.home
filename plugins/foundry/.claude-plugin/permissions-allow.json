@@ -53,7 +53,6 @@
   "Bash(gh release view:*)",
   "Bash(gh release list:*)",
   "Bash(gh api graphql:*)",
-  "Bash(gh api repos/*)",
   "Bash(gh api search/*)",
   "Bash(git log:*)",
   "Bash(git fetch:*)",

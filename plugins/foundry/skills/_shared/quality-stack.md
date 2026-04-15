@@ -47,7 +47,7 @@ Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the
 ### Codex pre-pass: additional inline steps (step 1 is in the shared file)
 
 2. **Collect findings**: build `CODEX_FINDINGS` — a bullet list of every flagged issue from the `codex:review` output. If nothing was found or the step was skipped, set `CODEX_FINDINGS=""`. The review is read-only — no working-tree changes are made.
-3. **Co-authorship rule**: add `Co-Authored-By: OpenAI Codex <codex@openai.com>` to the commit only when Codex finds real issues that are subsequently fixed (either by Claude acting on the findings, or via later `codex:codex-rescue` delegation). Do NOT add it when Codex found no issues or was skipped.
+3. **Actor context**: note whether Codex was involved (found real issues that were acted on). Pass this as context when committing — `git-commit.md` decides the trailers.
 
 Include a `### Codex Pre-pass` section in the final report:
 

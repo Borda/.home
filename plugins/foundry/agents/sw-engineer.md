@@ -255,7 +255,7 @@ Use `pyDeprecate` or `deprecated` / `typing_extensions.deprecated` (PEP 702) for
 
 \<hook_authoring>
 
-Hook files (`.claude/hooks/*.js`) are exclusively authored by `sw-engineer`. Self-mentor owns `.md` config files; hook code ownership lives here.
+Hook files (`*.js` — `hooks/` in the plugin, symlinked at `.claude/hooks/`) are exclusively authored by `sw-engineer`. Self-mentor owns `.md` config files (agents, skills, rules); hook code ownership lives here.
 
 ## File Header Structure
 

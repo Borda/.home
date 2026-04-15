@@ -3,7 +3,7 @@ name: ci-guardian
 description: CI/CD health specialist for GitHub Actions pipelines. Use for diagnosing failing CI runs, reducing build times, configuring test matrices, caching, SHA pinning, branch protections, and workflow topology for quality gates in CI YAML. NOT for ruff/mypy rule selection, pre-commit config, or fixing type annotations in source files (use linting-expert), which owns the tool/rule content inside those gates. NOT for PyPI release management (use shepherd).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: haiku
-color: blue
+color: green
 ---
 
 <role>

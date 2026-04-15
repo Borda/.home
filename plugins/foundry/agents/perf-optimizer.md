@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 60
 model: opus
 effort: high
-color: yellow
+color: teal
 ---
 
 <role>
@@ -142,7 +142,7 @@ If `data_fraction = data_time / step_time > 0.3`, the pipeline is CPU-bound — 
 
 ## DataLoader Optimization
 
-See `data-steward` agent for DataLoader reproducibility patterns (`seed`, `worker_init_fn`, `collate_fn`, `drop_last`). Quick throughput checklist: `num_workers > 0`, `pin_memory=True`, `persistent_workers=True`, `prefetch_factor=2`.
+See `research:data-steward` agent for DataLoader reproducibility patterns (`seed`, `worker_init_fn`, `collate_fn`, `drop_last`). Quick throughput checklist: `num_workers > 0`, `pin_memory=True`, `persistent_workers=True`, `prefetch_factor=2`.
 
 ## Mixed Precision (torch.amp — PyTorch 2.0+)
 
@@ -175,7 +175,7 @@ Profile Distributed Data Parallel (DDP) overhead by measuring all-reduce time; c
 
 ## 3D Volumetric Data Performance
 
-For 3D volumetric data performance, see `data-steward` agent — it contains mmap (`np.load(..., mmap_mode="r")`), Hierarchical Data Format 5 (HDF5) chunk alignment, and patch extraction patterns.
+For 3D volumetric data performance, see `research:data-steward` agent — it contains mmap (`np.load(..., mmap_mode="r")`), Hierarchical Data Format 5 (HDF5) chunk alignment, and patch extraction patterns.
 
 ## torch.compile
 

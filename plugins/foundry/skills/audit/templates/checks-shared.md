@@ -208,3 +208,60 @@ fix: use fully-qualified form, e.g. subagent_type="foundry:<name>"
 ```
 
 **Report only** — do not auto-fix; the correct prefix depends on which plugin owns the agent.
+
+______________________________________________________________________
+
+## Check 26 — Symbol and shortcut consistency
+
+Three sub-checks for within-file consistency of emoji symbols, slash-command notation, and legend alignment.
+
+**26a — Emoji/symbol consistency within files**
+
+For each agent or skill file, extract lines containing emoji characters and the concept label they annotate. Group by concept label. Flag any concept that is represented by more than one distinct emoji within the same file.
+
+```bash
+printf "=== Check 26a: Emoji/symbol consistency ===\n"
+for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do # timeout: 5000
+    [ -f "$f" ] || continue
+    # Print filename + any line containing common status emoji (skip code fences)
+    awk '/^```/{skip=!skip} !skip && /[🔴🟡🟢🔵⛔✅❌⚠️💭▶️🔗🔹🔸🚫]/{print FILENAME": "NR": "$0}' "$f" 2>/dev/null
+done
+```
+
+Using model reasoning, review the output: identify concept labels (e.g., "closed", "open", "active focus", "merged") that appear with two or more distinct symbols within the same file. Example: a file that marks a branch as 🔴 (closed) in one section and ⛔ closed in another is a violation.
+
+Flag each inconsistency: `[medium] Inconsistent symbol for "<concept>" in <file>: <symbol-A> (line N) vs <symbol-B> (line M)`
+
+**26b — Slash command notation consistency**
+
+Directive references to other skills (e.g., "run → /audit fix", "suggested next: /brainstorm breakdown") must use the `/name` form. Prose mentions (e.g., "the audit skill", "this brainstorm session") may omit the slash. Flag files where the same directive context mixes `` `/name` `` and `` `name` `` forms.
+
+```bash
+printf "=== Check 26b: Slash command notation ===\n"
+for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do # timeout: 5000
+    [ -f "$f" ] || continue
+    # Collect directive-looking references in both forms
+    grep -n '→ `/\?[a-z][a-z:-]*`\|run `/\?[a-z][a-z:-]*`\|suggest.*`/\?[a-z][a-z:-]*`' "$f" 2>/dev/null
+done
+```
+
+Using model reasoning: if the same skill is referenced in directive context with both `/name` and bare `name` forms in the same file → **low** finding.
+
+**26c — Legend ↔ body symbol alignment**
+
+When a file defines a legend or key (any line matching `Legend:` followed by symbol/concept pairs), every body use of a concept must match the legend symbol exactly.
+
+```bash
+printf "=== Check 26c: Legend/key alignment ===\n"
+grep -n 'Legend:\|^Key:' .claude/agents/*.md .claude/skills/*/SKILL.md 2>/dev/null || true # timeout: 5000
+```
+
+Using model reasoning: extract each (symbol, concept) pair from the legend. For each concept, scan the file body outside code fences for uses of a different symbol. Flag mismatches: `Legend defines <concept> as <symbol-A> but body uses <symbol-B> at line N`.
+
+**Report only** — never auto-fix; symbol choices may be intentional or constrained by existing documentation.
+
+| Sub-check | Severity | Auto-fix |
+| ------------------------------------------------ | -------- | -------- |
+| 26a — same concept, different symbols | medium | no |
+| 26b — directive notation mixed `/name` vs `name` | low | no |
+| 26c — body symbol contradicts legend | medium | no |

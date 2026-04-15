@@ -5,7 +5,7 @@ tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
 maxTurns: 50
 model: opus
 effort: high
-color: green
+color: purple
 memory: project
 ---
 

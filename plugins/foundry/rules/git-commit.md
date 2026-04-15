@@ -53,6 +53,13 @@ Co-authored-by: Claude Code <noreply@anthropic.com>
 
 The co-author trailer is added to every commit produced by Claude Code — it is not conditional on the user explicitly mentioning Claude's involvement.
 
+**Skill commit templates — trailers are not optional**: when a skill or workflow step provides a `git commit -m "..."` template (heredoc or one-liner), the template is a **message body scaffold only**. The `---` separator and co-author block must always be appended regardless of whether the template shows them:
+
+- **Heredoc** (`cat <<'EOF' ... EOF`): insert the `---` block and trailers before the closing `EOF`
+- **One-liner `-m "string"`**: convert to a heredoc — one-liners cannot carry multi-line trailers
+
+Never skip trailers because a skill template omits them.
+
 ## Branch Safety
 
 - **Never commit to main/master** — check current branch first; if on default branch → warn and stop, ask user to create a feature branch

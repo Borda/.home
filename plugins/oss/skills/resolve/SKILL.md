@@ -132,38 +132,42 @@ Parse $ARGUMENTS:
 - If it is a number or matches a GitHub PR URL pattern → **pr mode** (continue from Step 2)
 - Otherwise → **comment dispatch mode** (jump to Step 12)
 
-### Sources block
-
-Print immediately after mode is resolved, before any GitHub API calls:
-
-```
-## Resolve — sources
-
-Mode    : <pr | report | pr + report>
-PR      : #<N>  (or "n/a — working on current branch" when report mode found no PR#)
-GitHub  : fetching live comments · reviews · inline code comments  (or "not fetched" in report mode)
-Report  : <path to report file>  (or "not used" in pr mode / "not found — run /review first" if missing)
-
-Proceeding…
-```
-
-## Step 2: Create task
+## Step 2: Create initial task
 
 ```
 TaskCreate(
-  subject="Resolve PR #<number>",
-  description="OSS fast-close: intelligence → conflicts → action items for PR #<number>",
-  activeForm="Resolving PR #<number>"
+  subject="Resolve PR #<number> — gather action items",
+  description="Fetch PR thread, linked issues, and/or review report; classify all comments into ACTION_ITEMS",
+  activeForm="Gathering action items for PR #<number>"
 )
 ```
 
-Mark it `in_progress` immediately.
+Mark it `in_progress` immediately:
+
+```
+TaskUpdate(task_id=<task_id_from_above>, status="in_progress")
+```
 
 ## Step 3a: Report intelligence (report mode only)
 
 *Skip to Step 3b (PR intelligence) when in pr mode or pr + report mode.*
 
 When mode == **report**:
+
+### Sources confirmation
+
+Print before parsing findings:
+
+```
+## Resolve — sources
+
+Mode   : report
+PR     : #<N>  (extracted from report header, or "n/a — working on current branch")
+GitHub : not fetched
+Report : Read <path to report file>
+
+Building action items…
+```
 
 Read the review report file. Parse structured findings from each `###` section header (`### [blocking] Critical`, `### Architecture & Quality`, `### Test Coverage Gaps`, `### Performance Concerns`, `### Documentation Gaps`, `### Static Analysis`, `### API Design`, `### Codex Co-Review`). Skip `### OSS Checks`, `### Recommended Next Steps`, `### Review Confidence`, and `### Issue Root Cause Alignment`.
 
@@ -249,6 +253,21 @@ Read every comment, review, and inline code comment. Classify each:
 
 Build `ACTION_ITEMS`: `[{id, type, author, summary, file, line, full_comment_text}]`
 
+### Sources confirmation
+
+Print right before the action item table:
+
+```
+## Resolve — sources
+
+Mode   : pr
+PR     : #<N>
+GitHub : Read — PR body · <N> comments · <N> reviews · <N> inline code comments
+Report : not used
+
+Building action items…
+```
+
 Print the action item table:
 
 ```
@@ -282,11 +301,50 @@ Find and read the latest review report (`ls -t .temp/output-review-*.md 2>/dev/n
 
 **Re-prefix GitHub items**: once deduplication is complete, add `[gh]` as a source prefix to all GitHub-sourced items — `[req]` → `[gh][req]`, `[suggest]` → `[gh][suggest]`, `[question]` → `[gh][question]`. This matches the `[report]` source prefix and makes source unambiguous in the merged table. This re-prefixing applies only in `pr + report` mode; single-source `pr` mode items remain plain `[req]`/`[suggest]`.
 
+### Sources confirmation
+
+Print right before the merge summary and action item table:
+
+```
+## Resolve — sources
+
+Mode   : pr + report
+PR     : #<N>
+GitHub : Read — PR body · <N> comments · <N> reviews · <N> inline code comments
+Report : Read <path to report file>
+
+Building action items…
+```
+
 **Result**: a single merged `ACTION_ITEMS` list. GitHub-sourced items appear first (maintaining `[gh][req]`/`[gh][suggest]` order), followed by surviving `[report]` items. Print a merge summary before the action item table:
 
 ```
 Report merged: <N> findings from /review · <M> deduplicated against GitHub comments · <K> added as [report] items
 ```
+
+## Step 3d: Create per-item tasks
+
+Mark the Step 2 task `completed`:
+
+```
+TaskUpdate(task_id=<step2_task_id>, status="completed")
+```
+
+For each item in `ACTION_ITEMS` create a task:
+
+```
+TaskCreate(
+  subject="[<type>] <summary> — PR #<number>",
+  description="Author: @<author> | File: <file:line or '—'> | <full_comment_text>",
+  activeForm="Implementing: <summary>"
+)
+```
+
+- `<type>` — the item's type code: `req`, `suggest`, `question`, `done`, `info`, `self-review`, `report-req`, `report-suggest`, etc.
+- `<summary>` — the item's `summary` field (truncated to 80 chars if needed)
+- Skip items with type `[done]` and `[info]` — no task needed for already-done or praise items
+
+Store the returned task ID alongside each `ACTION_ITEMS` entry as `task_id`.
 
 ## Step 4: Checkout PR branch
 
@@ -454,7 +512,15 @@ test -z "$(git status --porcelain)" || { echo "⚠ dirty tree before item #<id> 
 
 # Snapshot before
 git diff HEAD --stat  # timeout: 3000
+```
 
+Mark the item's task in_progress:
+
+```
+TaskUpdate(task_id=<item.task_id>, status="in_progress")
+```
+
+```bash
 # Dispatch to Codex
 Agent(subagent_type="codex:codex-rescue", prompt="Apply this review feedback to the codebase. Implement exactly what is requested and nothing more. If the change is already present or there is nothing actionable, make no changes and explain why. Feedback from @<author>: <full_comment_text>")
 
@@ -476,6 +542,10 @@ git commit -m "$(
 
 [resolve #<item_id>] Review comment by @<author> (PR #<PR_NUMBER>):
 "<first 72 chars of full_comment_text>..."
+
+---
+Co-authored-by: Claude Code <noreply@anthropic.com>
+Co-authored-by: OpenAI Codex <codex@openai.com>
 EOF
 )"
 ```
@@ -483,6 +553,12 @@ EOF
 If no code changed (already done or non-actionable) → record Codex's reason; do NOT create an empty commit.
 
 Record per-item: `committed <SHA>` or `skipped — <Codex reason>`.
+
+Mark the item's task completed:
+
+```
+TaskUpdate(task_id=<item.task_id>, status="completed")
+```
 
 ## Step 9: Lint and QA gate
 
@@ -507,7 +583,13 @@ Wait for both. Then:
 
 ```bash
 git add $(git diff HEAD --name-only)                          # timeout: 3000
-git commit -m "lint: auto-fix violations after resolve cycle"  # include co-author trailer per git-commit.md; timeout: 3000
+git commit -m "$(cat <<'EOF'
+lint: auto-fix violations after resolve cycle
+
+---
+Co-authored-by: Claude Code <noreply@anthropic.com>
+EOF
+)"  # timeout: 3000
 ```
 
 - If `qa-specialist` reports **blocking** issues → fix each one (via Codex if `CODEX_AVAILABLE=true`, otherwise inline edit), then re-run qa-specialist once to confirm resolution; if issues remain after one fix pass, surface them in the final report and continue (do not loop indefinitely)
@@ -552,7 +634,9 @@ Confirm the latest commit headlines match what was just committed.
 
 ## Step 11: Final report
 
-Mark the task `completed`, then print:
+Mark any remaining open action item tasks `completed`. All per-item tasks should already be completed by Step 8; this is a safety close for items skipped (guard paused, question items, codex-not-available).
+
+Then print:
 
 ```
 ## Resolve Report — PR #<number>
@@ -604,7 +688,13 @@ TaskCreate(
 )
 ```
 
-If `CODEX_AVAILABLE=false`: stop with `⚠ codex plugin not found — install: /plugin marketplace add openai/codex-plugin-cc && /plugin install codex@openai-codex && /reload-plugins` and mark the task completed.
+If `CODEX_AVAILABLE=false`: stop with `⚠ codex plugin not found — install: /plugin marketplace add openai/codex-plugin-cc && /plugin install codex@openai-codex && /reload-plugins`, mark the task completed:
+
+```
+TaskUpdate(task_id=<task_id_from_above>, status="completed")
+```
+
+and stop.
 
 ### 12a: Dispatch
 
@@ -667,12 +757,24 @@ Agent(foundry:qa-specialist, maxTurns: 15): "Review all files changed in the mos
 
 ```bash
 git add $(git diff HEAD --name-only)                          # timeout: 3000
-git commit -m "lint: auto-fix violations after resolve cycle"  # include co-author trailer per git-commit.md; timeout: 3000
+git commit -m "$(cat <<'EOF'
+lint: auto-fix violations after resolve cycle
+
+---
+Co-authored-by: Claude Code <noreply@anthropic.com>
+EOF
+)"  # timeout: 3000
 ```
 
 - If `qa-specialist` reports blocking issues → fix inline, then re-run once; surface any unresolved issues in the report
 
-Mark the task `completed`, then print:
+Mark the task `completed`:
+
+```
+TaskUpdate(task_id=<task_id_from_above>, status="completed")
+```
+
+Then print:
 
 ```
 ## Resolve Report
