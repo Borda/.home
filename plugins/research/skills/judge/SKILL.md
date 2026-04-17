@@ -15,6 +15,18 @@ NOT for: running experiments (use `/research:run`); designing hypotheses (use `s
 
 </objective>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:solution-architect` with `general-purpose` and prepend the role description:
+
+| foundry agent                | Fallback          | Model      | Role description prefix                                                                                                                                         |
+| ---------------------------- | ----------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate architectural trade-offs, assess scope coverage, and identify missing dependencies. Output structured JSON only.` |
+
+`research:scientist` is in the same plugin as this skill — no fallback needed if the research plugin is installed.
+
 <workflow>
 
 ## --team flag (committee mode)
@@ -79,7 +91,7 @@ RUN_DIR=".experiments/judge-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"
 ```
 
-Spawn a **solution-architect** agent (uses `opusplan` for high reasoning quality) with this prompt:
+Spawn a `foundry:solution-architect` agent using `Agent(subagent_type="foundry:solution-architect", prompt="...")` (uses `opusplan` for high reasoning quality) with this prompt:
 
 ```
 Act as a research supervisor reviewing a PhD student's experimental protocol.
@@ -121,11 +133,43 @@ Poll every 5 min: `find <RUN_DIR> -newer "$CHECKPOINT" -type f | wc -l` — new 
 - **One extension (+5 min)**: if `tail -20 <RUN_DIR>/methodology.md` shows active progress (partial content written), grant one extension; second stall = hard cutoff
 - **On timeout**: read `tail -100 <RUN_DIR>/methodology.md`; if file missing or empty, set `methodology_rating = "timed_out"` and continue to J6 verdict with that value. Surface with ⏱ in the report.
 
+**Scientist health monitoring** — poll `<RUN_DIR>/scientific-review.md` on the same 5-min cadence:
+
+```bash
+LAUNCH_AT_SCI=$(date +%s)
+CHECKPOINT_SCI="/tmp/judge-check-sci-$LAUNCH_AT_SCI"
+touch "$CHECKPOINT_SCI"
+```
+
+Poll every 5 min: `find <RUN_DIR> -name "scientific-review.md" -newer "$CHECKPOINT_SCI" | wc -l` — file present = alive; zero = stalled.
+
+- **Hard cutoff: 15 min** of no file activity → timed out
+- **On timeout**: set `scientific_rating = "timed_out"` and continue to J6; surface with ⏱ in the Scientific Rigor section.
+
 Use `methodology_rating` from the returned envelope for verdict computation in J6:
 
 - `sound` → supports APPROVED
 - `needs-refinement` → supports NEEDS-REVISION
 - `fundamentally-flawed` → supports BLOCKED
+
+Also spawn `research:scientist` in parallel using `Agent(subagent_type="research:scientist", prompt="...")` (dispatch both in a single response at the start of J3) to review scientific rigor:
+
+```
+Act as an ML research peer reviewer assessing experimental protocol rigor.
+
+Read the campaign program file at <path_to_program.md>.
+
+Review across four dimensions:
+1. **Hypothesis falsifiability**: Is the goal precisely stated — can you tell unambiguously when the experiment has succeeded or failed?
+2. **Goodhart's Law**: Could the metric improve while the actual goal is NOT achieved? Name any specific proxy-gaming risks.
+3. **Missing baselines**: What standard controls, ablations, or baselines would a peer reviewer expect that are absent?
+4. **Reproducibility risks**: List concrete factors that could produce non-reproducible results (randomness seeds, dataset splits, flaky tests, environment dependencies).
+
+Write findings to `<RUN_DIR>/scientific-review.md`.
+Return ONLY: {"status":"done","scientific_rating":"sound|needs-refinement|fundamentally-flawed","issues":N,"file":"<RUN_DIR>/scientific-review.md","confidence":0.N,"summary":"<one-line>"}
+```
+
+Use `scientific_rating` as **advisory** input in the J6 report under a **Scientific Rigor** section — it informs but does not override the verdict. Exception: `scientific_rating = "fundamentally-flawed"` elevates the verdict to BLOCKED with a note to redesign the hypothesis.
 
 ## Step J4: Local validation
 
@@ -181,12 +225,12 @@ note: codex plugin not installed — skipping adversarial review (Claude-only ju
 
 Evaluate top-to-bottom; **first match wins**. BLOCKED always takes precedence — do not continue to subsequent rows once matched.
 
-| Condition                                                            | Verdict        |
-| -------------------------------------------------------------------- | -------------- |
-| any critical OR methodology_rating = `fundamentally-flawed`          | BLOCKED        |
-| J3 agent timed out (`methodology_rating` = `timed_out` or null)      | NEEDS-REVISION |
-| 0 critical AND (high > 0 OR methodology_rating = `needs-refinement`) | NEEDS-REVISION |
-| 0 critical AND 0 high AND methodology_rating = `sound`               | APPROVED       |
+| Condition                                                                                                                                                                                               | Verdict        |
+| ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------- |
+| any critical OR methodology_rating = `fundamentally-flawed` OR scientific_rating = `fundamentally-flawed` (note: `timed_out` does **not** trigger BLOCKED — it maps to NEEDS-REVISION via the next row) | BLOCKED        |
+| J3 agent timed out (`methodology_rating` = `timed_out` or null)                                                                                                                                         | NEEDS-REVISION |
+| 0 critical AND (high > 0 OR methodology_rating = `needs-refinement`)                                                                                                                                    | NEEDS-REVISION |
+| 0 critical AND 0 high AND methodology_rating = `sound`                                                                                                                                                  | APPROVED       |
 
 **Pre-compute**:
 
@@ -223,6 +267,15 @@ Read full review: <RUN_DIR>/methodology.md
 1. <gap>
 2. <gap>
 
+### Scientific Rigor (advisory)
+**Rating**: sound | needs-refinement | fundamentally-flawed | timed-out
+Read full review: `<RUN_DIR>/scientific-review.md`
+
+- Hypothesis falsifiability: <one-line finding>
+- Goodhart's Law risk: <one-line finding>
+- Missing baselines: <one-line finding>
+- Reproducibility risks: <one-line finding>
+
 ### Dry-Run Results
 | Command | Status | Output |
 |---------|--------|--------|
@@ -256,6 +309,7 @@ Read full review: <RUN_DIR>/methodology.md
 Judge — <program_title>
 Verdict:      APPROVED | NEEDS-REVISION | BLOCKED
 Methodology:  sound | needs-refinement | fundamentally-flawed
+Scientific:   sound | needs-refinement | fundamentally-flawed | timed-out  (advisory)
 Findings:     <N> critical · <N> high · <N> medium · <N> low
 Protocol gaps: <N>
 Validation:   metric=<value> guard=pass|fail  (or "skipped — --skip-validation")

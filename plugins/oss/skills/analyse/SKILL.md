@@ -151,7 +151,7 @@ fi
 
 ## Step 5: Mode dispatch
 
-Read `.claude/skills/analyse/modes/<mode>.md` and execute all steps defined there.
+Read `plugins/oss/skills/analyse/modes/<mode>.md` and execute all steps defined there.
 
 | Argument          | Mode file            |
 | ----------------- | -------------------- |
@@ -192,7 +192,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards �
 
 <notes>
 
-- Mode files live in `.claude/skills/analyse/modes/` — one file per mode, fully self-contained
+- Mode files live in `plugins/oss/skills/analyse/modes/` — one file per mode, fully self-contained
 - `modes/thread.md` handles all three thread types (issue, PR, discussion) via internal branching
 - Always use `gh` CLI — never hardcode repo URLs
 - Run `gh auth status` first if commands fail; user may need to authenticate

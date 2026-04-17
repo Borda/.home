@@ -144,7 +144,7 @@ Best method: [recommended approach / architecture]
 Key papers:  [top 2–3 papers with year]
 Gaps:        [what the research couldn't cover or needs runtime validation]
 Confidence:  [aggregate score] — [key gaps]
-→ saved to .temp/output-research-[$(git branch --show-current 2>/dev/null | tr "/" "-" || echo "main")]-[date].md
+→ saved to .temp/output-research-$BRANCH-$DATE.md
 ---
 ```
 
@@ -217,7 +217,7 @@ Analyze the current codebase to map the recommended method against existing code
 
 Write your full analysis to `.temp/output-research-codebase-$BRANCH-$DATE.md` using the Write tool.
 Return ONLY a compact JSON envelope on your final line — nothing else after it:
-{"status":"done","integration_points":N,"conflicts":N,"file":".temp/output-research-codebase-<date>.md","confidence":0.N,"summary":"N integration points, N conflicts"}
+{"status":"done","integration_points":N,"conflicts":N,"file":".temp/output-research-codebase-$BRANCH-$DATE.md","confidence":0.N,"summary":"N integration points, N conflicts"}
 ```
 
 ### Step R3: Synthesize plan

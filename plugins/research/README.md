@@ -2,7 +2,7 @@
 
 ML research plugin: two specialist agents and five slash-command skills for literature search, experiment design, methodology review, metric-driven optimization loops, and automated research sweeps — built on a profile-first, judge-gated pipeline that spends compute only on experiments worth running.
 
-> [!NOTE] Requires the `foundry` plugin for base agents. Install order does not matter.
+> [!NOTE] Works standalone — foundry is not required. Without it, agent dispatches fall back to `general-purpose` with role descriptions (lower quality). Installing foundry unlocks specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) and is strongly recommended for production use.
 
 ## 🎯 Why
 
@@ -37,7 +37,7 @@ claude plugin install research@borda-ai-home
 <summary>Install the full suite</summary>
 
 ```bash
-claude plugin install foundry@borda-ai-home   # base agents — required first
+claude plugin install foundry@borda-ai-home   # base agents — strongly recommended
 claude plugin install oss@borda-ai-home
 claude plugin install develop@borda-ai-home
 claude plugin install research@borda-ai-home
@@ -206,6 +206,10 @@ No user prompts; designed for unattended operation
 ### Colab Integration (GPU)
 
 > [!NOTE] `--colab` routes `run` iterations to Google Colab via the `colab-mcp` server. Opt-in: add `"colab-mcp"` to `enabledMcpjsonServers` in `settings.local.json`, then restart Claude Code.
+
+## Dependencies
+
+**Optional**: `foundry` plugin. When installed, skills use specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) for higher-quality output. Without foundry, skills fall back to `general-purpose` agents with role-description prompts — all skills remain functional.
 
 ## 📦 Plugin details
 

@@ -17,6 +17,20 @@ NOT for: bug fixes (use `/develop:fix`); `.claude/` config changes (use `/manage
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent           | Fallback          | Model    | Role description prefix                                                                                           |
+| ----------------------- | ----------------- | -------- | ----------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`   | `general-purpose` | `opus`   | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
+| `foundry:qa-specialist` | `general-purpose` | `opus`   | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`    |
+| `foundry:doc-scribe`    | `general-purpose` | `sonnet` | `You are a documentation specialist. Write Google-style docstrings and keep README content accurate and concise.` |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 ## Anti-Rationalizations
 
 | Temptation                                                           | Reality                                                                                      |
@@ -75,7 +89,7 @@ Present the analysis summary before proceeding.
 
 ## Step 1.5: Source verification (when using external APIs or version-sensitive libraries)
 
-Skip if the feature is purely internal to the project's own code.
+Skip if the feature calls no external library APIs — no new framework features, no third-party SDK methods, and no stdlib functions that changed in a recent Python version.
 
 **Trigger**: the feature calls an external library API — a new framework feature, a third-party SDK method, or a stdlib function that has changed in a recent Python version.
 
@@ -216,8 +230,6 @@ Repeat until all feature tests pass and the Step 2 demo passes.
 If Step 2 produced an example script: promote it into a formal pytest test now that the API is stable. Delete the script once the test is in place.
 
 ## Step 4: Review and close gaps
-
-Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass before cycle 1.
 
 Full review of the implementation. This is a **loop** — review -> fix -> re-review until only nits remain. Maximum 3 cycles.
 

@@ -10,6 +10,8 @@ Skill domains:
 - `/oss:review` → synthetic Python module with N cross-domain issues (arch + tests + docs + lint)
 - `/research:plan` → synthetic optimization goal (e.g. "reduce pytest runtime by 30%"); measure whether the plan mode produces a complete, valid `program.md` with all required sections, a plausible `metric_cmd`, correct `direction`, and coherent `scope_files`
 - `/research:judge` → synthetic `program.md` with N injected plan-quality issues (e.g. missing guard command, absent `direction`, non-existent `scope_files` path, invalid `agent_strategy`); measure whether judge correctly identifies each injected issue at the right severity
+- `/develop:review` → synthetic Python file with N injected code-quality issues (style, correctness, coverage gaps); measure whether review identifies each injected issue at the correct severity level
+- `/codemap:query` → synthetic codemap index with known centrality/coupling values; measure whether `central`, `coupled`, `deps`, `rdeps`, and `path` queries return the correct modules matching ground-truth graph structure
 
 ### Step 2: Spawn skill pipeline subagents
 

@@ -1,4 +1,4 @@
-# Skill Checks — 21, 22, 23, 24
+# Skill Checks — 21, 22, 23, 24, 27, 28
 
 ______________________________________________________________________
 
@@ -138,3 +138,119 @@ For references with a trailing argument token (e.g., `fix` in `/audit fix`, `bre
 | ---------------------------------------- | -------- | -------- |
 | 24a — target skill not on disk           | high     | no       |
 | 24b — argument absent from argument-hint | medium   | no       |
+
+______________________________________________________________________
+
+## Check 27 — Cross-plugin shared-file reference integrity
+
+Plugin SKILL.md files (non-foundry plugins) must not contain `Read` calls or inline references to `.claude/skills/_shared/<file>` unless that exact file ships inside `plugins/foundry/skills/_shared/`. That path is only available at runtime via the `foundry:init` symlink — any file absent from foundry's own `_shared/` is a broken reference when foundry is installed, and entirely unreachable when foundry is not installed.
+
+**Special antipattern — foundry-dependency catch-22**: when the referenced file's purpose is to describe fallback behaviour for users without foundry (e.g. an `agent-resolution.md` listing `general-purpose` substitutes), the reference is **critical** — the file that explains how to work without foundry is only accessible via foundry.
+
+**Step 1 — Collect cross-plugin shared-file references**:
+
+```bash
+# Find all Read/include refs to .claude/skills/_shared/ in plugin SKILL.md files  # timeout: 5000
+grep -rn '\.claude/skills/_shared/' plugins/*/skills/ 2>/dev/null | grep -v 'foundry'
+```
+
+For each match: record `(plugin, skill-file, referenced-filename)`.
+
+**Step 2 — Verify file exists in foundry's \_shared/**:
+
+```bash
+ls plugins/foundry/skills/_shared/ 2>/dev/null  # timeout: 5000
+```
+
+For each referenced filename from Step 1: check if it appears in the foundry `_shared/` listing.
+
+- Present → reference is valid at runtime (when foundry is installed) — **no finding**
+- Absent → **[high] 27a**: `<plugin>/<skill>: references .claude/skills/_shared/<file> which is absent from foundry/_shared/ — broken at all times`
+
+**Step 3 — Catch-22 upgrade**:
+
+For each file flagged in Step 2 (absent from foundry `_shared/`): inspect the referenced filename and any surrounding context for signals that it provides fallback/degraded-mode behaviour (keywords: `fallback`, `without foundry`, `agent-resolution`, `general-purpose`, `not installed`).
+
+- Match → upgrade to **[critical] 27b**: `<plugin>/<skill>: fallback file <name> is only reachable via foundry — catch-22`
+- No match → keep as **[high] 27a**
+
+**Step 4 — Plugin-local \_shared/ unmounted files**:
+
+```bash
+ls plugins/*/skills/_shared/ 2>/dev/null  # timeout: 5000
+```
+
+Plugin-local `_shared/` directories (e.g. `plugins/develop/skills/_shared/`) have **no install-time mount point** — they are invisible to the model at runtime. Any file there that a SKILL.md references is unreachable.
+
+```bash
+# For each plugin-local _shared/ file, check if any SKILL.md in that plugin references it  # timeout: 5000
+for f in plugins/*/skills/_shared/*; do
+    plugin=$(echo "$f" | cut -d/ -f2)
+    fname=$(basename "$f")
+    grep -rl "$fname" "plugins/$plugin/skills/" 2>/dev/null | grep 'SKILL\.md'
+done
+```
+
+- Referenced and in plugin-local `_shared/` → **[medium] 27c**: `<plugin>/<skill>: references <file> from plugin-local _shared/ which is not mounted at runtime — move to foundry/_shared/ or inline`
+- Exists in plugin-local `_shared/` but not referenced → **[low]**: unreachable dead file; suggest removal
+
+**Report only** — do not auto-fix; resolution requires deciding whether to inline content or move the file to `foundry/_shared/`.
+
+| Sub-check                                                    | Severity | Auto-fix |
+| ------------------------------------------------------------ | -------- | -------- |
+| 27a — file absent from foundry's \_shared/                   | high     | no       |
+| 27b — catch-22 (fallback file needs foundry to reach)        | critical | no       |
+| 27c — plugin-local \_shared/ file referenced but not mounted | medium   | no       |
+
+______________________________________________________________________
+
+## Check 28 — Cross-plugin agent dispatch fallback
+
+Skills dispatching agents via `Agent(subagent_type="<plugin>:<name>", ...)` depend on that plugin being installed. When the dispatched agent belongs to a different plugin from the skill's own plugin, and no fallback is declared for the case where that plugin is absent, the skill fails at runtime.
+
+**Exempt from this check**: `general-purpose` (built-in, always available); `codex:*` agents (conditional dispatch already tracked by Check 7).
+
+**Step 1 — Map skills to their owning plugin:**
+
+```bash
+# Map each plugin skill file to its owning plugin  # timeout: 5000
+for f in plugins/*/skills/*/SKILL.md; do
+    plugin=$(echo "$f" | cut -d/ -f2)
+    skill=$(echo "$f" | cut -d/ -f4)
+    echo "$plugin $skill $f"
+done
+```
+
+**Step 2 — Collect cross-plugin dispatches per skill:**
+
+```bash
+# Find all subagent_type values across plugin skill files  # timeout: 5000
+grep -rn 'subagent_type' plugins/*/skills/*/SKILL.md 2>/dev/null | grep -v '^Binary'
+```
+
+For each match: extract `(skill_file, dispatched_plugin, dispatched_agent)`. A dispatch is **cross-plugin** when `dispatched_plugin ≠ owning_plugin`. Build a map: `skill_file → [cross-plugin agents]`.
+
+Skip: any `general-purpose` dispatch and any `codex:*` dispatch.
+
+**Step 3 — Verify fallback coverage:**
+
+For each skill with one or more cross-plugin dispatches, read the skill file and search for a fallback declaration. A valid fallback is any of:
+
+- A section heading matching `Agent Resolution`, `Fallback`, or `Plugin Check` (case-insensitive)
+- A sentence containing the cross-plugin agent name AND a word from `{fallback, not installed, substitute, general-purpose, unavailable}` within 5 lines of each other
+- A conditional dispatch block: `if not installed` or `plugin list.*grep.*<plugin>` followed by an alternative
+
+No fallback found → **[high] 28a**: `<plugin>/<skill>: dispatches <cross-plugin-agent> with no fallback for missing plugin`
+
+**Step 4 — Completeness check:**
+
+For each skill where a fallback section exists: verify every cross-plugin agent dispatched by that skill is named within the fallback block (bare name OR fully-qualified `plugin:name` form). An agent is covered when its name appears in the fallback block.
+
+Partially covered → **[medium] 28b**: `<plugin>/<skill>: fallback section present but does not cover <agent>`
+
+**Report only** — fixing requires adding an Agent Resolution section with fallback substitutes for each cross-plugin dependency; the pattern in `develop:plan` (Agent Resolution table with `foundry agent | Fallback | Model | Role description prefix`) is the reference implementation.
+
+| Sub-check                                    | Condition | Severity | Auto-fix |
+| -------------------------------------------- | --------- | -------- | -------- |
+| 28a — no fallback for cross-plugin dispatch  | high      | no       |          |
+| 28b — fallback present but agent not covered | medium    | no       |          |

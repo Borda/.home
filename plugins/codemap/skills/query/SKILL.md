@@ -2,11 +2,13 @@
 name: query
 description: Query the codemap structural index — central, coupled, deps, rdeps, or import path between modules.
 argument-hint: <central [--top N] | coupled [--top N] | deps <module> | rdeps <module> | path <from> <to>>
+allowed-tools: Read, Bash
+effort: low
 ---
 
 <objective>
 
-Query the codemap structural index for import-graph analysis. **Python projects only** — the index covers `.py` files; queries on non-Python projects will return empty or error. `scan-query` is at `${CLAUDE_PLUGIN_ROOT}/bin/scan-query` — use this exact path.
+Query the codemap structural index for import-graph analysis. **Python projects only** — the index covers `.py` files; queries on non-Python projects will return empty or error. `scan-query` is available on PATH (installed by `/codemap:scan`).
 
 Queries:
 

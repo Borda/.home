@@ -7,13 +7,36 @@ allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, Ask
 disable-model-invocation: true
 ---
 
+<objective>
+
+Interactive wizard that scans the codebase, proposes a metric/guard/agent config, and writes a `program.md` run spec. Also runs cProfile on a file path to surface bottlenecks before prompting for the optimization goal.
+
+NOT for: running experiments (use `/research:run`); methodology validation (use `/research:judge`); full pipeline from goal to result (use `/research:sweep`).
+
+</objective>
+
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute foundry agents with `general-purpose` and prepend the role description:
+
+| foundry agent                | Fallback          | Model      | Role description prefix                                                                                                                                   |
+| ---------------------------- | ----------------- | ---------- | --------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate scope coverage and architectural dependencies. Return structured JSON only.`                                |
+| `foundry:perf-optimizer`     | `general-purpose` | `opus`     | `You are a performance engineer. Validate that metric_cmd measures the right characteristic and guard_cmd is comprehensive. Return structured JSON only.` |
+
+`research:scientist` is in the same plugin — no fallback needed.
+
+<workflow>
+
 ## Plan Mode (Steps P-P0–P-P3)
 
 <!-- P-P prefix = Plan-mode steps; R-prefix = Run-mode steps; these labels appear in task-tracking instructions -->
 
 Triggered by `plan <goal|file>`. Interactive wizard to configure a run.
 
-**Task tracking**: create tasks for P-P0, P-P1, P-P2, P-P3 at start.
+**Task tracking**: create tasks for P-P0, P-P1, P-P2, P-P2b, P-P3 at start.
 
 ### Step P-P0: Detect input type
 
@@ -91,6 +114,39 @@ compute:         local | colab | docker
 
 Dry-run both commands before presenting. If either fails, flag the error and propose corrections. Do not proceed to P-P3 until the user confirms or edits the config.
 
+### Step P-P2b: Agent validation (pre-write)
+
+After user confirms the config, run expert agent review before writing `program.md`. Dispatches are conditional on goal type — run whichever apply in parallel:
+
+**Always** — spawn architect to validate scope coverage:
+
+```
+Agent(subagent_type="foundry:solution-architect", prompt="Review a proposed research experiment scope.\n\nGoal: <goal>\nScope files: <scope_files>\nMetric command: <metric_cmd>\n\nCheck: (1) Do scope_files cover the components relevant to the goal? List architectural dependencies outside scope that the ideation agent would need to touch. (2) Are there shared abstractions (base classes, imports, shared state) outside scope required for changes within it?\n\nReturn ONLY: {\"ok\":true|false,\"gaps\":[\"...\"],\"suggestions\":[\"...\"],\"confidence\":0.N}")
+```
+
+**If `agent_strategy = ml` or goal contains ML keywords (accuracy, loss, model, training, inference, classification, regression)** — also spawn research:scientist:
+
+```
+Agent(subagent_type="research:scientist", prompt="Review a proposed ML experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nAgent strategy: <agent_strategy>\n\nCheck: (1) Is the goal a well-formed ML hypothesis — falsifiable, with a concrete success criterion? (2) Could metric_cmd improve while the real goal is not achieved (Goodhart's Law)? (3) Is agent_strategy appropriate for this goal type?\n\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"confidence\":0.N}")
+```
+
+**If `agent_strategy = perf` or goal contains performance keywords (latency, throughput, wall-clock, speed, memory, FPS)** — also spawn perf:
+
+```
+Agent(subagent_type="foundry:perf-optimizer", prompt="Review a proposed performance experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nGuard command: <guard_cmd>\n\nCheck: (1) Does metric_cmd measure the right performance characteristic for this goal? (2) Is guard_cmd comprehensive enough to catch regressions an ideation agent might introduce?\n\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"confidence\":0.N}")
+```
+
+Print advisory block below the config:
+
+```
+Advisory review:
+  architect: <gaps or "scope looks complete">
+  scientist:  <issues or "hypothesis is well-formed">   [only if dispatched]
+  perf:       <issues or "metric/guard look valid">      [only if dispatched]
+```
+
+If any agent returns `ok: false`: surface suggestions inline and ask the user whether to revise the config (re-enter P-P2) or proceed anyway. Do not block — user decides.
+
 ### Step P-P3: Write program.md
 
 Determine the output path: if the user provided a second argument after `<goal>`, use that path; otherwise use `program.md` at the project root.
@@ -144,4 +200,6 @@ Next steps:
 
 ## --team flag
 
-If `--team` is present in arguments: after the program.md is written, also read `.claude/skills/research/run/modes/team.md` to understand the team protocol. Inform the user that `--team` applies at the run step (not the plan step), and that they can use `/research:run <program.md> --team` to execute the plan with team mode active.
+If `--team` is present in arguments: after the program.md is written, also read `plugins/research/skills/run/team.md` to understand the team protocol. Inform the user that `--team` applies at the run step (not the plan step), and that they can use `/research:run <program.md> --team` to execute the plan with team mode active.
+
+</workflow>

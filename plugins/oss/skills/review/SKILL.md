@@ -18,7 +18,7 @@ Perform a comprehensive code review by spawning specialized sub-agents in parall
 
 - **$ARGUMENTS**: PR number or report path.
   - If a number is given (e.g. `42`): review the PR diff
-  - `--reply`: after review, spawn shepherd to draft a contributor-facing PR comment from the findings. When the argument is a path ending in `.md`, spawns shepherd directly from that report without running a new review.
+  - `--reply`: after review, spawn oss:shepherd to draft a contributor-facing PR comment from the findings. When the argument is a path ending in `.md`, spawns oss:shepherd directly from that report without running a new review.
   - **Scope**: this skill reviews Python source code only. If the input is a non-Python file (YAML, JSON, shell script, etc.), state that it is out of scope and suggest the appropriate tool — do not produce findings.
   - **Local files**: use `/develop:review` to review local files or the current git diff without a GitHub PR.
 
@@ -32,6 +32,23 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 </constants>
 
 <workflow>
+
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent                | Fallback          | Model    | Role description prefix                                                                                                     |
+| ---------------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`        | `general-purpose` | `opus`   | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.`           |
+| `foundry:qa-specialist`      | `general-purpose` | `opus`   | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`              |
+| `foundry:perf-optimizer`     | `general-purpose` | `opus`   | `You are a performance engineer. Profile before changing. Focus on CPU/GPU/memory/IO bottlenecks in Python/ML workloads.`   |
+| `foundry:doc-scribe`         | `general-purpose` | `sonnet` | `You are a documentation specialist. Write Google-style docstrings and keep README content accurate and concise.`           |
+| `foundry:linting-expert`     | `general-purpose` | `haiku`  | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
+| `foundry:solution-architect` | `general-purpose` | `opus`   | `You are a system design specialist. Produce ADRs, interface specs, and API contracts — read code, produce specs only.`     |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
 
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
@@ -176,7 +193,7 @@ Flag rules:
 - Caught=Yes + Action=`pass` or bare `except` → **MEDIUM** (swallowed error)
 - Cap at 15 rows. Focus on new/changed paths only, not the entire codebase.
 
-Read the review checklist (use the Read tool to read `.claude/skills/review/checklist.md`) — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
+Read the review checklist (use the Read tool to read `plugins/oss/skills/review/checklist.md`) — apply CRITICAL/HIGH patterns as severity anchors. Respect the suppressions list.
 
 If `ISSUE_NUMS` is non-empty, linked issue analysis files exist at `$RUN_DIR/issue-*.md`. Read them. Evaluate whether the code changes address the root cause identified in each linked issue — not just the symptom or the PR description. If the PR addresses only a symptom while the root cause remains unfixed, flag as `[blocking] HIGH — root cause misalignment`. If the PR description diverges from the issue's stated problem (solving something different than what was reported), flag as `HIGH — PR/issue scope divergence`.
 
@@ -260,7 +277,7 @@ Before constructing the output path, extract the current branch and date compone
 
 Spawn a **foundry:sw-engineer** consolidator agent with this prompt:
 
-> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `plugins/oss/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). If `issue-*.md` files exist in `$RUN_DIR`, include a `### Issue Root Cause Alignment` section placed immediately after `### [blocking] Critical`. For each linked issue: state the root cause hypothesis, whether the PR addresses it (yes / partially / no), whether the PR description diverges from the issue's stated problem, and whether the reproduction scenario is tested. Any `root cause misalignment` or `scope divergence` finding is at least HIGH severity. Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75 (moderate — static analysis, no runtime context). Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
 
 Main context receives only the one-liner verdict. Proceed with that summary for terminal output.
 
@@ -350,7 +367,7 @@ After consolidating findings, identify tasks from the review that Codex can impl
 - Architectural issues, logic errors, security vulnerabilities, or behavioural changes
 - Any task where you cannot write a precise description without guessing
 
-Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there.
+Read `.claude/skills/_shared/codex-delegation.md` and apply the delegation criteria defined there (if file not found, skip Step 7 delegation entirely).
 
 Example prompt: `"Add a test for StreamReader.read_chunk() in tests/test_reader.py — the method should raise ValueError when called after close(), currently no test covers this path."`
 
@@ -370,7 +387,7 @@ If `REPLY_MODE` is not set, skip this step.
 
 Pre-compute the reply date: `SPAWN_DATE="$(date -u +%Y-%m-%d)"`
 
-Spawn the **shepherd** agent with:
+Spawn the **oss:shepherd** agent with:
 
 - The review output file path from Step 6
 - The PR number and contributor handle (if known from Step 1)
@@ -402,6 +419,6 @@ End your response with a `## Confidence` block per CLAUDE.md output standards. F
   - Security findings in auth/input/deps → run `pip-audit` for dependency Common Vulnerabilities and Exposures (CVEs); address Open Web Application Security Project (OWASP) issues inline via `/develop:fix`
   - Mechanical issues beyond what Step 6 auto-fixed → `/codex:codex-rescue <task>` to delegate additional tasks
   - Docstrings, type annotations, renames, and other mechanical findings → `/codex:codex-rescue <task description>` per finding to delegate to Codex
-  - PR feedback to be shared directly with a contributor → use `--reply` to auto-draft via shepherd; or invoke shepherd manually for custom framing
+  - PR feedback to be shared directly with a contributor → use `--reply` to auto-draft via oss:shepherd; or invoke oss:shepherd manually for custom framing
 
 </notes>

@@ -461,20 +461,29 @@ function isDuplicateEvent(eventName, tmpDir) {
 
 function readAgentInfo(root, agentType) {
   if (!agentType || agentType === "unknown") return { model: "inherit", color: null };
-  try {
-    const content = fs.readFileSync(path.join(root, ".claude", "agents", `${agentType}.md`), "utf8");
-    // Extract frontmatter block (between first and second ---)
-    const fm = content.match(/^---\n([\s\S]*?)\n---/);
-    const block = fm ? fm[1] : "";
-    const modelMatch = block.match(/^model:\s*(\S+)/m);
-    const colorMatch = block.match(/^color:\s*(\S+)/m);
-    return {
-      model: modelMatch ? modelMatch[1] : "inherit",
-      color: colorMatch ? colorMatch[1] : null,
-    };
-  } catch (_) {
-    return { model: "inherit", color: null }; // built-in types (general-purpose) or missing file
+  // Strip plugin namespace prefix: "foundry:sw-engineer" → "sw-engineer"
+  const shortName = agentType.includes(":") ? agentType.split(":").pop() : agentType;
+  // Search order: project-local full name, project-local short name, home-installed short name
+  const candidates = [
+    path.join(root, ".claude", "agents", `${agentType}.md`),
+    path.join(root, ".claude", "agents", `${shortName}.md`),
+    path.join(os.homedir(), ".claude", "agents", `${shortName}.md`),
+  ];
+  for (const f of candidates) {
+    try {
+      const content = fs.readFileSync(f, "utf8");
+      // Extract frontmatter block (between first and second ---)
+      const fm = content.match(/^---\n([\s\S]*?)\n---/);
+      const block = fm ? fm[1] : "";
+      const modelMatch = block.match(/^model:\s*(\S+)/m);
+      const colorMatch = block.match(/^color:\s*(\S+)/m);
+      return {
+        model: modelMatch ? modelMatch[1] : "inherit",
+        color: colorMatch ? colorMatch[1] : null,
+      };
+    } catch (_) {}
   }
+  return { model: "inherit", color: null }; // built-in types (general-purpose) or missing file
 }
 
 function appendLog(logFile, dir, entry) {

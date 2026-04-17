@@ -17,6 +17,18 @@ NOT for: `.claude/` config issues (use `/audit`); general unknown failures witho
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent         | Fallback          | Model  | Role description prefix                                                                                           |
+| --------------------- | ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer` | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done

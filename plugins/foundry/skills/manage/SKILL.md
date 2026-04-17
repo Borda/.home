@@ -1,6 +1,6 @@
 ---
 name: manage
-description: Create, update, or delete agents, skills, rules, and hooks with full cross-reference propagation. Non-trivial writes (agent/skill content-edits and creates) are delegated to self-mentor subagents; hook content-edits are delegated to sw-engineer; large cross-ref fan-outs (> 3 files) also delegate. The parent orchestrates and handles MEMORY.md, README, audit, and the final report. Also manages settings.json permissions atomically with permissions-guide.md.
+description: Create, update, or delete agents, skills, rules, and hooks with full cross-reference propagation. Non-trivial writes (agent/skill content-edits and creates) are delegated to foundry:self-mentor subagents; hook content-edits are delegated to sw-engineer; large cross-ref fan-outs (> 3 files) also delegate. The parent orchestrates and handles MEMORY.md, README, audit, and the final report. Also manages settings.json permissions atomically with permissions-guide.md.
 argument-hint: create <agent|skill|rule> <name> "desc" | update <name> [new-name|"change"|spec.md] | delete <name> | add perm <rule> "desc" "use-case" | remove perm <rule>
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
@@ -9,7 +9,7 @@ effort: high
 
 <objective>
 
-Manage the lifecycle of agents, skills, rules, and hooks in the `.claude/` directory. Handles creation with rich domain content, atomic renames with cross-reference propagation, content editing (agent/skill edits delegated to self-mentor subagent; hook edits delegated to sw-engineer; rule edits inline), and clean deletion with broken-reference cleanup. Keeps the MEMORY.md inventory in sync with what actually exists on disk.
+Manage the lifecycle of agents, skills, rules, and hooks in the `.claude/` directory. Handles creation with rich domain content, atomic renames with cross-reference propagation, content editing (agent/skill edits delegated to foundry:self-mentor subagent; hook edits delegated to sw-engineer; rule edits inline), and clean deletion with broken-reference cleanup. Keeps the MEMORY.md inventory in sync with what actually exists on disk.
 
 </objective>
 
@@ -20,8 +20,8 @@ Manage the lifecycle of agents, skills, rules, and hooks in the `.claude/` direc
   - `create skill <name> "description"` — create a new skill with workflow scaffold
   - `create rule <name> "description"` — create a new rule file with frontmatter and sections
   - `update <name> <new-name>` — rename; type auto-detected from disk
-  - `update <name> "change description"` — content-edit; agent/skill edits delegated to self-mentor, hook edits delegated to sw-engineer, rule edits inline
-  - `update <name> <spec-file.md>` — content-edit from spec file; agent/skill edits delegated to self-mentor, hook edits delegated to sw-engineer, rule edits inline
+  - `update <name> "change description"` — content-edit; agent/skill edits delegated to foundry:self-mentor, hook edits delegated to sw-engineer, rule edits inline
+  - `update <name> <spec-file.md>` — content-edit from spec file; agent/skill edits delegated to foundry:self-mentor, hook edits delegated to sw-engineer, rule edits inline
   - `delete <name>` — delete; type auto-detected from disk (agents, skills, rules, hooks); asks user if ambiguous
   - `add perm <rule> "description" "use case"` — add a permission to settings.json allow list and permissions-guide.md
   - `remove perm <rule>` — remove a permission from settings.json allow list and permissions-guide.md
@@ -39,8 +39,8 @@ Manage the lifecycle of agents, skills, rules, and hooks in the `.claude/` direc
 **Update second-argument discrimination**:
 
 - Two bare kebab-case args (second arg no spaces, no `.md` extension) → **rename mode**
-- One name + quoted string → **content-edit mode** (agent/skill: self-mentor subagent; hook: sw-engineer subagent; rule: inline)
-- One name + path ending in `.md` → **content-edit mode** (agent/skill: self-mentor subagent; hook: sw-engineer subagent; rule: inline)
+- One name + quoted string → **content-edit mode** (agent/skill: foundry:self-mentor subagent; hook: sw-engineer subagent; rule: inline)
+- One name + path ending in `.md` → **content-edit mode** (agent/skill: foundry:self-mentor subagent; hook: sw-engineer subagent; rule: inline)
 
 **Examples:**
 
@@ -168,7 +168,7 @@ Branch into one of these modes:
 
 3. Choose model based on role complexity:
 
-   - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, self-mentor): long-horizon reasoning + plan mode
+   - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, foundry:self-mentor): long-horizon reasoning + plan mode
    - `opus` — complex implementation roles (sw-engineer, qa-specialist, research:scientist, perf-optimizer): deep reasoning without plan mode
    - `sonnet` — focused execution roles (data-steward, web-explorer, doc-scribe): pattern-matching, structured output
    - `haiku` — high-frequency diagnostics roles (linting-expert, oss:ci-guardian): rule-application, structured lint output
@@ -359,7 +359,7 @@ rm .claude/rules/<name>.md # timeout: 5000
 
 ### Mode: Content-Edit Hook
 
-Hook files are JavaScript — delegate to **sw-engineer** (not self-mentor) for implementation-quality edits:
+Hook files are JavaScript — delegate to **sw-engineer** (not foundry:self-mentor) for implementation-quality edits:
 
 1. Determine the change directive (same as Content-Edit Agent).
 2. Spawn **foundry:sw-engineer** subagent — hook files contain Node.js logic with security-sensitive patterns (stdin handling, subprocess calls, exit codes); sw-engineer has the implementation domain knowledge to edit them safely:
@@ -428,8 +428,6 @@ Use the Edit tool to insert the row: find the last table row in the target secti
 
 4. Verify both files were updated:
 
-<!-- Note: python3 is excluded from auto-allow list by design — user will see an approval prompt for this command. -->
-
 ```bash
 python3 -c "import json; d=json.load(open('.claude/settings.json')); print('OK' if '<rule>' in d['permissions']['allow'] else 'MISSING')" # timeout: 5000
 grep -F '`<rule>`' .claude/permissions-guide.md
@@ -440,8 +438,6 @@ grep -F '`<rule>`' .claude/permissions-guide.md
 Removes a rule from both `settings.json` and `permissions-guide.md` atomically.
 
 1. Update `settings.json` — parse, filter, write back:
-
-<!-- Note: python3 is excluded from auto-allow list by design — user will see an approval prompt for this command. -->
 
 ```bash
 python3 -c "  # timeout: 5000
@@ -458,8 +454,6 @@ with open('.claude/settings.json', 'w') as f:
 2. Update `permissions-guide.md` — use the Edit tool to remove the table row containing `` `<rule>` ``.
 
 3. Verify both files are clean:
-
-<!-- Note: python3 is excluded from auto-allow list by design — user will see an approval prompt for this command. -->
 
 ```bash
 python3 -c "import json; d=json.load(open('.claude/settings.json')); print('OK' if '<rule>' not in d['permissions']['allow'] else 'STILL PRESENT')" # timeout: 5000
@@ -478,7 +472,7 @@ Use the Grep tool to find all references to the name across the config:
 - Pattern `<name>`, file `.claude/CLAUDE.md`, output mode `content`
 - Pattern `<name>`, file `README.md`, output mode `content`
 
-**For update (rename):** Count the files grep returns. For **≤ 3 files**: apply inline with the Edit tool. For **> 3 files**: spawn **self-mentor** subagent — inline edits across many files inflate the main context:
+**For update (rename):** Count the files grep returns. For **≤ 3 files**: apply inline with the Edit tool. For **> 3 files**: spawn **foundry:self-mentor** subagent — inline edits across many files inflate the main context:
 
 ```
 Apply these cross-reference updates (<old-name> → <new-name>):
@@ -562,7 +556,7 @@ Run `/audit` to validate the created/modified file(s) and catch any issues intro
 /audit
 ```
 
-For a targeted check of only the affected file, spawn **self-mentor** directly:
+For a targeted check of only the affected file, spawn **foundry:self-mentor** directly:
 
 - For `create`: audit the new file for structural completeness, cross-ref validity, and content quality
 - For `update`: audit the renamed file and verify no stale references remain
@@ -596,7 +590,7 @@ End your response with a `## Confidence` block per CLAUDE.md output standards.
 - **Cross-ref grep is broad**: searches bare kebab-case names across all markdown files — catches backtick references, prose mentions, spawn directives, and inventory lists
 - **MEMORY.md inventory**: always regenerated from disk (`ls`), never manually calculated — this prevents drift
 - **Rule files have no `name:` frontmatter** — the filename IS the identifier. Renames only change the file on disk and update cross-references; there is no frontmatter `name:` field to update.
-- **Non-trivial write delegation** — agent/skill content-edits and creates are delegated to `self-mentor` subagents to prevent main-context inflation from large file reads and generations (200–600 line files). Rule content-edits stay inline (rule files are ≤ 80 lines). Cross-ref propagation (Step 5) delegates to `self-mentor` when > 3 files need updating. The subagent always returns a compact JSON envelope; the parent handles MEMORY.md (Step 6), README (Step 7), audit (Step 9), and the final report.
+- **Non-trivial write delegation** — agent/skill content-edits and creates are delegated to `foundry:self-mentor` subagents to prevent main-context inflation from large file reads and generations (200–600 line files). Rule content-edits stay inline (rule files are ≤ 80 lines). Cross-ref propagation (Step 5) delegates to `foundry:self-mentor` when > 3 files need updating. The subagent always returns a compact JSON envelope; the parent handles MEMORY.md (Step 6), README (Step 7), audit (Step 9), and the final report.
 - **Type auto-detection**: `update` and `delete` search all four dirs in parallel (agents, skills, rules, hooks); the name is the unique identifier. If two entities share a name (rare), `AskUserQuestion` resolves the ambiguity.
 - **Content-edit vs rename discrimination**: bare kebab-case second arg = rename; quoted string or `.md` path = content-edit. Unambiguous because names never contain spaces or end in `.md`.
 - Follow-up chains:

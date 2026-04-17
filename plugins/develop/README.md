@@ -2,7 +2,7 @@
 
 Development workflow plugin: six slash-command skills for scope planning, feature development, bug fixing, refactoring, debugging, and code review — all built on a validate-first principle that proves the problem exists before writing a single line of solution.
 
-> [!NOTE] Requires the `foundry` plugin for base agents. Install order does not matter.
+> [!NOTE] Works standalone — foundry is not required. Without it, agent dispatches fall back to `general-purpose` with role descriptions (lower quality). Installing foundry unlocks specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) and is strongly recommended for production use.
 
 ## 🎯 Why
 
@@ -39,7 +39,7 @@ claude plugin install develop@borda-ai-home
 <summary>Install the full suite</summary>
 
 ```bash
-claude plugin install foundry@borda-ai-home   # base agents — required first
+claude plugin install foundry@borda-ai-home   # base agents — strongly recommended
 claude plugin install oss@borda-ai-home
 claude plugin install develop@borda-ai-home
 claude plugin install research@borda-ai-home
@@ -204,6 +204,10 @@ Every mode ends with the same three-layer gate:
 1. **linting-expert** — ruff, mypy, pre-commit; zero tolerance for style violations
 2. **qa-specialist** — test coverage, edge cases, OWASP Top 10 (auto-included)
 3. **Codex pre-pass** — independent diff review before anything is considered done
+
+## Dependencies
+
+**Optional**: `foundry` plugin. When installed, skills use specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) for higher-quality output. Without foundry, skills fall back to `general-purpose` agents with role-description prompts — all skills remain functional.
 
 ## 📦 Plugin details
 

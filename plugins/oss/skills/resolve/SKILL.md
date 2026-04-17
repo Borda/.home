@@ -35,6 +35,20 @@ When given bare comment text, skip straight to Codex dispatch (Step 12).
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent            | Fallback          | Model   | Role description prefix                                                                                                     |
+| ------------------------ | ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`    | `general-purpose` | `opus`  | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.`           |
+| `foundry:qa-specialist`  | `general-purpose` | `opus`  | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`              |
+| `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -180,7 +194,7 @@ Map each finding bullet to the action item schema:
 | MEDIUM                   | `[suggest]`                            |
 | LOW                      | `[suggest]` (omit if total items > 10) |
 
-- `author`: the section owner agent (e.g., `foundry:sw-engineer` for Architecture, `qa-specialist` for Test Coverage)
+- `author`: the section owner agent (e.g., `foundry:sw-engineer` for Architecture, `foundry:qa-specialist` for Test Coverage)
 - `file` / `line`: extract from `file:line` notation in the finding bullet; leave blank if absent
 - `full_comment_text`: the full finding bullet text
 - All items carry the tag `[report]` as a prefix to `type` (e.g., `[report][req]`, `[report][suggest]`)
@@ -519,14 +533,12 @@ Print conflict report:
 | config.yaml | Target | unrelated config change from base, PR had no opinion |
 
 **Result**: N files resolved. Merge commit created.
+```
 
 Mark all conflict tasks completed:
 
 ```
-
 for each (filepath, conflict_task_id) pair from Step 5a: TaskUpdate(task_id=\<conflict_task_id>, status="completed")
-
-```
 ```
 
 ## Step 8: Implement action items
@@ -627,7 +639,7 @@ EOF
 )"  # timeout: 3000
 ```
 
-- If `qa-specialist` reports **blocking** issues → fix each one (via Codex if `CODEX_AVAILABLE=true`, otherwise inline edit), then re-run qa-specialist once to confirm resolution; if issues remain after one fix pass, surface them in the final report and continue (do not loop indefinitely)
+- If `foundry:qa-specialist` reports **blocking** issues → fix each one (via Codex if `CODEX_AVAILABLE=true`, otherwise inline edit), then re-run foundry:qa-specialist once to confirm resolution; if issues remain after one fix pass, surface them in the final report and continue (do not loop indefinitely)
 - Warnings (non-blocking) → record in the final report; do not block push
 
 ## Step 10: Push
@@ -691,7 +703,7 @@ Then print:
 | [question] | @reviewer | ⊘ answered inline — existing approach is correct per linked issue #42 | why not use X? | — |
 
 ### Lint + QA
-<linting-expert summary: N fixes applied | or "no violations"> / <qa-specialist summary: N blocking fixed, N warnings | or "clean">
+<linting-expert summary: N fixes applied | or "no violations"> / <foundry:qa-specialist summary: N blocking fixed, N warnings | or "clean">
 
 ### Push
 ✓ Pushed to <remote>/<HEAD_REF> — N new commits
@@ -707,128 +719,9 @@ Then print:
 
 ______________________________________________________________________
 
-# Independent entry point for comment-dispatch mode — not a continuation of the main PR workflow
-
 ## Step 12: Comment dispatch + Codex review loop
 
-Reached when $ARGUMENTS is bare comment text (not a PR number or URL).
-
-Create a task:
-
-```
-TaskCreate(
-  subject="Resolve: <60-char summary of $ARGUMENTS>",
-  description="<full $ARGUMENTS>",
-  activeForm="Resolving comment"
-)
-```
-
-If `CODEX_AVAILABLE=false`: stop with `⚠ codex plugin not found — install: /plugin marketplace add openai/codex-plugin-cc && /plugin install codex@openai-codex && /reload-plugins`, mark the task completed:
-
-```
-TaskUpdate(task_id=<task_id_from_above>, status="completed")
-```
-
-and stop.
-
-### 12a: Dispatch
-
-```bash
-Agent(subagent_type="codex:codex-rescue", prompt="Apply this review comment to the codebase. If the change is already present, or the comment has no actionable code change, make no changes and briefly explain why. Comment: $ARGUMENTS")
-```
-
-Record the initial dispatch outcome (code changed or no change + reason).
-
-### 12b: Codex review loop (max 5 passes)
-
-```bash
-git diff HEAD --stat # timeout: 3000 — confirm there are changes to review
-```
-
-If no changes: skip the loop; set `CODEX_REVIEW_FINDINGS=""`.
-
-Otherwise:
-
-```pseudocode
-for REVIEW_PASS in 1 2 3 4 5; do
-
-  # Review phase — Agent() is a Claude Code tool call, not a shell command
-  CODEX_OUT = Agent(subagent_type="codex:codex-rescue",
-                    prompt="Review working-tree changes. End output with ISSUES_FOUND=N.")
-  ISSUES_FOUND = parse CODEX_OUT for ISSUES_FOUND=N (default 0)
-
-  if ISSUES_FOUND == 0: break
-
-  # Fix phase
-  Agent(subagent_type="codex:codex-rescue",
-        prompt="Apply this fix: <issue description from review>")
-
-done
-
-if REVIEW_PASS == 5 and ISSUES_FOUND > 0:
-  echo "⚠ Review loop hit 5-pass cap — $ISSUES_FOUND issues remain; surface to user"
-```
-
-### 12c: Lint and QA gate
-
-If code was changed (dispatch or review loop produced commits):
-
-```bash
-RUN_DIR=".reports/resolve/$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-mkdir -p "$RUN_DIR" # timeout: 5000
-```
-
-Spawn both agents in parallel:
-
-```
-Agent(foundry:linting-expert): "Review all files changed in HEAD (git diff HEAD~N..HEAD where N = number of commits just made). List every lint/type violation. Apply inline fixes for any that are auto-fixable. Write your full findings to $RUN_DIR/linting-expert-step12c.md using the Write tool, then return ONLY a compact JSON envelope: {fixed: N, remaining: N, files: [...]}."
-
-Agent(foundry:qa-specialist, maxTurns: 15): "Review all files changed in the most recent commits for correctness, edge cases, and regressions. Flag any blocking issues. Write your full findings to $RUN_DIR/qa-specialist-step12c.md using the Write tool, then return ONLY a compact JSON envelope: {blocking: N, warnings: N, issues: [...]}."
-```
-
-> **Health monitoring**: Agent calls are synchronous; Claude awaits responses natively. If no response within ~15 min, surface partial results from `$RUN_DIR` with ⏱.
-
-- If `linting-expert` made changes → commit:
-
-```bash
-git add $(git diff HEAD --name-only)                          # timeout: 3000
-git commit -m "$(cat <<'EOF'
-lint: auto-fix violations after resolve cycle
-
----
-Co-authored-by: Claude Code <noreply@anthropic.com>
-EOF
-)"  # timeout: 3000
-```
-
-- If `qa-specialist` reports blocking issues → fix inline, then re-run once; surface any unresolved issues in the report
-
-Mark the task `completed`:
-
-```
-TaskUpdate(task_id=<task_id_from_above>, status="completed")
-```
-
-Then print:
-
-```
-## Resolve Report
-
-**Verdict**: ✓ resolved | ⊘ no change — <Codex's reason>
-
-### Codex Review
-<findings across passes, or "No issues found" / "Skipped — no changes">
-
-### Lint + QA
-<linting-expert summary: N fixes applied | or "no violations"> / <qa-specialist summary: N blocking fixed, N warnings | or "clean">
-
-**Next**: review diff and commit | reply to reviewer with Codex's explanation
-
-## Confidence
-**Score**: [0.N]
-**Gaps**: [e.g. Codex partial completion, ambiguous comment intent]
-**Refinements**: N passes. — omit if 0 passes
-```
+Read and execute `plugins/oss/skills/resolve/modes/comment-dispatch.md`.
 
 </workflow>
 

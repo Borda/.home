@@ -7,6 +7,16 @@ allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, Ask
 disable-model-invocation: true
 ---
 
+<objective>
+
+Non-interactive end-to-end research pipeline: auto-plan → judge gate → run. Single command from goal to result. Accepts a goal string and passes through all run/colab/team flags.
+
+NOT for: interactive planning (use `/research:plan`); methodology review only (use `/research:judge`); running an already-approved plan (use `/research:run`).
+
+</objective>
+
+<workflow>
+
 ## Steps S1–S5
 
 Triggered by `sweep "goal" [--flags]`. Non-interactive end-to-end pipeline: auto-plan → judge gate → run.
@@ -37,7 +47,7 @@ Usage: /research:sweep "goal description" [--flags]
 
 ### Step S2: Non-interactive plan
 
-Run plan mode steps P-P2 and P-P3 from `modes/plan.md` (P-P0 profiling flow skipped — `<goal>` is always a text string; P-P1 scope guard skipped — goal was provided explicitly) with these behavioral overrides:
+Run plan mode steps P-P2 and P-P3 from `plugins/research/skills/plan/SKILL.md` (P-P0 profiling flow skipped — `<goal>` is always a text string; P-P1 scope guard skipped — goal was provided explicitly) with these behavioral overrides:
 
 - **P-P2 (config presentation)**: Accept all auto-detected defaults without prompting the user. Print the proposed config as an informational block prefixed `sweep: auto-config →` but do NOT wait for user confirmation.
 - If `--colab[=HW]` or `--compute=colab` was passed, write `compute: colab` (and `colab_hw: <HW>` if provided) into the Config block.
@@ -56,7 +66,7 @@ Initialize `REFINE_ITER = 0`, `MAX_REFINE = 3`.
 
 Repeat up to `MAX_REFINE` times:
 
-1. Increment `REFINE_ITER`. Run judge mode (J1–J6 from `modes/judge.md`) against the program file.
+1. Increment `REFINE_ITER`. Run judge mode (J1–J6 from `plugins/research/skills/judge/SKILL.md`) against the program file.
 
    - Pass `--skip-validation` if the user provided it; otherwise include validation (J4).
    - Capture the J6 verdict and the judge report path (`JUDGE_REPORT`).
@@ -97,7 +107,7 @@ Fix the issues above in <program path>, then:
 
 ### Step S5: Run
 
-Run Default Mode (R1–R7 from `modes/run.md`) against the program file from S2, passing through all flags:
+Run Default Mode (R1–R7 from `plugins/research/skills/run/SKILL.md`) against the program file from S2, passing through all flags:
 
 - `--colab[=HW]` / `--compute`
 - `--team`
@@ -113,3 +123,5 @@ On completion, the standard R6 terminal summary is printed. Additionally, prepen
 ```
 sweep: complete — plan → judge → run pipeline finished
 ```
+
+</workflow>

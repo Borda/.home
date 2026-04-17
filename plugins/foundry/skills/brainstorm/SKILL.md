@@ -383,7 +383,6 @@ For each blocking question: call `AskUserQuestion` — one at a time, in order. 
 
 Spec: <file path>
 
-<!-- Format: | # | Task | Invocation | — fill from the spec; one row per action item -->
 | # | Task | Invocation |
 |---|------|------------|
 | 1 | [first action item] | `/develop:feature "<goal>"` |

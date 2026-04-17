@@ -17,6 +17,19 @@ NOT for: unknown failures without a traceback (use `/investigate`); `.claude/` c
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent           | Fallback          | Model  | Role description prefix                                                                                           |
+| ----------------------- | ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`   | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
+| `foundry:qa-specialist` | `general-purpose` | `opus` | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`    |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 ## Anti-Rationalizations
 
 | Temptation                                                 | Reality                                                                                               |
@@ -126,8 +139,6 @@ Make the minimal change to fix the root cause:
 4. If any existing tests break: the fix has side effects — reconsider the approach
 
 ## Step 4: Review and close gaps
-
-Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass before cycle 1.
 
 Full review of the fix. This is a **loop** — review -> fix -> re-review until only nits remain. Maximum 3 cycles.
 

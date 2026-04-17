@@ -45,6 +45,8 @@ The scanner writes to `.cache/scan/<project>.json` and prints a summary line:
 After the scan completes, read the index and report a compact summary:
 
 ```bash
+# Note: $(...) inside the double-quoted python3 -c "..." string is shell-expanded before Python sees it.
+# basename/git rev-parse resolve the project name at call time — intentional shell substitution.
 python3 -c "
 import json, sys
 with open('.cache/scan/\$(basename \$(git rev-parse --show-toplevel)).json') as f:

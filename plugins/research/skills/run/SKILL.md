@@ -11,7 +11,7 @@ disable-model-invocation: true
 
 Sustained metric-improvement loop — reads a `program.md` file, iterates with specialist ideation agents, commits changes atomically, and auto-rolls back on regression. Designed for long-running automated improvement campaigns.
 
-NOT for: methodology validation before a run (use `/research:judge`); hypothesis generation (use `scientist` agent); one-off feature work (use `/develop:feature`).
+NOT for: methodology validation before a run (use `/research:judge`); hypothesis generation (use `research:scientist` agent); one-off feature work (use `/develop:feature`).
 
 </objective>
 
@@ -32,21 +32,21 @@ STATE_DIR:                  .experiments/<run-id>/      (timestamped dir per run
 
 **Agent strategy mapping** (`agent_strategy` in config → ideation agent to spawn):
 
-| `agent_strategy` | Specialist agent         | When to use                                  |
-| ---------------- | ------------------------ | -------------------------------------------- |
-| `auto`           | heuristic                | Default — infer from metric_cmd keywords     |
-| `perf`           | `foundry:perf-optimizer` | latency, throughput, memory, GPU utilization |
-| `code`           | `foundry:sw-engineer`    | coverage, complexity, lines, coupling        |
-| `ml`             | `scientist`              | accuracy, loss, F1, AUC, BLEU                |
-| `arch`           | `solution-architect`     | coupling, cohesion, modularity metrics       |
+| `agent_strategy` | Specialist agent             | When to use                                  |
+| ---------------- | ---------------------------- | -------------------------------------------- |
+| `auto`           | heuristic                    | Default — infer from metric_cmd keywords     |
+| `perf`           | `foundry:perf-optimizer`     | latency, throughput, memory, GPU utilization |
+| `code`           | `foundry:sw-engineer`        | coverage, complexity, lines, coupling        |
+| `ml`             | `research:scientist`         | accuracy, loss, F1, AUC, BLEU                |
+| `arch`           | `foundry:solution-architect` | coupling, cohesion, modularity metrics       |
 
-> note: solution-architect uses opusplan tier — higher cost per ideation call
+> note: foundry:solution-architect uses opusplan tier — higher cost per ideation call
 
 **Auto-inference keyword heuristics** (applied when `agent_strategy: auto` or omitted; checked against `## Goal` text AND metric command):
 
 - contains `pytest`, `coverage`, `complexity` → `code` → `foundry:sw-engineer`
 - contains `time`, `latency`, `bench`, `throughput`, `memory` → `perf` → `foundry:perf-optimizer`
-- contains `accuracy`, `loss`, `f1`, `auc`, `train`, `val`, `eval` → `ml` → `scientist`
+- contains `accuracy`, `loss`, `f1`, `auc`, `train`, `val`, `eval` → `ml` → `research:scientist`
 - no keyword match → `perf` (default fallback)
 
 **Stuck escalation sequence** (at STUCK_THRESHOLD consecutive discards):
@@ -59,6 +59,21 @@ STATE_DIR:                  .experiments/<run-id>/      (timestamped dir per run
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent                | Fallback          | Model      | Role description prefix                                                                                                                                                         |
+| ---------------------------- | ----------------- | ---------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`        | `general-purpose` | `opus`     | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.`                                                               |
+| `foundry:linting-expert`     | `general-purpose` | `haiku`    | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.`                                                     |
+| `foundry:perf-optimizer`     | `general-purpose` | `opus`     | `You are a performance engineer. Profile before changing. Focus on CPU/GPU/memory/IO bottlenecks in Python/ML workloads.`                                                       |
+| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Generate architectural optimization hypotheses and annotate feasibility of proposed changes. Write findings to the specified output file.` |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 ## Default Mode (Steps R1–R7)
 
 Triggered by `run <goal|file.md>`.
@@ -69,17 +84,17 @@ Triggered by `run <goal|file.md>`.
 
 If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
-> **Research run directory**: Research outputs (`hypotheses.jsonl`, `checkpoint.json`, `journal.md`) go to `.experiments/<run-id>/` — a timestamped directory created at the start of R0, distinct from the main state directory `.experiments/state/<run-id>/`. Referred to as `<RUN_DIR>` throughout this step. See `./protocol.md` for the full layout.
+> **Research run directory**: Research outputs (`hypotheses.jsonl`, `checkpoint.json`, `journal.md`) go to `.experiments/<run-id>/` — a timestamped directory created at the start of R0, distinct from the main state directory `.experiments/state/<run-id>/`. Referred to as `<RUN_DIR>` throughout this step. See `protocol.md` (companion file in the same skill directory) for the full layout.
 
 1. **Build hypothesis queue** — if `--hypothesis <path>` is provided, read that file as the pre-built queue (skip oracle phase). Otherwise, spawn oracle agents based on active flags — agents run in parallel if both flags are set:
 
-   **If `--researcher` is set** — spawn `scientist` (`maxTurns: 15`):
+   **If `--researcher` is set** — spawn `research:scientist` (`maxTurns: 15`):
 
    ```
    Read the program file and the project codebase. Generate 5–10 ML experiment hypotheses grounded in SOTA literature and the specific metric goal. Write to `<RUN_DIR>/hypotheses.jsonl` — one JSON object per line, each with fields: hypothesis, rationale, confidence (float 0–1), expected_delta, priority (int, 1=highest), source: "oracle". Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-researcher.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
    ```
 
-   **If `--architect` is set** — spawn `solution-architect` (`maxTurns: 15`) as hypothesis generator (not just feasibility annotator):
+   **If `--architect` is set** — spawn `foundry:solution-architect` (`maxTurns: 15`) as hypothesis generator (not just feasibility annotator):
 
    ```
    Read the program file and the project codebase. Analyze the architecture, coupling, and structural design. Generate 5–10 architectural optimization hypotheses (refactoring opportunities, coupling reductions, abstraction improvements) that could improve the metric. Write to `<RUN_DIR>/hypotheses-arch.jsonl` — one JSON object per line with the same schema as the research oracle (hypothesis, rationale, confidence, expected_delta, priority, source: "architect"). Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-solution-architect.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","count":N,"confidence":0.N}
@@ -87,7 +102,7 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
    **If both `--researcher` and `--architect` are set**: run both oracle agents in parallel (two separate Agent calls). After both complete, merge the two JSONL files into a single `<RUN_DIR>/hypotheses.jsonl`, interleaving by priority (lower priority number = higher priority, round-robin on ties). Update priority values in the merged file to reflect the interleaved order.
 
-   After oracle phase(s), always run the feasibility annotation pass — spawn `solution-architect` (`maxTurns: 10`):
+   After oracle phase(s), always run the feasibility annotation pass — spawn `foundry:solution-architect` (`maxTurns: 10`):
 
    ```
    Read `<RUN_DIR>/hypotheses.jsonl` and the project codebase. For each hypothesis, annotate with: feasible (bool), blocker (str|null, required if feasible=false), codebase_mapping (str). Write the annotated queue back to the same file preserving order. Write your full analysis, reasoning, and Confidence block to `<RUN_DIR>/oracle-feasibility.md` using the Write tool. Return ONLY: {"status":"done","file":"<path>","feasible":N,"infeasible":N,"confidence":0.N}
@@ -95,7 +110,7 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
    Note: when `--architect` is the only flag (no `--researcher`), skip the feasibility annotation pass — the architect already validated feasibility during hypothesis generation. Set `feasible: true` on all entries implicitly.
 
-   Both agents follow the handoff envelope protocol (see CLAUDE.md §2). Schema: `./protocol.md`.
+   Both agents follow the handoff envelope protocol (see CLAUDE.md §2). Schema: `protocol.md` (companion file in the same skill directory).
 
 2. **Filter and sort** — load the annotated queue. Infeasible entries (`feasible: false`) remain in the file for audit but are excluded from execution. Sort by `priority` ascending (1 = first to run).
 
@@ -105,9 +120,9 @@ If neither `--researcher` nor `--architect` is set, skip to Step R1.
 
 **Per-iteration hypothesis selection** (active when `--researcher` or `--architect` is set, inside Step R5's loop): pop the next hypothesis from `RESEARCH_QUEUE` as the iteration's direction. Append to the Phase 2 ideation prompt: "Focus this iteration on testing this hypothesis: `<hypothesis text>`."
 
-**Per-iteration journal hook** (inside Step R5, after Phase 7 keep-decision): if `--journal` is active, append a journal entry to `<RUN_DIR>/journal.md` after EVERY iteration — regardless of outcome. Entry format: see `./protocol.md`. Journals record both kept and reverted iterations so the ideation agent can learn what approaches failed and avoid repeating them.
+**Per-iteration journal hook** (inside Step R5, after Phase 7 keep-decision): if `--journal` is active, append a journal entry to `<RUN_DIR>/journal.md` after EVERY iteration — regardless of outcome. Entry format: see `protocol.md` (companion file in the same skill directory). Journals record both kept and reverted iterations so the ideation agent can learn what approaches failed and avoid repeating them.
 
-**Per-iteration checkpoint write** (after Phase 7, keep or rollback): if `--researcher` or `--architect` is active, append one line to `<RUN_DIR>/checkpoint.json` per the schema in `./protocol.md`: `{iteration, hypothesis_id, metric_before, metric_after, status: "passed"|"rolled_back"}`.
+**Per-iteration checkpoint write** (after Phase 7, keep or rollback): if `--researcher` or `--architect` is active, append one line to `<RUN_DIR>/checkpoint.json` per the schema in `protocol.md` (companion file in the same skill directory): `{iteration, hypothesis_id, metric_before, metric_after, status: "passed"|"rolled_back"}`.
 
 ### Step R1: Load / build config
 
@@ -323,7 +338,7 @@ Program constraints: read `<program_file>` — especially `## Notes`, `## Config
 `{"description":"...","files_modified":[],"scripts":["explore-<i>-<slug>.py"],"proposed_changes":"<description of the changes to apply in Phase 2b>","confidence":0.N}`
 ```
 
-For `--colab` runs: the ideation agent (especially `scientist`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.
+For `--colab` runs: the ideation agent (especially `research:scientist`) may call `mcp__colab-mcp__runtime_execute_code` during this phase to prototype GPU code before committing.
 
 <!-- MCP tool call — invoked via MCP protocol, not Bash; requires colab-mcp server enabled in settings.local.json -->
 
@@ -632,7 +647,7 @@ ______________________________________________________________________
 
 - Step R2 (preconditions): checks for `mcp__colab-mcp__runtime_execute_code` availability.
 - Phase 5 (verify metric): calls `mcp__colab-mcp__runtime_execute_code` with `metric_cmd` instead of local `timeout <cmd>`.
-- Phase 2 (ideate): `scientist` agent can call `mcp__colab-mcp__runtime_execute_code` to prototype GPU code before committing.
+- Phase 2 (ideate): `research:scientist` agent can call `mcp__colab-mcp__runtime_execute_code` to prototype GPU code before committing.
 - `VERIFY_TIMEOUT_SEC` = 300 (vs 120 local) to account for network + GPU startup latency.
 
 If Colab MCP is unavailable at Step R2, print:

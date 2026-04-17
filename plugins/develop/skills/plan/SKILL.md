@@ -3,7 +3,7 @@ name: plan
 description: Analysis-only planning — classify and scope a task without writing code; outputs a structured plan to .plans/active/.
 argument-hint: <goal>
 effort: medium
-allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
+allowed-tools: Read, Write, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion, WebFetch
 disable-model-invocation: true
 ---
 
@@ -16,6 +16,20 @@ NOT for: writing code or tests (use the appropriate develop mode); `.claude/` co
 </objective>
 
 <workflow>
+
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent            | Fallback          | Model   | Role description prefix                                                                                                     |
+| ------------------------ | ----------------- | ------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`    | `general-purpose` | `opus`  | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.`           |
+| `foundry:qa-specialist`  | `general-purpose` | `opus`  | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`              |
+| `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
 
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
@@ -119,7 +133,7 @@ Agents return inline (verdicts are ~150 bytes — no file handoff needed). Colle
 
 For each blocker or open question:
 
-1. **Attempt autonomous resolution** — search the codebase, read relevant files, re-read the goal. Also search the web for similar issues and established patterns (e.g. known library constraints, common implementation trade-offs) — use WebSearch for this. If the answer can be determined from any of these sources, update `<PLAN_FILE>` and mark the item resolved.
+1. **Attempt autonomous resolution** — search the codebase, read relevant files, re-read the goal. Also search the web for similar issues and established patterns (e.g. known library constraints, common implementation trade-offs) — use WebFetch for this. If the answer can be determined from any of these sources, update `<PLAN_FILE>` and mark the item resolved.
 2. **Re-query the raising agent** — send only the resolved item: `{"a":"<ROLE>","resolved":"<item>","answer":"<resolution>"}`. If the agent returns `ok: true` -> resolved; remove from the blockers list.
 3. After all resolvable items are cleared, re-check: if all agents are now `ok: true` -> `✓ agents ready`.
 

@@ -2,7 +2,7 @@
 name: release
 description: 'Prepare release communication and check release readiness. Modes — notes (writes PUBLIC-NOTES.md), changelog (prepends CHANGELOG.md), summary (internal brief), migration (breaking-changes guide), prepare (full pipeline: audit → notes + changelog + summary + migration if breaking changes), audit (pre-release readiness check: blockers, docs alignment, version consistency, Common Vulnerabilities and Exposures (CVEs)). Use whenever the user says "prepare release", "write changelog", "what changed since v1.x", "prepare v2.0", "write release notes", "am I ready to release", "check release readiness", or wants to announce a version to users.'
 argument-hint: <mode> [range] | migration <from> <to> | prepare <version> | audit [version]
-allowed-tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate
+allowed-tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, Agent
 model: opus
 ---
 
@@ -118,7 +118,7 @@ Pre-flight — verify all templates are present before proceeding:
 
 ```bash
 for tmpl in PUBLIC-NOTES.tmpl.md CHANGELOG.tmpl.md SUMMARY.tmpl.md MIGRATION.tmpl.md; do # timeout: 5000
-    [ -f ".claude/skills/release/templates/$tmpl" ] || {
+    [ -f "plugins/oss/skills/release/templates/$tmpl" ] || {
         echo "Missing template: $tmpl — aborting"
         exit 1
     }
@@ -141,25 +141,40 @@ Omit any section that has no content.
 
 For `notes` mode: first produce a CHANGELOG-format classification (Step 2 output in changelog structure). Then derive the user-facing notes FROM that classification, expanding interesting features with implementation insights from Step 3. The changelog classification is a working document — do not write it to disk in `notes` mode, but use it as the structural backbone for the notes.
 
-Read the PUBLIC-NOTES template from .claude/skills/release/templates/PUBLIC-NOTES.tmpl.md and use it as the format for the notes output.
+Read the PUBLIC-NOTES template from plugins/oss/skills/release/templates/PUBLIC-NOTES.tmpl.md and use it as the format for the notes output.
 
 ### CHANGELOG Entry (`changelog`)
 
-Read the CHANGELOG entry template from .claude/skills/release/templates/CHANGELOG.tmpl.md and use it as the format.
+Read the CHANGELOG entry template from plugins/oss/skills/release/templates/CHANGELOG.tmpl.md and use it as the format.
 
 ### Internal Release Summary (`summary`)
 
-Read the internal release summary template from .claude/skills/release/templates/SUMMARY.tmpl.md and use it as the format.
+Read the internal release summary template from plugins/oss/skills/release/templates/SUMMARY.tmpl.md and use it as the format.
 
 ### Migration Guide (`migration`)
 
-Read the migration guide template from .claude/skills/release/templates/MIGRATION.tmpl.md and use it as the format.
+Read the migration guide template from plugins/oss/skills/release/templates/MIGRATION.tmpl.md and use it as the format.
 
 ## Step 5: Writing guidelines
 
-Read the writing guidelines from .claude/skills/release/guidelines/writing-rules.md and follow them.
+Read the writing guidelines from plugins/oss/skills/release/guidelines/writing-rules.md and follow them.
 
-After applying the guidelines above to polish the output, write to disk per mode:
+After applying the guidelines above to polish the output, for `notes` and `changelog` modes dispatch shepherd for public-facing voice and tone review before writing to disk:
+
+```bash
+# Pre-compute shepherd run dir (file-handoff protocol)
+SHEPHERD_DIR=".temp/release-shepherd-$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')-$(date +%Y-%m-%d)"
+mkdir -p "$SHEPHERD_DIR"
+# Write the generated draft content to: $SHEPHERD_DIR/draft.md before dispatching
+```
+
+```
+Agent(subagent_type="oss:shepherd", prompt="Review the draft release content at <$SHEPHERD_DIR/draft.md> for public-facing voice and tone. Apply shepherd voice guidelines: human and direct, no internal jargon, no staff names, no internal maintenance details. Write the revised content to <$SHEPHERD_DIR/shepherd-revised.md>. Return ONLY: {\"status\":\"done\",\"changes\":N,\"file\":\"<$SHEPHERD_DIR/shepherd-revised.md>\"}")
+```
+
+Read `$SHEPHERD_DIR/shepherd-revised.md` and use it as the final content for writing to disk. For `summary` and `migration` modes, shepherd is not dispatched — proceed directly to writing.
+
+Write to disk per mode:
 
 - **`notes`**: write to `PUBLIC-NOTES.md` at the repo root. Notify: `→ written to PUBLIC-NOTES.md`
 - **`changelog`**: prepend the entry to `CHANGELOG.md` after the `# Changelog` heading (create the file with that heading if it does not exist). Notify: `→ prepended to CHANGELOG.md`
@@ -194,7 +209,7 @@ Run all checks from **Mode: audit** with `$VERSION` as the target. Present the r
 
 ### Phase 2: Gather and classify changes
 
-Run **Steps 1–2** to gather and classify all commits in `$RANGE`.
+Run **Steps 1–2 (main workflow Step 1: Gather changes, Step 2: Classify each change)** to gather and classify all commits in `$RANGE`.
 
 Note whether any **Breaking Changes** were classified — this gates Phase 3d.
 
@@ -207,7 +222,7 @@ mkdir -p "$RELEASE_DIR"
 
 Write each artifact in sequence:
 
-**a. `releases/$VERSION/PUBLIC-NOTES.md`** — user-facing notes (Step 3 `notes` format).
+**a. `releases/$VERSION/PUBLIC-NOTES.md`** — user-facing notes (Step 3 `notes` format). Shepherd voice review applies per Step 5.
 
 **b. `CHANGELOG.md`** — prepend entry stamped `$VERSION — $DATE` (Step 3 `changelog` format) to the root `CHANGELOG.md`. This file is cumulative — it is not versioned per release. Create it with a `# Changelog` header if it does not exist.
 
@@ -243,7 +258,7 @@ Write each artifact in sequence:
 
 **Purpose**: Pre-release readiness check — surfaces outstanding work, alignment gaps, and blocking issues before cutting a release.
 
-Read and execute all checks from `.claude/skills/release/templates/audit-checks.md`. Checks cover: version consistency across manifests, docs/CHANGELOG alignment, open blocking issues, dependency CVE scan, and unreleased commits since last tag.
+Read and execute all checks from `plugins/oss/skills/release/templates/audit-checks.md`. Checks cover: version consistency across manifests, docs/CHANGELOG alignment, open blocking issues, dependency CVE scan, and unreleased commits since last tag.
 
 After the readiness table, if any issues were found, append a **Findings summary** table with one row per issue:
 

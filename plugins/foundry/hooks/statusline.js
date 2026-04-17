@@ -110,7 +110,7 @@ process.stdin.on("end", () => {
       orange: "\x1b[33m", // closest ANSI to orange
       pink: "\x1b[95m", // bright magenta
       purple: "\x1b[94m", // bright blue
-      teal: "\x1b[96m", // bright cyan — reserved (no agent declares this color)
+      teal: "\x1b[96m", // bright cyan — used by linting-expert, perf-optimizer
       violet: "\x1b[35m", // magenta (closest ANSI) — reserved (no agent declares this color)
       yellow: "\x1b[93m", // bright yellow
     };
@@ -210,8 +210,19 @@ process.stdin.on("end", () => {
           const key = isGeneral ? `model:${model}` : `type:${a.type}`;
           const isGray = isGeneral || model === "inherit";
           const label = isGeneral ? model : a.type;
-          // Use agent's declared color (from frontmatter) if available and not gray
-          const ansiColor = !isGray && a.color ? COLOR_MAP[a.color] || "" : "";
+          // Use agent's declared color (from frontmatter) if available and not gray.
+          // Fallback: hash the agent type name to a stable palette color so typed agents
+          // never render gray even when their frontmatter file isn't found.
+          let ansiColor = "";
+          if (!isGray) {
+            if (a.color && COLOR_MAP[a.color]) {
+              ansiColor = COLOR_MAP[a.color];
+            } else {
+              const palette = Object.values(COLOR_MAP);
+              const hash = [...(a.type || "")].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0);
+              ansiColor = palette[Math.abs(hash) % palette.length];
+            }
+          }
           if (!groups.has(key)) groups.set(key, { label, isGray, ansiColor, count: 0 });
           groups.get(key).count++;
         }

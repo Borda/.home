@@ -3,7 +3,7 @@ name: distill
 description: One-time snapshot that extracts patterns from work history and accumulated lessons, then distills them into concrete improvements — new agent/skill suggestions, roster quality review, memory pruning, or consolidating lessons and feedback into rules and agent/skill updates.
 argument-hint: '[review | prune | lessons | "<recurring task description>"]'
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash, Glob, Grep, Write, AskUserQuestion
+allowed-tools: Read, Edit, Bash, Glob, Grep, Write, AskUserQuestion, Agent
 effort: high
 ---
 
@@ -318,6 +318,14 @@ Applied N changes — <date>
 ```
 
 3. Remind the user: "Run `/foundry:init` to propagate rule changes to `~/.claude/`"
+
+**Step L5: Self-mentor review** — after applying changes, dispatch self-mentor to audit the created and modified config files:
+
+```
+Agent(subagent_type="foundry:self-mentor", prompt="Review the following Claude config files just created or modified by /distill:lessons: <list new rule files and updated agent/skill files from Step L4>. Check: (1) quality — rules are concrete, not vague; (2) duplication — no overlap with existing files; (3) NOT-for boundary clarity; (4) structural consistency. Return a prioritized report of issues; note advisory vs. blocking.")
+```
+
+Surface self-mentor findings as an advisory block in terminal output. Do not block on self-mentor findings — they are quality recommendations, not release gates.
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 

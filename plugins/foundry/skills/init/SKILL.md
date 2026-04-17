@@ -248,10 +248,6 @@ Suggest: "Re-run `/foundry:init` after any plugin upgrade to refresh symlinks to
 
 <notes>
 
-**Testing init changes**: The init skill has no `.claude/skills/init` entry — it is only reachable as `/foundry:init` after the plugin is installed. To test changes: bump `version` in `plugins/foundry/.claude-plugin/plugin.json`, then run `claude plugin install foundry@borda-ai-home` from the repo root to refresh the cache, then invoke `/foundry:init`.
-
-**Why no agent or skill symlinks?** The Claude Code plugin system natively exposes all plugin skills and agents at root namespace. Agents must always be referenced with the full plugin prefix (`foundry:sw-engineer`, not `sw-engineer`) for unambiguous dispatch regardless of what symlinks exist. Init therefore creates no agent or skill symlinks.
-
-**Upgrade path**: After `claude plugin install foundry@borda-ai-home` upgrades the version, symlinks will point to the old cache path. Re-run `/foundry:init` — Step 7 detects stale symlinks as conflicts and replaces them.
+**Testing init changes**: The init skill has no `.claude/skills/init` entry — it is only reachable as `/foundry:init` after the plugin is installed. To test changes: bump `version` in `plugins/foundry/.claude-plugin/plugin.json`, then run `claude plugin install foundry@borda-ai-home` from the repo root to refresh the cache, then invoke `/foundry:init`. **Upgrade path**: After `claude plugin install foundry@borda-ai-home` upgrades the version, symlinks will point to the old cache path. Re-run `/foundry:init` — Step 7 detects stale symlinks as conflicts and replaces them.
 
 </notes>

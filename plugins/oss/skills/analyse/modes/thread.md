@@ -2,7 +2,20 @@
 
 All three are GitHub conversation threads — same analysis structure, different API fetch. `TYPE` is set by auto-detection in SKILL.md (`issue`, `discussion`, or `pr`). `NUMBER` = the item number (strip `discussion ` prefix if present).
 
-**Cache check first**: if `$CACHE_FILE` exists (see SKILL.md Cache layer), read `item` and `comments` from it — skip the primary fetch. Still run wide-net searches (never cached). For PRs: `gh pr checks` and `gh pr diff` are never cached — always live.
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent           | Fallback          | Model  | Role description prefix                                                                                           |
+| ----------------------- | ----------------- | ------ | ----------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`   | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
+| `foundry:qa-specialist` | `general-purpose` | `opus` | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`    |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
+**Cache check first**: if `$CACHE_FILE` exists — this variable is set by the parent `analyse/SKILL.md` Cache layer; see that file for the keying convention — read `item` and `comments` from it — skip the primary fetch. Still run wide-net searches (never cached). For PRs: `gh pr checks` and `gh pr diff` are never cached — always live.
 
 If cache miss, run all fetches in parallel:
 

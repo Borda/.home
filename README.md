@@ -147,20 +147,20 @@ borda.ai-home/
 
 Specialist roles with deep domain knowledge — requested by name, or auto-selected by Claude Code and Codex CLI.
 
-| Agent                  | Plugin   | Claude | Codex | Purpose                                                       |
-| ---------------------- | -------- | ------ | ----- | ------------------------------------------------------------- |
-| **doc-scribe**         | foundry  | ✓      | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references     |
-| **linting-expert**     | foundry  | ✓      | ✓     | ruff, mypy, pre-commit, type annotations                      |
-| **perf-optimizer**     | foundry  | ✓      | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
-| **qa-specialist**      | foundry  | ✓      | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
-| **self-mentor**        | foundry  | ✓      | ✓     | Config quality review, duplication detection, cross-ref audit |
-| **solution-architect** | foundry  | ✓      | ✓     | System design, ADRs, API surface, migration plans             |
-| **sw-engineer**        | foundry  | ✓      | ✓     | Architecture, implementation, SOLID principles, type safety   |
-| **web-explorer**       | foundry  | ✓      | ✓     | API version comparison, migration guides, PyPI tracking       |
-| **ci-guardian**        | oss      | ✓      | ✓     | GitHub Actions, test matrices, flaky test detection, caching  |
-| **shepherd**           | oss      | ✓      | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
-| **data-steward**       | research | ✓      | ✓     | Dataset versioning, split validation, leakage detection       |
-| **scientist**          | research | ✓      | —     | Paper analysis, hypothesis generation, experiment design      |
+| Agent                  | Claude [plugins] | Codex | Purpose                                                       |
+| ---------------------- | ---------------- | ----- | ------------------------------------------------------------- |
+| **doc-scribe**         | foundry          | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references     |
+| **linting-expert**     | foundry          | ✓     | ruff, mypy, pre-commit, type annotations                      |
+| **perf-optimizer**     | foundry          | —     | Profile-first CPU/GPU/memory/I/O, torch.compile               |
+| **qa-specialist**      | foundry          | ✓     | pytest, hypothesis, mutation testing, ML test patterns        |
+| **self-mentor**        | foundry          | ✓     | Config quality review, duplication detection, cross-ref audit |
+| **solution-architect** | foundry          | ✓     | System design, ADRs, API surface, migration plans             |
+| **sw-engineer**        | foundry          | ✓     | Architecture, implementation, SOLID principles, type safety   |
+| **web-explorer**       | foundry          | ✓     | API version comparison, migration guides, PyPI tracking       |
+| **ci-guardian**        | oss              | ✓     | GitHub Actions, test matrices, flaky test detection, caching  |
+| **shepherd**           | oss              | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing |
+| **data-steward**       | research         | ✓     | Dataset versioning, split validation, leakage detection       |
+| **scientist**          | research         | —     | Paper analysis, hypothesis generation, experiment design      |
 
 ## 🤖 Claude Code
 

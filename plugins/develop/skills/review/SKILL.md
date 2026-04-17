@@ -32,6 +32,23 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 
 <workflow>
 
+## Agent Resolution
+
+> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
+
+When foundry is **not** installed, substitute `foundry:X` references with `general-purpose` and prepend the role description plus `model: <model>` to the spawn call:
+
+| foundry agent                | Fallback          | Model    | Role description prefix                                                                                                     |
+| ---------------------------- | ----------------- | -------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `foundry:sw-engineer`        | `general-purpose` | `opus`   | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.`           |
+| `foundry:qa-specialist`      | `general-purpose` | `opus`   | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.`              |
+| `foundry:perf-optimizer`     | `general-purpose` | `opus`   | `You are a performance engineer. Profile before changing. Focus on CPU/GPU/memory/IO bottlenecks in Python/ML workloads.`   |
+| `foundry:doc-scribe`         | `general-purpose` | `sonnet` | `You are a documentation specialist. Write Google-style docstrings and keep README content accurate and concise.`           |
+| `foundry:linting-expert`     | `general-purpose` | `haiku`  | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
+| `foundry:solution-architect` | `general-purpose` | `opus`   | `You are a system design specialist. Produce ADRs, interface specs, and API contracts — read code, produce specs only.`     |
+
+Skills with `--team` mode: team spawning with fallback agents still works but produces lower-quality output.
+
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
 - status `completed` if the work is clearly done
@@ -130,6 +147,8 @@ REVIEW_CHECKLIST="${OSS_ROOT}/skills/review/checklist.md"
 
 Replace `$REVIEW_CHECKLIST` in the Agent 1 and consolidator spawn prompts below with the resolved path.
 
+<!-- Note: $REVIEW_CHECKLIST must be pre-expanded before inserting into spawn prompts — replace with the literal path string from the bash block above, same as $RUN_DIR. -->
+
 Launch agents simultaneously with the Agent tool (security augmentation is folded into Agent 1 — not a separate spawn; Agent 6 is optional). Every agent prompt must end with:
 
 > "Write your FULL findings (all sections, Confidence block) to `$RUN_DIR/<agent-name>.md` using the Write tool — where `<agent-name>` is e.g. `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:solution-architect`. Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":1,\"medium\":2},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.88}`"
@@ -185,7 +204,7 @@ Before constructing the output path, extract the current branch and date: `BRANC
 
 Spawn a **foundry:sw-engineer** consolidator agent with this prompt:
 
-> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `.claude/skills/review/checklist.md` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75. Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip any that are missing). Read `$REVIEW_CHECKLIST` using the Read tool and apply the consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply the precision gate: only include findings with a concrete, actionable location (function, line range, or variable name). Apply the finding density rule: for modules under 100 lines, aim for ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include its unique findings under a `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep the agent version, mark as 'also flagged by Codex'). Parse each agent's `confidence` from its envelope; assign `codex` a fixed confidence of 0.75. Write the consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using the Write tool. Return ONLY a one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
 
 Main context receives only the one-liner verdict.
 

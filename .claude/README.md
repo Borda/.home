@@ -9,7 +9,8 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 
 - [♻️ Restore This Setup](#%EF%B8%8F-restore-this-setup)
 - [🔄 Distribution](#-distribution)
-- [🔌 MCP Servers](#-mcp-servers)
+- [📦 Plugin Architecture](#-plugin-architecture)
+- [🔌 Recommended Add-ons](#-recommended-add-ons)
 - [🧩 Agents](#-agents)
   - [Reference table](#reference-table)
   - [Agent relationship map](#agent-relationship-map)
@@ -88,19 +89,69 @@ plugins/foundry/           ← source of truth
 
 **statusLine path:** home `settings.json` uses `$HOME` prefix (`node $HOME/.claude/hooks/statusline.js`) — `/foundry:init` sets this automatically.
 
-## 🔌 MCP Servers
+## 📦 Plugin Architecture
 
-Two optional MCP servers are defined in `.mcp.json` at the repo root. Both are **disabled by default** and must be enabled per-machine. Copy to home manually: `cp .mcp.json ~/.claude/.mcp.json`.
+```
+   ╔══════════════════════════════════╗
+   ║  🟠 foundry  [OPTIONAL]          ║
+   ╟────────────────────┬─────────────╢
+   ║  agents            │  skills     ║
+   ║  sw-engineer       │  audit      ║
+   ║  qa-specialist     │  calibrate  ║
+   ║  linting-expert    │  manage     ║
+   ║  perf-optimizer    │  brainstorm ║
+   ║  solution-architect│  investigate║
+   ║  doc-scribe        │  session    ║
+   ║  web-explorer      │  distill    ║
+   ║  self-mentor       │             ║
+   ╚════════════════════╨═════════════╝
+                :
+                :····························:····························:
+                :                            :                            :
+   ╔═════════════════════════╗  ╔═════════════════════════╗  ╔═════════════════════════╗
+   ║       🟡 develop        ║  ║        🟢 oss           ║  ║     🟣 research         ║
+   ║  agents    │  skills    ║  ║  agents    │  skills    ║  ║  agents    │  skills    ║
+   ╟────────────┬────────────╢  ╟────────────┬────────────╢  ╟────────────┬────────────╢
+   ║ {sw-eng}   │  feature   ║  ║ ci-guard   │  analyse   ║  ║ scientist  │  topic     ║
+   ║ {qa-spec}  │  fix       ║  ║ shepherd   │  review    ║  ║ data-stew  │  plan      ║
+   ║ {linting}  │  refactor  ║  ║ {sw-eng}   │  resolve   ║  ║ {sw-eng}   │  judge     ║
+   ║ {doc}      │  plan      ║  ║ {qa-spec}  │  release   ║  ║ {linting}  │  run       ║
+   ║            │  debug     ║  ║ {linting}  │            ║  ║ {perf-opt} │  sweep     ║
+   ║            │  review    ║  ║ {perf-opt} │            ║  ║ {web-exp}  │            ║
+   ╚════════════╧════════════╝  ║ {sol-arch} │            ║  ╚════════════╧════════════╝
+                                ╚════════════╧════════════╝
+   {name} = uses foundry agent (not defined in plugin)
+```
 
-### openspace
+Each plugin is fully self-contained and can be installed in any order or combination — every `SKILL.md` carries inline agent fallback tables so that, without foundry, agent dispatches resolve to a `general-purpose` model prefixed with a role description. Installing foundry replaces those fallbacks with purpose-built specialized agents (each tuned to the right model tier and domain constraints), which is the recommended setup. The four plugins are composable: install only what you need, and add foundry whenever you want the quality upgrade.
 
-[HKUDS/OpenSpace](https://github.com/HKUDS/OpenSpace) is a local MCP server that exposes skill-evolving tools (`execute_task`, `search_skills`, `fix_skill`, `upload_skill`). Integrated to reduce token consumption on repeated tasks — skills auto-improve through use (~46% fewer tokens on warm reruns). Enable by adding `"openspace"` to `enabledMcpjsonServers` in `settings.local.json`.
+## 🔌 Recommended Add-ons
 
-→ Install and setup: [HKUDS/OpenSpace](https://github.com/HKUDS/OpenSpace)
+Optional external tools that integrate with this setup. All are **disabled by default** and must be enabled per-machine.
 
-### colab-mcp
+### Codex plugin
 
-Used by `/research:run --colab` for GPU workloads via Google Colab. See the `/research:run` skill examples for usage. Enable by adding `"colab-mcp"` to `enabledMcpjsonServers`.
+The [Codex plugin](https://github.com/openai/codex-plugin-cc) adds a local OpenAI Codex agent as a Tier 1 pre-pass reviewer and autonomous executor. Used by `/develop:fix`, `/develop:feature`, `/oss:review`, `/oss:resolve`, `/calibrate`, and `/research:run`.
+
+Install inside Claude Code:
+
+```text
+/plugin marketplace add openai/codex-plugin-cc
+/plugin install codex@openai-codex
+/reload-plugins
+```
+
+→ Full invocation map and architecture: [Integration with Codex](#-integration-with-codex)
+
+### OpenSpace (MCP)
+
+[HKUDS/OpenSpace](https://github.com/HKUDS/OpenSpace) is a local MCP server exposing skill-evolving tools (`execute_task`, `search_skills`, `fix_skill`, `upload_skill`) — skills auto-improve through use (~46% fewer tokens on warm reruns). Enable by adding `"openspace"` to `enabledMcpjsonServers` in `settings.local.json`.
+
+### Colab MCP
+
+Used by `/research:run --colab` for GPU workloads via Google Colab. Enable by adding `"colab-mcp"` to `enabledMcpjsonServers` in `settings.local.json`.
+
+MCP servers are defined in `.mcp.json` at the repo root — copy to home: `cp .mcp.json ~/.claude/.mcp.json`.
 
 ## 🧩 Agents
 
@@ -110,16 +161,16 @@ Used by `/research:run --colab` for GPU workloads via Google Colab. See the `/re
 | ------------------------- | --------------------------------------------- | ---------------------------------------------------------------------------------------------------------------- |
 | **🟠 sw-engineer**        | Architecture and implementation               | SOLID principles, type safety, clean architecture, doctest-driven dev                                            |
 | **🟠 solution-architect** | System design and API planning                | ADRs, interface specs, migration plans, coupling analysis, API surface audit                                     |
-| **🟢 shepherd**           | Project lifecycle management                  | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
-| **🟣 scientist**          | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
 | **🟠 qa-specialist**      | Testing and validation                        | pytest, hypothesis, mutation testing, snapshot tests, ML test patterns; auto-includes OWASP Top 10 in teams      |
 | **🟠 linting-expert**     | Code quality and static analysis              | ruff, mypy, pre-commit, rule selection strategy, CI quality gates; runs autonomously (`permissionMode: dontAsk`) |
 | **🟠 perf-optimizer**     | Performance engineering                       | Profile-first workflow, CPU/GPU/memory/I/O, torch.compile, mixed precision                                       |
-| **🟢 ci-guardian**        | CI/CD reliability                             | GitHub Actions, reusable workflows, trusted publishing, flaky test detection                                     |
-| **🟣 data-steward**       | Data lifecycle — acquisition and ML pipelines | API completeness, dataset versioning, split validation, leakage detection, data contracts                        |
 | **🟠 doc-scribe**         | Documentation                                 | Google/Napoleon docstrings (no type duplication), Sphinx/mkdocs, API references                                  |
 | **🟠 web-explorer**       | Web and docs research                         | API version comparison, migration guides, PyPI tracking, ecosystem compat                                        |
 | **🟠 self-mentor**        | Config quality reviewer                       | Agent/skill auditing, duplication detection, cross-ref validation, line budgets                                  |
+| **🟢 shepherd**           | Project lifecycle management                  | Issue triage, PR review, SemVer, pyDeprecate, trusted publishing                                                 |
+| **🟢 ci-guardian**        | CI/CD reliability                             | GitHub Actions, reusable workflows, trusted publishing, flaky test detection                                     |
+| **🟣 scientist**          | ML research and implementation                | Paper analysis, experiment design, LLM evaluation, inference optimization                                        |
+| **🟣 data-steward**       | Data lifecycle — acquisition and ML pipelines | API completeness, dataset versioning, split validation, leakage detection, data contracts                        |
 
 ### Agent relationship map
 
@@ -434,19 +485,19 @@ Each mode enforces a validation gate *before* writing implementation code:
 
 | Caller ↓ / Called →       | 🟠sm | 🟠sw | 🟠qa | 🟠lint | 🟠arch | 🟠perf | 🟠doc | 🟠web | 🟢cig | 🟢shep | 🟣sci | 🟣ds | 🔷cx |
 | ------------------------- | ---- | ---- | ---- | ------ | ------ | ------ | ----- | ----- | ----- | ------ | ----- | ---- | ---- |
-| **🟠 self-mentor**        |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 sw-engineer**        |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 qa-specialist**      |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 linting-expert**     |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 solution-architect** |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 perf-optimizer**     |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟠 doc-scribe**         |      | °    |      | °      |        |        |       |       |       | °      |       |      |      |
-| **🟠 web-explorer**       |      |      |      |        |        |        |       |       |       |        |       |      |      |
-| **🟢 ci-guardian**        |      |      |      | °      |        |        |       |       |       | °      |       |      |      |
-| **🟢 shepherd**           |      |      |      |        |        |        | °     |       | °     |        |       |      |      |
-| **🟣 scientist**          |      | °    | °    |        |        | °      |       | °     |       |        |       | °    |      |
-| **🟣 data-steward**       |      |      |      |        |        |        |       | →     |       |        | °     |      |      |
-| **🔷 codex-rescue**       |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **self-mentor**        |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **sw-engineer**        |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **qa-specialist**      |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **linting-expert**     |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **solution-architect** |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **perf-optimizer**     |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟠 **doc-scribe**         |      | °    |      | °      |        |        |       |       |       | °      |       |      |      |
+| 🟠 **web-explorer**       |      |      |      |        |        |        |       |       |       |        |       |      |      |
+| 🟢 **ci-guardian**        |      |      |      | °      |        |        |       |       |       | °      |       |      |      |
+| 🟢 **shepherd**           |      |      |      |        |        |        | °     |       | °     |        |       |      |      |
+| 🟣 **scientist**          |      | °    | °    |        |        | °      |       | °     |       |        |       | °    |      |
+| 🟣 **data-steward**       |      |      |      |        |        |        |       | →     |       |        | °     |      |      |
+| 🔷 **codex-rescue**       |      |      |      |        |        |        |       |       |       |        |       |      |      |
 
 <details>
 <summary><strong>Legend</strong></summary>
@@ -461,24 +512,33 @@ Each mode enforces a validation gate *before* writing implementation code:
 
 ### Skills
 
-_Skills with no direct agent calls: init, manage, distill, session (foundry); plan, debug→fix (develop); plan, judge, sweep→run (research)_
+_Empty rows = no direct agent dispatches (intentional, not an omission). ✓ = always spawned · ? = conditional spawn_
 
-| Skill           | plugin      | 🟠sm | 🟠sw | 🟠qa | 🟠lint | 🟠arch | 🟠perf | 🟠doc | 🟠web | 🟢shep | 🟣sci | 🟣ds | 🔷cx |
-| --------------- | ----------- | ---- | ---- | ---- | ------ | ------ | ------ | ----- | ----- | ------ | ----- | ---- | ---- |
-| **brainstorm**  | 🟠 foundry  | ✓    |      |      |        |        |        |       |       |        |       |      |      |
-| **investigate** | 🟠 foundry  |      |      |      |        |        |        |       |       |        |       |      | ✓    |
-| **audit**       | 🟠 foundry  | ✓    |      |      |        |        |        |       | ✓     |        |       |      |      |
-| **calibrate**   | 🟠 foundry  | ✓    | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     | ✓     | ✓      | ✓     | ✓    |      |
-| **review**      | 🟢 oss      |      | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     |       | ✓      |       |      | ✓    |
-| **analyse**     | 🟢 oss      |      |      |      |        |        |        |       |       | ✓      |       |      |      |
-| **release**     | 🟢 oss      |      |      |      |        |        |        |       | ✓     |        |       |      |      |
-| **resolve**     | 🟢 oss      |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
-| **review**      | 🟡 develop  |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
-| **feature**     | 🟡 develop  |      | ✓    | ✓    | ✓      |        |        | ✓     |       |        |       |      | ✓    |
-| **fix**         | 🟡 develop  |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
-| **refactor**    | 🟡 develop  |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
-| **topic**       | 🟣 research |      |      |      |        |        |        |       | ✓     |        | ✓     |      |      |
-| **run**         | 🟣 research |      | ✓    |      |        | ?      | ✓      |       |       |        | ✓     | ✓    | ✓    |
+| Skill              | 🟠sm | 🟠sw | 🟠qa | 🟠lint | 🟠arch | 🟠perf | 🟠doc | 🟠web | 🟢shep | 🟣sci | 🟣ds | 🔷cx |
+| ------------------ | ---- | ---- | ---- | ------ | ------ | ------ | ----- | ----- | ------ | ----- | ---- | ---- |
+| 🟠 **brainstorm**  | ✓    |      |      |        |        |        |       |       |        |       |      |      |
+| 🟠 **investigate** |      |      |      |        |        |        |       |       |        |       |      | ✓    |
+| 🟠 **audit**       | ✓    | ✓    |      |        |        |        |       | ✓     |        |       |      | ✓    |
+| 🟠 **calibrate**   | ✓    | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     | ✓     | ✓      | ✓     | ✓    | ✓    |
+| 🟠 **manage**      | ✓    | ✓    |      |        |        |        |       | ✓     |        |       |      |      |
+| 🟠 **init**        |      |      |      |        |        |        |       |       |        |       |      |      |
+| 🟠 **distill**     | ✓    |      |      |        |        |        |       |       |        |       |      |      |
+| 🟠 **session**     |      |      |      |        |        |        |       |       |        |       |      |      |
+| 🟢 **review**      |      | ✓    | ✓    | ✓      | ✓      | ✓      | ✓     |       | ✓      |       |      | ✓    |
+| 🟢 **analyse**     |      |      |      |        |        |        |       |       | ✓      |       |      |      |
+| 🟢 **release**     |      |      |      |        |        |        |       |       | ✓      |       |      |      |
+| 🟢 **resolve**     |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
+| 🟡 **review**      |      | ✓    | ✓    | ✓      | ?      | ✓      | ✓     |       |        |       |      | ✓    |
+| 🟡 **feature**     |      | ✓    | ✓    | ✓      |        |        | ✓     |       |        |       |      | ✓    |
+| 🟡 **fix**         |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
+| 🟡 **refactor**    |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      | ✓    |
+| 🟡 **plan**        |      | ✓    | ✓    | ✓      |        |        |       |       |        |       |      |      |
+| 🟡 **debug**       |      | ✓    |      |        |        |        |       |       |        |       |      |      |
+| 🟣 **topic**       |      |      |      |        | ?      |        |       |       |        | ✓     |      |      |
+| 🟣 **run**         |      | ✓    |      | ✓      | ?      | ✓      |       |       |        | ✓     |      | ✓    |
+| 🟣 **judge**       |      |      |      |        | ✓      |        |       |       |        | ✓     |      | ✓    |
+| 🟣 **plan**        |      |      |      |        | ✓      | ?      |       |       |        | ?     |      |      |
+| 🟣 **sweep**       |      | ✓    |      | ✓      | ✓      | ✓      |       |       |        | ✓     |      | ✓    |
 
 ## 📐 Rules
 
@@ -736,15 +796,7 @@ Row 2:  🕵 2 agents (self-mentor, sw-engineer) │ 🤖 codex-rescue │ 🔧 
 
 → Full architecture: [root README → Claude + Codex integration](../README.md#-claude--codex-integration)
 
-### Setup
-
-Install the Codex plugin in Claude Code — not an MCP server, a local plugin:
-
-```text
-/plugin marketplace add openai/codex-plugin-cc
-/plugin install codex@openai-codex
-/reload-plugins
-```
+→ Install: see [Recommended Add-ons → Codex plugin](#-recommended-add-ons)
 
 ### Skills digestion
 

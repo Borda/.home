@@ -130,7 +130,7 @@ Design one targeted test per hypothesis that gives a clear confirm/rule-out sign
 python3 -c "import sys; print(sys.executable, sys.version)"
 
 # Missing allow entry: check home settings.json allow list
-cat ~/.claude/settings.json | jq -r '.permissions.allow[]'
+jq -r '.permissions.allow[]' ~/.claude/settings.json
 
 # Hook path wrong: verify hook file exists
 ls -la ~/.claude/hooks/
@@ -158,7 +158,7 @@ Stop when one hypothesis is confirmed with clear evidence, or all top-3 are rule
 
 **Recommended next action**: <one of:>
   - `/develop:fix` — code regression confirmed (application code only — NOT for `.claude/` changes)
-  - `/manage update <name> "<change directive>"` — `.claude/` agent/skill/rule content needs updating (use this, NOT `/develop`, for any proposed change to `.claude/`)
+  - `/manage update <name> "<change directive>"` — `.claude/` agent/skill/rule content needs updating (use this, NOT `/develop:feature or /develop:fix`, for any proposed change to `.claude/`)
   - `/audit fix` — structural/quality issue in `.claude/` config confirmed
   - `/foundry:init` — propagate project `.claude/` to `~/.claude/` (foundry plugin is the distribution path)
   - Manual step: <exact command to run>
