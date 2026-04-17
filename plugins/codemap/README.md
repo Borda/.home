@@ -6,8 +6,7 @@ Scan your Python project once. Every agent, skill, and developer session answers
 
 > [!TIP] Standalone — no other plugins required. Pairs with the `develop` plugin: `develop:feature`, `develop:fix`, `develop:plan`, and `develop:refactor` pick up the index automatically.
 
-> [!NOTE]
-> **Python only.** `scan-index` uses `ast.parse` — it indexes `.py` files exclusively. JavaScript, TypeScript, Go, Rust, and other languages are not supported.
+> [!NOTE] **Python only.** `scan-index` uses `ast.parse` — it indexes `.py` files exclusively. JavaScript, TypeScript, Go, Rust, and other languages are not supported.
 
 ## 📋 Contents
 
@@ -20,7 +19,6 @@ Scan your Python project once. Every agent, skill, and developer session answers
 - [Integrating codemap](#-integrating-codemap)
 - [Overview](#-overview)
 - [Plugin details](#-plugin-details)
-
 
 ## 🎯 Why
 
@@ -90,7 +88,6 @@ scan-query list                     # enumerate all indexed modules
 ```
 
 All output is JSON — pipe directly into your analysis or pass to an agent.
-
 
 ### Wire into your skills
 
@@ -350,14 +347,14 @@ The fastest path is the integration skill — it discovers your installed skills
 
 ### Query reference — which command to use when
 
-| Situation | Query |
+| Situation                              | Query                                   |
 | -------------------------------------- | --------------------------------------- |
-| "What breaks if I change X?" | `rdeps X` |
-| "What does X pull in?" | `deps X` |
-| "Are A and B already coupled?" | `path A B` — `null` means not connected |
+| "What breaks if I change X?"           | `rdeps X`                               |
+| "What does X pull in?"                 | `deps X`                                |
+| "Are A and B already coupled?"         | `path A B` — `null` means not connected |
 | "What's the riskiest module to touch?" | `central --top 10` (highest rdep_count) |
-| "What's the most entangled module?" | `coupled --top 10` (highest dep_count) |
-| "List all modules in the project" | `list` |
+| "What's the most entangled module?"    | `coupled --top 10` (highest dep_count)  |
+| "List all modules in the project"      | `list`                                  |
 
 <details>
 <summary>Manual injection — adding codemap to a custom skill or agent</summary>
@@ -408,10 +405,10 @@ fi
 
 ### 3 Skills
 
-| Skill           | Trigger                            | What it does                                                                  |
-| --------------- | ---------------------------------- | ----------------------------------------------------------------------------- |
-| **scan**        | `/codemap:scan`                    | Runs `ast.parse` across all Python files; writes `.cache/scan/<project>.json` |
-| **query**       | `/codemap:query`                   | Queries the index; checks staleness on every call; returns JSON               |
+| Skill           | Trigger                            | What it does                                                                    |
+| --------------- | ---------------------------------- | ------------------------------------------------------------------------------- |
+| **scan**        | `/codemap:scan`                    | Runs `ast.parse` across all Python files; writes `.cache/scan/<project>.json`   |
+| **query**       | `/codemap:query`                   | Queries the index; checks staleness on every call; returns JSON                 |
 | **integration** | `/codemap:integration check\|init` | Audits install health (`check`) or onboards codemap into skills/agents (`init`) |
 
 ### 5 CLI Commands

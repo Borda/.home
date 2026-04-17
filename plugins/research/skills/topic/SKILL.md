@@ -204,7 +204,6 @@ Before spawning in Steps R2–R3, pre-compute the output path components: `YYYY=
 
 ### Step R2: Codebase analysis
 
-
 Spawn a **solution-architect** agent with this prompt:
 
 ```

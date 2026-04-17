@@ -14,7 +14,6 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 - [🤖 Claude Code](#-claude-code)
 - [🤖 Codex CLI](#-codex-cli)
 - [🤝 Claude + Codex Integration](#-claude--codex-integration)
-- [🪙 Token Savings (RTK)](#-token-savings-rtk)
 - [🛠 Recommended Add-ons](#-recommended-add-ons)
 - [🔌 Plugin Management](#-plugin-management)
 
@@ -534,13 +533,13 @@ Two optional MCP servers are defined in `.mcp.json` (defined at the repo root; e
 
 ## 🛠 Recommended Add-ons
 
-### 🪙 Token Savings (RTK)
+### Token Savings (RTK)
 
 [RTK](https://github.com/rtk-ai/rtk) is an optional CLI proxy that compresses Bash output (git, pytest, build tools) before it reaches Claude — 60–99% token savings with no workflow changes. A `PreToolUse` hook (`plugins/foundry/hooks/rtk-rewrite.js`) transparently rewrites supported commands across all Claude skills; Codex runs get the same treatment via `.codex/hooks/rtk-enforce.js`. The hook is a no-op when RTK is not installed, so the config stays portable.
 
 → Install instructions: [rtk-ai/rtk](https://github.com/rtk-ai/rtk)
 
-### 🔌 Codex CLI plugin
+### Codex CLI plugin
 
 [openai/codex-plugin-cc](https://github.com/openai/codex-plugin-cc) connects the Codex CLI to Claude Code as a local plugin — enabling the cross-validation, mechanical delegation, and diff pre-pass described in [Claude + Codex Integration](#-claude--codex-integration).
 
@@ -548,17 +547,23 @@ Two optional MCP servers are defined in `.mcp.json` (defined at the repo root; e
 
 > [!NOTE] RTK only compresses **Bash tool output** — shell commands like `git`, `cargo`, `pytest`, etc. It does not affect Claude Code's native tools (Read, Grep, Glob, Edit, Write), which run inside Claude's own engine and are already token-efficient by design.
 
-### 🖥 cc-Lens
+### cc-Lens
 
 [cc-Lens](https://github.com/Arindam200/cc-lens) is a local analytics dashboard for Claude Code — token/cost trends, tool usage breakdowns, session replay. Reads `~/.claude/` directly, no cloud, no data leaves the machine.
 
 → Run: `npx cc-lens` — no install required
 
-### ☁️ Colab-MCP
+### Colab-MCP
 
 [colab-mcp](https://github.com/googlecolab/colab-mcp) connects Google Colab as a remote GPU executor. Pre-configured in `.mcp.json` (disabled by default) — used by `/research:run --colab` to offload metric-improvement iterations to a cloud GPU without a local CUDA setup. Supports hardware selection: `--colab=H100`, `--colab=L4`, `--colab=T4`, `--colab=A100`.
 
 → Enable: add `"colab-mcp"` to `enabledMcpjsonServers` in `settings.local.json`
+
+### Caveman
+
+[caveman](https://github.com/JuliusBrussee/caveman) makes Claude respond in compressed "caveman speak" — cutting ~75% of output tokens while retaining full technical accuracy. Adjustable intensity levels (lite → full → ultra → 文言文) and a compression tool that also cuts ~46% of input tokens per session.
+
+→ Install: `claude plugin marketplace add JuliusBrussee/caveman && claude plugin install caveman@caveman`
 
 ## 🔌 Plugin Management
 

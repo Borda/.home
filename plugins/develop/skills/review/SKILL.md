@@ -82,7 +82,7 @@ fi
 
 If codemap returns results: prepend a `## Structural Context (codemap)` block to the **Agent 1 (foundry:sw-engineer)** spawn prompt. Include:
 
-- Each changed module's `rdep_count` — label as **high risk** (>20), **moderate** (5–20), or **low** (<5)
+- Each changed module's `rdep_count` — label as **high risk** (>20), **moderate** (5–20), or **low** (\<5)
 - `central --top 5` for project-wide blast-radius reference
 
 Agent 1 uses this to prioritize: modules with high `rdep_count` warrant deeper scrutiny on API compatibility, error handling, and behavioural correctness — downstream callers outside the diff are not otherwise visible to the reviewer. If codemap is not installed or index absent, skip silently.
