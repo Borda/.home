@@ -1,7 +1,7 @@
 {
   "author": {
     "name": "Jirka",
-    "url": "https://github.com/Borda/.ai-home"
+    "url": "https://github.com/Borda/AI-Rig"
   },
   "description": "OSS Claude Code config: agents, skills, and hooks for professional AI-assisted development workflows",
   "keywords": [
@@ -14,6 +14,6 @@
   ],
   "license": "MIT",
   "name": "foundry",
-  "repository": "https://github.com/Borda/.ai-home",
+  "repository": "https://github.com/Borda/AI-Rig",
   "version": "0.1.2"
 }

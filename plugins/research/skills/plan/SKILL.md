@@ -15,6 +15,8 @@ NOT for: running experiments (use `/research:run`); methodology validation (use 
 
 </objective>
 
+<workflow>
+
 ## Agent Resolution
 
 > **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.
@@ -27,8 +29,6 @@ When foundry is **not** installed, substitute foundry agents with `general-purpo
 | `foundry:perf-optimizer`     | `general-purpose` | `opus`     | `You are a performance engineer. Validate that metric_cmd measures the right characteristic and guard_cmd is comprehensive. Return structured JSON only.` |
 
 `research:scientist` is in the same plugin — no fallback needed.
-
-<workflow>
 
 ## Plan Mode (Steps P-P0–P-P3)
 

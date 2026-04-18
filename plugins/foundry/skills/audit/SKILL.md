@@ -360,7 +360,7 @@ Apply this hierarchy to every fix action at all severity levels.
 Choose the fix agent based on file type:
 
 - **`.claude/agents/*.md` and `.claude/skills/*/SKILL.md`** → spawn **foundry:self-mentor** — it has domain expertise in config quality and has `Write`/`Edit` tools
-- **Code files** (`.py`, `.js`, `.ts`, etc.) → spawn **sw-engineer**
+- **Code files** (`.py`, `.js`, `.ts`, etc.) → spawn **foundry:sw-engineer**
 
 **Phase 4 delegation rule**: fix-phase edits that touch >3 files should be delegated to a `foundry:sw-engineer` agent rather than applied inline — pass it the list of findings and target file paths; it applies Edit calls and returns a compact status JSON.
 
@@ -375,7 +375,7 @@ When the finding count exceeds 10 or `fix all` was passed, spawn a dedicated **a
 ```
 Read `<RUN_DIR>/summary.jsonl` — this is the findings list (one JSON object per line).
 Read `.claude/skills/audit/templates/fix-prompt.md` for the per-file fix prompt template.
-For each unique file in the findings list, spawn one fix agent (foundry:self-mentor for .md files, sw-engineer for .js/.py files) with all findings for that file batched into a single prompt.
+For each unique file in the findings list, spawn one fix agent (foundry:self-mentor for .md files, foundry:sw-engineer for .js/.py files) with all findings for that file batched into a single prompt.
 Issue all fix spawns in a single response for parallelism.
 After all fix agents complete, spawn foundry:self-mentor re-audit agents (one per changed file) to confirm fixes held.
 Write a completion summary to `<RUN_DIR>/fix-summary.md`:

@@ -1,7 +1,7 @@
 {
   "author": {
     "name": "Jirka",
-    "url": "https://github.com/Borda/.ai-home"
+    "url": "https://github.com/Borda/AI-Rig"
   },
   "description": "Codebase structural index \u2014 scan Python projects once, query the import graph for blast-radius and coupling before touching code \u2014 Python projects only",
   "keywords": [
@@ -15,6 +15,6 @@
   ],
   "license": "MIT",
   "name": "codemap",
-  "repository": "https://github.com/Borda/.ai-home",
+  "repository": "https://github.com/Borda/AI-Rig",
   "version": "0.1.0"
 }

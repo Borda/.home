@@ -43,11 +43,11 @@ Configuration for [Claude Code](https://claude.ai/code) (Anthropic's AI coding C
 **Step 1** — install the plugins (run from the directory containing your clone):
 
 ```bash
-claude plugin marketplace add ./Borda-AI-Home
-claude plugin install foundry@borda-ai-home
-claude plugin install oss@borda-ai-home
-claude plugin install develop@borda-ai-home
-claude plugin install research@borda-ai-home
+claude plugin marketplace add ./Borda-AI-Rig
+claude plugin install foundry@borda-ai-rig
+claude plugin install oss@borda-ai-rig
+claude plugin install develop@borda-ai-rig
+claude plugin install research@borda-ai-rig
 ```
 
 **Step 2** — run inside Claude Code:
@@ -555,6 +555,7 @@ _Empty rows = no direct agent dispatches (intentional, not an omission). ✓ = a
 | `python-code.md`        | `**/*.py`                       | Python style: docstrings, deprecation (pyDeprecate), library API freshness checks, version policy, PyTorch AMP           |
 | `quality-gates.md`      | (global)                        | Confidence blocks on all analysis tasks, internal quality loop, output routing rules                                     |
 | `testing.md`            | `tests/**/*.py`, `**/test_*.py` | pytest AAA structure, parametrize standards, doctest location (source files, not tests)                                  |
+| `public-github.md`      | (global)                        | Read-only policy for public GitHub operations — permitted reads and forbidden writes                                     |
 
 ### How rules are auto-loaded
 
@@ -761,7 +762,7 @@ Output: JSON with token usage by model (input/output/cache), tool call counts, t
 A lightweight hook (`hooks/statusline.js`) adds a persistent two-row status bar to every Claude Code session:
 
 ```
-Row 1:  claude-sonnet-4-6 │ Borda.ai-home │ Pro ~$1.20 │ ████░░░░░░ 38% │ 💬
+Row 1:  claude-sonnet-4-6 │ Borda.AI-Rig │ Pro ~$1.20 │ ████░░░░░░ 38% │ 💬
 Row 2:  🕵 2 agents (self-mentor, sw-engineer) │ 🤖 codex-rescue │ 🔧 Bash ×3 · Edit · Read ×12
 ```
 

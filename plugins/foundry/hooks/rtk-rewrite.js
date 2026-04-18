@@ -56,6 +56,7 @@ const RTK_PREFIXES = [
   "gh",
   // JS / TS
   "tsc",
+  "jest",
   "vitest",
   "next",
   "pnpm",

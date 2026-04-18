@@ -11,9 +11,11 @@ disable-model-invocation: true
 
 Research-supervisor review of `program.md` — validates experimental methodology and emits an APPROVED / NEEDS-REVISION / BLOCKED verdict before the expensive run loop. Read-only; never modifies code or state.
 
-NOT for: running experiments (use `/research:run`); designing hypotheses (use `scientist` agent); config quality (`/audit`).
+NOT for: running experiments (use `/research:run`); designing hypotheses (use `research:scientist` agent); config quality (`/audit`).
 
 </objective>
+
+<workflow>
 
 ## Agent Resolution
 
@@ -26,8 +28,6 @@ When foundry is **not** installed, substitute `foundry:solution-architect` with 
 | `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate architectural trade-offs, assess scope coverage, and identify missing dependencies. Output structured JSON only.` |
 
 `research:scientist` is in the same plugin as this skill — no fallback needed if the research plugin is installed.
-
-<workflow>
 
 ## --team flag (committee mode)
 

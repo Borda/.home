@@ -27,19 +27,19 @@ Maintaining an open-source project means juggling three competing demands: revie
 ## ⚡ Quick start
 
 ```bash
-# Run from the directory that CONTAINS your Borda-AI-Home clone
-claude plugin marketplace add ./Borda-AI-Home
-claude plugin install oss@borda-ai-home
+# Run from the directory that CONTAINS your Borda-AI-Rig clone
+claude plugin marketplace add ./Borda-AI-Rig
+claude plugin install oss@borda-ai-rig
 ```
 
 <details>
 <summary>Install the full suite</summary>
 
 ```bash
-claude plugin install foundry@borda-ai-home   # base agents — strongly recommended
-claude plugin install oss@borda-ai-home
-claude plugin install develop@borda-ai-home
-claude plugin install research@borda-ai-home
+claude plugin install foundry@borda-ai-rig   # base agents — strongly recommended
+claude plugin install oss@borda-ai-rig
+claude plugin install develop@borda-ai-rig
+claude plugin install research@borda-ai-rig
 ```
 
 </details>
@@ -157,8 +157,8 @@ Tier 2: 6 parallel agents — sw-engineer, qa-specialist, perf-optimizer,
 ### Upgrade
 
 ```bash
-cd Borda-AI-Home && git pull
-claude plugin install oss@borda-ai-home
+cd Borda-AI-Rig && git pull
+claude plugin install oss@borda-ai-rig
 ```
 
 ### Uninstall

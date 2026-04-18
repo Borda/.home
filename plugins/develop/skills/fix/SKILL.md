@@ -11,11 +11,13 @@ disable-model-invocation: true
 
 Reproduce-first bug resolution. Capture the bug in a failing regression test, apply the minimal fix, then verify via quality stack and review loop.
 
-NOT for: unknown failures without a traceback (use `/investigate`); `.claude/` config issues (use `/audit`).
+NOT for: unknown failures without a traceback (use `/foundry:investigate`); `.claude/` config issues (use `/audit`).
 
 </objective>
 
 <workflow>
+
+<!-- Agent Resolution: identical across all develop skills -->
 
 ## Agent Resolution
 

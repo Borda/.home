@@ -106,6 +106,7 @@
   "Bash(basename:*)",
   "Bash(dirname:*)",
   "Bash(node --check:*)",
+  "Bash(scan-query:*)",
   "Bash(find .cache*)",
   "Bash(find .experiments*)",
   "Bash(find .developments*)",

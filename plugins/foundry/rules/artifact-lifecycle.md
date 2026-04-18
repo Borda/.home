@@ -20,7 +20,7 @@ All runtime artifacts live at the **project root**, not inside `.claude/`. Skill
   audit/                 ← /audit skill runs
   review/                ← /review skill runs
   analyse/               ← /analyse skill (thread, ecosystem, health subdirs)
-.experiments/            ← /optimize skill runs (run mode)
+.experiments/            ← /research:run (run mode)
 .developments/           ← /develop review-cycle runs
 .cache/
   gh/                    ← shared GitHub API response cache (cross-skill)
@@ -55,4 +55,4 @@ A completed run always contains `result.jsonl`. Incomplete runs (crashed, timed 
 | `.notes/`                                                                  | manual  | human-maintained                                    |
 | `releases/<version>/`                                                      | manual  | release artefacts; archive or delete after shipping |
 
-Log file TTL and the SessionEnd cleanup hook script are in `.claude/rules/foundry-config.md` (foundry-infrastructure only).
+Log file TTL and the SessionEnd cleanup hook script are in `foundry-config.md` (foundry-infrastructure only).

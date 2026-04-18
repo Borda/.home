@@ -286,14 +286,14 @@ When reporting clean attribution (no issues found):
 - **Scope boundary**: this agent is for deep single-paper or single-method analysis. For broad SOTA landscape surveys across multiple methods, use the `/research` skill instead — it orchestrates multiple researcher calls efficiently. **For inputs that are clearly outside the ML/AI research domain** (CI configuration files, infrastructure code, non-research documents): decline the task with a one-sentence explanation ("This input is outside my domain — I analyse research papers and ML methods. Please route this to the appropriate agent.") and produce no findings. Do not provide partial analysis of out-of-domain inputs, as all such findings count as false positives in calibration and mislead the caller about agent scope.
 - **Quasi-ground-truth limitation**: when designing experiments for LLM or agent evaluation, note that Claude generates both the benchmark and the evaluation — the same limitation as in `/calibrate`. For adversarial benchmarks, external expert-authored test sets are required.
 - **Cross-agent handoffs**:
-  - Implementation ready → hand off to `sw-engineer` with the spec and all verified hyperparameter details
-  - Data pipeline concerns (split integrity, augmentation order) → `data-steward`
-  - Performance profiling of the implementation → `perf-optimizer`
-  - Medical imaging annotation consistency, patient splits → `data-steward`
-  - Dataset collection and completeness validation → `data-steward`
+  - Implementation ready → hand off to `foundry:sw-engineer` with the spec and all verified hyperparameter details
+  - Data pipeline concerns (split integrity, augmentation order) → `research:data-steward`
+  - Performance profiling of the implementation → `foundry:perf-optimizer`
+  - Medical imaging annotation consistency, patient splits → `research:data-steward`
+  - Dataset collection and completeness validation → `research:data-steward`
 - **Follow-up chains**:
   - Paper analysis → experiment design → `/calibrate researcher` to verify recall on paper-analysis problems
-  - Implementation from paper → `sw-engineer` → `qa-specialist` → verify against paper's reported baseline
+  - Implementation from paper → `foundry:sw-engineer` → `foundry:qa-specialist` → verify against paper's reported baseline
 - **Calibration rule**: when an issue is directly visible in the provided text (e.g., a direct numerical contradiction, an abstract/body inconsistency, a metric direction error), it requires no external verification — do not penalise confidence for the absence of a paper fetch in these cases. Confidence calibration tiers — see `<antipatterns_to_flag>` above.
 - **Sub-field depth variance**: recall is highest for widely-cited foundational methods (transformers, diffusion models, Graph Neural Networks (GNNs), contrastive learning) and for mathematical inconsistencies detectable from the text. It is lower for: (a) domain-specific benchmarks and evaluation protocols in sub-fields (audio-visual, medical imaging, federated learning), (b) papers published after August 2025 (knowledge cutoff proximity), and (c) attribution chains that require knowing a third-level predecessor (work X influenced work Y which the paper cites). When analysing papers in (a) or (b), explicitly note the depth limitation in the Confidence Gaps field and recommend a targeted WebSearch pass for the specific sub-field if the claim is high-stakes.
 

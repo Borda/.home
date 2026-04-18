@@ -1,4 +1,4 @@
-# 🏠 Borda's .ai-home
+# 🏠 Borda's AI-Rig
 
 Personal AI coding assistant configuration for Python/ML OSS development. Version-controlled, opinionated, continuously improved.
 
@@ -45,16 +45,16 @@ Managing AI coding workflows for Python/ML OSS is complex — you need domain-aw
 npm install -g @anthropic-ai/claude-code
 
 # 1. Clone (run from the directory that will CONTAIN the clone)
-git clone https://github.com/Borda/.ai-home Borda-AI-Home
+git clone https://github.com/Borda/AI-Rig Borda-AI-Rig
 
 # 2. Register as a local marketplace
-claude plugin marketplace add ./Borda-AI-Home
+claude plugin marketplace add ./Borda-AI-Rig
 
 # 3. Install all four plugins
-claude plugin install foundry@borda-ai-home   # base agents + audit, manage, calibrate, brainstorm, …
-claude plugin install oss@borda-ai-home       # OSS workflow: analyse, review, resolve, release
-claude plugin install develop@borda-ai-home   # development: feature, fix, refactor, plan, debug
-claude plugin install research@borda-ai-home  # ML research: topic, plan, judge, run, sweep
+claude plugin install foundry@borda-ai-rig   # base agents + audit, manage, calibrate, brainstorm, …
+claude plugin install oss@borda-ai-rig       # OSS workflow: analyse, review, resolve, release
+claude plugin install develop@borda-ai-rig   # development: feature, fix, refactor, plan, debug
+claude plugin install research@borda-ai-rig  # ML research: topic, plan, judge, run, sweep
 ```
 
 > [!NOTE] **Safe to install alongside any existing Claude Code setup.** Plugins live in a private cache (`~/.claude/plugins/cache/<plugin>/`) under their own namespace. Your existing `~/.claude/agents/`, `~/.claude/skills/`, and `settings.json` are never modified or overwritten — custom agents and skills you have created remain fully independent. See the [Claude Code plugin reference](https://code.claude.com/docs/en/plugins-reference) for details.
@@ -71,7 +71,7 @@ claude plugin install research@borda-ai-home  # ML research: topic, plan, judge,
 >
 > ```bash
 > npm install -g @openai/codex
-> cp -r Borda-AI-Home/.codex/ ~/.codex/   # Codex agents and profiles
+> cp -r Borda-AI-Rig/.codex/ ~/.codex/   # Codex agents and profiles
 > ```
 
 → See [Token Savings (RTK)](#-token-savings-rtk) for RTK install details.
@@ -104,7 +104,7 @@ Each command chains agents in a defined topology — see [Common Workflow Sequen
 ## 📦 What's Here
 
 ```
-borda.ai-home/
+AI-Rig/
 ├── plugins/
 │   ├── foundry/            # Base plugin: agents, hooks, audit/manage/calibrate/brainstorm/…
 │   │   ├── .claude-plugin/
@@ -450,7 +450,7 @@ codex "run resolve on this repo and apply required quality gates"
 
 ```bash
 npm install -g @openai/codex          # install Codex CLI
-cp -r Borda-AI-Home/.codex/ ~/.codex/ # activate globally (run from parent of clone)
+cp -r Borda-AI-Rig/.codex/ ~/.codex/ # activate globally (run from parent of clone)
 ```
 
 ### Sync / Update
@@ -459,10 +459,10 @@ After pulling the repo, re-apply to `~/.codex/`:
 
 ```bash
 # ⚠ Overwrites ~/.codex/ completely — use rsync below if you have local customizations
-cp -r Borda-AI-Home/.codex/ ~/.codex/
+cp -r Borda-AI-Rig/.codex/ ~/.codex/
 
 # Incremental sync (preserves any local-only files you added)
-rsync -av Borda-AI-Home/.codex/ ~/.codex/
+rsync -av Borda-AI-Rig/.codex/ ~/.codex/
 ```
 
 Use `rsync` when you have local customizations (extra agents, personal profiles) that you don't want overwritten.
@@ -570,11 +570,11 @@ Two optional MCP servers are defined in `.mcp.json` (defined at the repo root; e
 ### Upgrade
 
 ```bash
-cd Borda-AI-Home && git pull
-claude plugin install foundry@borda-ai-home   # reinstalls from updated source
-claude plugin install oss@borda-ai-home
-claude plugin install develop@borda-ai-home
-claude plugin install research@borda-ai-home
+cd Borda-AI-Rig && git pull
+claude plugin install foundry@borda-ai-rig   # reinstalls from updated source
+claude plugin install oss@borda-ai-rig
+claude plugin install develop@borda-ai-rig
+claude plugin install research@borda-ai-rig
 ```
 
 Re-run `/foundry:init` only if permissions or `enabledPlugins` changed. Re-run `/foundry:init link` if you previously used the link mode — symlinks point to the old plugin cache after an upgrade.
@@ -582,7 +582,7 @@ Re-run `/foundry:init` only if permissions or `enabledPlugins` changed. Re-run `
 ### Session-only (no install, for development)
 
 ```bash
-claude --plugin-dir ./Borda-AI-Home/plugins/foundry
+claude --plugin-dir ./Borda-AI-Rig/plugins/foundry
 ```
 
 ### Uninstall
@@ -595,3 +595,13 @@ claude plugin uninstall research
 ```
 
 Settings added by `/foundry:init` remain in `~/.claude/settings.json`; remove manually if desired. If `/foundry:init link` was run, symlinks in `~/.claude/agents/` and `~/.claude/skills/` also persist and will be broken after uninstall — remove with `rm ~/.claude/agents/<name>.md` and `rm -rf ~/.claude/skills/<name>` for each.
+
+______________________________________________________________________
+
+<div align="center">
+
+**Questions?** Open an [issue](https://github.com/Borda/AI-Rig/issues) or start a [discussion](https://github.com/Borda/AI-Rig/discussions).
+
+Made with 💙 by the Borda et al.
+
+</div>

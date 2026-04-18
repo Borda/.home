@@ -170,7 +170,7 @@ After Codex writes `$RUN_DIR/codex.md`, extract a compact seed list (≤10 items
 
 ## Step 3: Spawn sub-agents in parallel
 
-**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md`. The run directory was created in Step 2 (`$RUN_DIR`).
+**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md` (if file not found, skip). The run directory was created in Step 2 (`$RUN_DIR`).
 
 <!-- Note: $RUN_DIR must be pre-expanded before inserting into spawn prompts — replace with the literal path string computed in Step 2 setup. -->
 

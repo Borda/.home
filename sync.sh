@@ -8,7 +8,7 @@
 set -e
 
 PLUGINS=(foundry oss develop research)
-MARKETPLACE="borda-ai-home"
+MARKETPLACE="borda-ai-rig"
 
 if [[ "${1:-}" == "--clean" ]]; then
     echo "Uninstalling existing plugins..."

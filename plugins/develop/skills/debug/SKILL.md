@@ -11,11 +11,13 @@ disable-model-invocation: true
 
 Investigation-first debugging. Gather evidence, trace the data flow, form a confirmed root-cause hypothesis, write a regression test, then hand off to fix mode.
 
-NOT for: `.claude/` config issues (use `/audit`); general unknown failures without a traceback (use `/investigate`).
+NOT for: `.claude/` config issues (use `/audit`); general unknown failures without a traceback (use `/foundry:investigate`).
 
 </objective>
 
 <workflow>
+
+<!-- Agent Resolution: identical across all develop skills -->
 
 ## Agent Resolution
 

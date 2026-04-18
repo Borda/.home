@@ -1,4 +1,4 @@
-# Agent Teams Protocol — Borda.ai-home
+# Agent Teams Protocol — Borda.AI-Rig
 
 AgentSpeak v2 compressed inter-agent messaging for Claude Code Agent Teams. Achieves ~60% token savings vs natural language on inter-agent messages. Adapted from [github.com/yuvalsuede/claude-teams-language-protocol](https://github.com/yuvalsuede/claude-teams-language-protocol) (MIT) <!-- attribution-only; not a runtime dependency -->.
 
@@ -63,14 +63,14 @@ Status code is always first. Task ID (`T#`) always precedes file shortcode.
 
 ## Agent Shortcodes
 
-| Code | Agent              | Code | Agent          |
-| ---- | ------------------ | ---- | -------------- |
-| `SW` | sw-engineer        | `PO` | perf-optimizer |
-| `SA` | solution-architect | `AR` | researcher     |
-| `QA` | qa-specialist      | `DS` | doc-scribe     |
-| `LE` | linting-expert     | `CG` | ci-guardian    |
-| `DT` | data-steward       | `WE` | web-explorer   |
-| `OM` | shepherd           | `SM` | self-mentor    |
+| Code | Agent              | Code | Agent              |
+| ---- | ------------------ | ---- | ------------------ |
+| `SW` | sw-engineer        | `PO` | perf-optimizer     |
+| `SA` | solution-architect | `AR` | research:scientist |
+| `QA` | qa-specialist      | `DS` | doc-scribe         |
+| `LE` | linting-expert     | `CG` | ci-guardian        |
+| `DT` | data-steward       | `WE` | web-explorer       |
+| `OM` | shepherd           | `SM` | self-mentor        |
 
 ## Project File Shortcodes (`.claude/` config)
 

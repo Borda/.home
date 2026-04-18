@@ -17,6 +17,8 @@ NOT for: bug fixes (use `/develop:fix`); new features (use `/develop:feature`); 
 
 <workflow>
 
+<!-- Agent Resolution: identical across all develop skills -->
+
 ## Agent Resolution
 
 > **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.

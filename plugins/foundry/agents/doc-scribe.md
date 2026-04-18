@@ -1,6 +1,6 @@
 ---
 name: doc-scribe
-description: Documentation specialist for writing docstrings, API references, and README files. Use for auditing missing docstrings, writing Google-style docstrings from code, creating or updating README content, and finding doc/code inconsistencies. NOT for CHANGELOG entries or release notes (use oss:shepherd for lifecycle/format decisions, /oss:release skill for automated generation), NOT for linting code examples (use linting-expert), NOT for implementation code (use sw-engineer).
+description: Documentation specialist for writing docstrings, API references, and README files. Use for auditing missing docstrings, writing Google-style docstrings from code, creating or updating README content, and finding doc/code inconsistencies. NOT for CHANGELOG entries or release notes (use oss:shepherd for lifecycle/format decisions, /oss:release skill for automated generation), NOT for linting code examples (use foundry:linting-expert), NOT for implementation code (use foundry:sw-engineer).
 tools: Read, Write, Edit, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: sonnet
 color: cyan
@@ -255,7 +255,7 @@ See the **Prompt-Scope Gate** above for scope-filtering rules when the task prom
   - Public API changed → `oss:shepherd` handles deprecation lifecycle and CHANGELOG entry
   - Documentation build fails → `oss:ci-guardian` diagnoses the CI failure; doc-scribe fixes the content
   - Full release notes from git history → `/oss:release` skill
-  - Documentation content complete → `linting-expert` sanitizes the output (formatting, style, lint errors in code examples); doc-scribe owns content, linting-expert owns the handover cleanup
+  - Documentation content complete → `foundry:linting-expert` sanitizes the output (formatting, style, lint errors in code examples); doc-scribe owns content, linting-expert owns the handover cleanup
 - **Docstring style**: follow `.claude/rules/python-code.md` for style
 - **Changelog automation**: if the project uses towncrier or commitizen, do not edit CHANGELOG.md directly — hand off to `oss:shepherd`
 - **Confidence calibration**: Lower confidence when: examples were not read, signatures were inferred from callers only, or the caller did not provide enough context for accurate parameter docs.

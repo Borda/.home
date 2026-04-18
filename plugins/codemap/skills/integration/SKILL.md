@@ -52,14 +52,14 @@ if command -v scan-query >/dev/null 2>&1; then
 elif [ -x "${CLAUDE_PLUGIN_ROOT}/bin/scan-query" ]; then
     SQ="${CLAUDE_PLUGIN_ROOT}/bin/scan-query"; SRC="CLAUDE_PLUGIN_ROOT"
 else
-    SQ=$(ls "$HOME/.claude/plugins/cache/borda-ai-home/codemap"/*/bin/scan-query 2>/dev/null | sort -V | tail -1)
+    SQ=$(ls "$HOME/.claude/plugins/cache/borda-ai-rig/codemap"/*/bin/scan-query 2>/dev/null | sort -V | tail -1)
     SRC="cache glob"
 fi
 if [ -n "$SQ" ] && [ -x "$SQ" ]; then
     printf "${GRN}✓${NC} scan-query: %s (via %s)\n" "$SQ" "$SRC"
 else
     printf "${RED}✗${NC} scan-query: not found\n"
-    printf "  → Install: claude plugin install codemap@borda-ai-home\n"
+    printf "  → Install: claude plugin install codemap@borda-ai-rig\n"
     exit 1
 fi
 ```

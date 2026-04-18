@@ -62,7 +62,7 @@ if [ -z "$PLUGIN_ROOT" ]; then
 fi
 ```
 
-If `$PLUGIN_ROOT` is empty after both attempts, stop and report: "foundry plugin not found — install it first with: `claude plugin marketplace add /path/to/Borda-AI-Home && claude plugin install foundry@borda-ai-home`"
+If `$PLUGIN_ROOT` is empty after both attempts, stop and report: "foundry plugin not found — install it first with: `claude plugin marketplace add /path/to/Borda-AI-Rig && claude plugin install foundry@borda-ai-rig`"
 
 Confirm `$PLUGIN_ROOT/hooks/statusline.js` exists. If not, stop and report.
 
@@ -248,6 +248,6 @@ Suggest: "Re-run `/foundry:init` after any plugin upgrade to refresh symlinks to
 
 <notes>
 
-**Testing init changes**: The init skill has no `.claude/skills/init` entry — it is only reachable as `/foundry:init` after the plugin is installed. To test changes: bump `version` in `plugins/foundry/.claude-plugin/plugin.json`, then run `claude plugin install foundry@borda-ai-home` from the repo root to refresh the cache, then invoke `/foundry:init`. **Upgrade path**: After `claude plugin install foundry@borda-ai-home` upgrades the version, symlinks will point to the old cache path. Re-run `/foundry:init` — Step 7 detects stale symlinks as conflicts and replaces them.
+**Testing init changes**: The init skill has no `.claude/skills/init` entry — it is only reachable as `/foundry:init` after the plugin is installed. To test changes: bump `version` in `plugins/foundry/.claude-plugin/plugin.json`, then run `claude plugin install foundry@borda-ai-rig` from the repo root to refresh the cache, then invoke `/foundry:init`. **Upgrade path**: After `claude plugin install foundry@borda-ai-rig` upgrades the version, symlinks will point to the old cache path. Re-run `/foundry:init` — Step 7 detects stale symlinks as conflicts and replaces them.
 
 </notes>

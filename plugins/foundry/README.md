@@ -26,18 +26,18 @@ Generic Claude Code is a generalist. It will help with code, but it does not kno
 ## ⚡ Quick start
 
 ```bash
-# Run from the directory that CONTAINS your Borda-AI-Home clone
-claude plugin marketplace add ./Borda-AI-Home
-claude plugin install foundry@borda-ai-home
+# Run from the directory that CONTAINS your Borda-AI-Rig clone
+claude plugin marketplace add ./Borda-AI-Rig
+claude plugin install foundry@borda-ai-rig
 ```
 
 <details>
 <summary>Install companion plugins for the full workflow suite</summary>
 
 ```bash
-claude plugin install oss@borda-ai-home
-claude plugin install develop@borda-ai-home
-claude plugin install research@borda-ai-home
+claude plugin install oss@borda-ai-rig
+claude plugin install develop@borda-ai-rig
+claude plugin install research@borda-ai-rig
 ```
 
 </details>
@@ -177,8 +177,8 @@ Agents are not independent — they form a directed pipeline:
 ### Upgrade
 
 ```bash
-cd Borda-AI-Home && git pull
-claude plugin install foundry@borda-ai-home
+cd Borda-AI-Rig && git pull
+claude plugin install foundry@borda-ai-rig
 ```
 
 > [!IMPORTANT] Re-run `/foundry:init link` after upgrading — symlinks point to the versioned cache path and go stale after reinstall.

@@ -32,6 +32,10 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 
 <workflow>
 
+<!-- Structural pattern shared with oss:review — coordinate changes between develop:review and oss:review when modifying agent spawn logic, file-handoff protocol, or consolidation steps -->
+
+<!-- Agent Resolution: identical across all develop skills -->
+
 ## Agent Resolution
 
 > **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If the check fails or you are uncertain, proceed as if foundry is available — it is the common case; only fall back if an agent dispatch explicitly fails.

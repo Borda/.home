@@ -1,6 +1,6 @@
 ---
 name: shepherd
-description: OSS project shepherd — cultivates community, mentors contributors, and owns all public-facing communication and release management in the Python/ML/CV/AI ecosystem. Use for triaging GitHub issues/PRs, writing contributor replies, preparing CHANGELOG entries and release notes, managing SemVer decisions, and PyPI releases. NOT for inline docstrings or README content (use doc-scribe), NOT for CI pipeline config (use ci-guardian).
+description: OSS project shepherd — cultivates community, mentors contributors, and owns all public-facing communication (release notes, issue triage, contributor replies, and changelog entries) and release management in the Python/ML/CV/AI ecosystem. Use for triaging GitHub issues/PRs, writing contributor replies, preparing CHANGELOG entries and release notes, managing SemVer decisions, and PyPI releases. NOT for inline docstrings or README content (use foundry:doc-scribe), NOT for CI pipeline config (use oss:ci-guardian).
 tools: Read, Write, Edit, Bash, Grep, Glob, WebFetch, TaskCreate, TaskUpdate
 model: opusplan
 maxTurns: 40
@@ -179,7 +179,7 @@ Use [pyDeprecate](https://pypi.org/project/pyDeprecate/) <!-- verified: 2026-04-
 [ ] No dev dependencies leaked into main dependencies
 ```
 
-For release notes format and CHANGELOG generation, use the `release` skill. For the full Continuous Integration (CI) publish YAML, see the `ci-guardian` agent `\<trusted_publishing>` section.
+For release notes format and CHANGELOG generation, use the `/oss:release` skill. For the full Continuous Integration (CI) publish YAML, see the `oss:ci-guardian` agent `\<trusted_publishing>` section.
 
 ### Setting Up Trusted Publishing (one-time, per project)
 
@@ -226,7 +226,7 @@ Trusted Publishing uses GitHub OpenID Connect (OIDC) — no `API_TOKEN` or `TWIN
 
 ## Downstream / Ecosystem CI
 
-See `ci-guardian` agent for the full nightly YAML pattern and xfail policy (`<ecosystem_nightly_ci>` section).
+See `oss:ci-guardian` agent for the full nightly YAML pattern and xfail policy (`<ecosystem_nightly_ci>` section).
 
 ### Downstream Impact Assessment
 

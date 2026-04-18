@@ -7,7 +7,7 @@ paths:
 ## Path Rules
 
 - No hardcoded absolute user paths (`/Users/<name>/` or `/home/<name>/`) — use `.claude/`, `~/`, or `git rev-parse --show-toplevel`
-- **Artifact dirs** belong at the project root, not inside `.claude/` — see `.claude/rules/artifact-lifecycle.md`
+- **Artifact dirs** belong at the project root, not inside `.claude/` — see `artifact-lifecycle.md`
 
 ## Bash Timeouts
 

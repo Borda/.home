@@ -37,7 +37,7 @@ paths:
 
 - Source of truth: `plugins/foundry/` (rules, agents, skills, hooks, CLAUDE.md, TEAM_PROTOCOL.md, permissions-guide.md)
 - `.claude/` entries are symlinks into the plugin — edit the plugin files, not the symlinks
-- Rules distribute to `~/.claude/rules/` via `/foundry:init` (copy) or `/foundry:init link` (symlink)
+- Rules distribute to `~/.claude/rules/` via `/foundry:init`
 - `permissions-guide.md` is project-only reference — symlinked from `.claude/`, not copied to `~/.claude/`
 - `settings.local.json` is never distributed; `CLAUDE.md` is NOT distributed (reserved file — user owns `~/.claude/CLAUDE.md`); `TEAM_PROTOCOL.md` IS distributed via `/foundry:init`
 

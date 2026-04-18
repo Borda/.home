@@ -682,7 +682,7 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
         inside skill Bash calls regardless of how the shell or Claude Code manage PATH.
         """
         env = os.environ.copy()
-        plugin_cache = Path.home() / ".claude" / "plugins" / "cache" / "borda-ai-home" / "codemap"
+        plugin_cache = Path.home() / ".claude" / "plugins" / "cache" / "borda-ai-rig" / "codemap"
         bin_dirs = sorted(plugin_cache.glob("*/bin"), reverse=True)  # latest version first
         if bin_dirs:
             env["PATH"] = str(bin_dirs[0]) + os.pathsep + env.get("PATH", "")

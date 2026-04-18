@@ -598,7 +598,7 @@ Update `state.json`: `status = completed`.
 
 ### Step R7: Codex delegation (optional)
 
-After confirming results, inspect applied changes (`git diff <baseline_commit>...<best_commit> --stat`) and identify tasks Codex can complete (inline comments on non-obvious changes, docstring updates for modified functions, test coverage for the modified path). Read `.claude/skills/_shared/codex-delegation.md` and apply the criteria defined there.
+After confirming results, inspect applied changes (`git diff <baseline_commit>...<best_commit> --stat`) and identify tasks Codex can complete (inline comments on non-obvious changes, docstring updates for modified functions, test coverage for the modified path). Read `.claude/skills/_shared/codex-delegation.md` (if file not found, skip this delegation step) and apply the criteria defined there.
 
 ______________________________________________________________________
 

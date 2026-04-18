@@ -1,6 +1,6 @@
 ---
 name: topic
-description: Research State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, recommends the best implementation strategy for the current codebase, and optionally produces a phased implementation plan mapped to the codebase. Delegates deep analysis to the researcher agent and codebase mapping to solution-architect.
+description: Research State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, recommends the best implementation strategy for the current codebase, and optionally produces a phased implementation plan mapped to the codebase. Delegates deep analysis to the research:scientist agent and codebase mapping to foundry:solution-architect.
 argument-hint: <topic> [--team]
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch, TaskCreate, TaskUpdate
 context: fork
@@ -12,7 +12,7 @@ model: opus
 
 Research the literature on an AI/ML topic and return actionable findings: what SOTA methods exist, which fits best for the current use case, and a concrete implementation plan. This skill is an orchestrator — it gathers codebase context, delegates literature search and analysis to the researcher agent, and packages results into a structured report.
 
-This skill is NOT for deep single-paper analysis or experiment design — use the `scientist` agent directly for hypothesis generation, ablation design, and experiment validation.
+This skill is NOT for deep single-paper analysis or experiment design — use the `research:scientist` agent directly for hypothesis generation, ablation design, and experiment validation.
 
 </objective>
 
@@ -279,7 +279,7 @@ Confidence:  [score] — [key gaps]
 
 <notes>
 
-- This skill orchestrates — it gathers context and delegates research to `scientist` and codebase mapping to `solution-architect` (plan mode). For direct hypothesis/experiment work, use the `scientist` agent directly.
+- This skill orchestrates — it gathers context and delegates research to `research:scientist` and codebase mapping to `foundry:solution-architect` (plan mode). For direct hypothesis/experiment work, use the `research:scientist` agent directly.
 - **Team Mode dependency**: `--team` mode requires `~/.claude/TEAM_PROTOCOL.md` to exist — each teammate spawn prompt includes `Read ~/.claude/TEAM_PROTOCOL.md and use AgentSpeak v2`; verify the file is present before launching team mode.
 - **Link integrity**: All URLs cited in the research report must be fetched and verified before inclusion. Use WebFetch to confirm each URL exists and says what you claim.
 - Follow-up chains:

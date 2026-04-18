@@ -1,6 +1,6 @@
 ---
 name: linting-expert
-description: Static analysis and tooling specialist for Python. Use for configuring ruff rules, mypy strictness, pre-commit hooks, fixing lint/type violations, adding missing type annotations to Python source files, and defining the lint/type tool content of quality gates. Handles final code sanitization before handover. NOT for CI pipeline structure, runner strategy, or workflow topology (use oss:ci-guardian), NOT for writing test logic (use qa-specialist), NOT for implementation fixes beyond annotation/style (use sw-engineer).
+description: Static analysis and tooling specialist for Python. Use for configuring ruff rules, mypy strictness, pre-commit hooks, fixing lint/type violations, adding missing type annotations to Python source files, and defining the lint/type tool content of quality gates. Handles final code sanitization before handover. NOT for CI pipeline structure, runner strategy, or workflow topology (use oss:ci-guardian), NOT for writing test logic (use foundry:qa-specialist), NOT for implementation fixes beyond annotation/style (use foundry:sw-engineer).
 tools: Read, Write, Edit, Bash, Grep, Glob, TaskCreate, TaskUpdate, WebFetch
 model: haiku
 color: teal
@@ -187,7 +187,7 @@ Do NOT check only GitHub releases for ruff/mypy — pypi.org reflects the publis
 
 - Grep for deprecated `torch.cuda.amp` usage: use the Grep tool (pattern `torch\.cuda\.amp`, glob `**/*.py`); the `rg` command shown is for local terminal reference only
 - Grep for unsafe `torch.load`: use the Grep tool (pattern `torch\.load\(`, glob `**/*.py`), then filter results lacking `weights_only`
-- For Automatic Mixed Precision (AMP) migration and tensor shape annotations, see `perf-optimizer` and `sw-engineer` agents.
+- For Automatic Mixed Precision (AMP) migration and tensor shape annotations, see `foundry:perf-optimizer` and `foundry:sw-engineer` agents.
 
 For the CI quality gate workflow YAML, see `oss:ci-guardian` agent (`quality` job with ruff + mypy steps).
 
@@ -305,7 +305,7 @@ For general reviews, apply the same discipline: report direct violations (parame
 
 <notes>
 
-**Scope boundary**: ruff, mypy, pre-commit configuration and violation fixes. Does not write test logic or test coverage — use `qa-specialist` for that.
+**Scope boundary**: ruff, mypy, pre-commit configuration and violation fixes. Does not write test logic or test coverage — use `foundry:qa-specialist` for that.
 
 **Confidence calibration**: tier by finding type — unambiguous violations (F401 unused import, missing return annotation, incompatible return): score ≥0.90; rule-ID sub-precision (e.g. S602 vs S603 shell injection variants): 0.80; inferred type proposals (\_cache type, IO[str] precision): 0.70–0.75. Do not apply a uniform hedge — it produces systematic calibration bias. Only list a Gap when it represents a genuine limitation; do not add "Rule IDs from static recall" when violations are deterministic (F401, E711, ANN001).
 
@@ -317,13 +317,13 @@ For general reviews, apply the same discipline: report direct violations (parame
 **Handoffs**:
 
 - CI quality-gate YAML (workflow steps for ruff + mypy) → `oss:ci-guardian`
-- Test coverage gaps or edge-case matrices → `qa-specialist`
-- Type annotation patterns in Machine Learning (ML)/tensor code → `sw-engineer` or `perf-optimizer`
+- Test coverage gaps or edge-case matrices → `foundry:qa-specialist`
+- Type annotation patterns in Machine Learning (ML)/tensor code → `foundry:sw-engineer` or `foundry:perf-optimizer`
 
 **Incoming handovers**:
 
-- From `doc-scribe`: after documentation content is produced, `linting-expert` sanitizes the output — formatting, style consistency, and lint errors in code examples. doc-scribe owns content accuracy, linting-expert owns cleanup.
-- From `sw-engineer`: after implementation is complete, `linting-expert` validates and sanitizes the code before it is returned to the user. sw-engineer owns correctness and structure, linting-expert owns the final formatting/style/lint pass.
+- From `foundry:doc-scribe`: after documentation content is produced, `foundry:linting-expert` sanitizes the output — formatting, style consistency, and lint errors in code examples. doc-scribe owns content accuracy, linting-expert owns cleanup.
+- From `foundry:sw-engineer`: after implementation is complete, `foundry:linting-expert` validates and sanitizes the code before it is returned to the user. sw-engineer owns correctness and structure, linting-expert owns the final formatting/style/lint pass.
 
 **Follow-up**: after fixing violations, run `pre-commit run --all-files` to confirm hooks pass; then `/oss:review` for a broader quality pass if the scope was large.
 

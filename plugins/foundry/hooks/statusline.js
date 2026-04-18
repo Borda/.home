@@ -105,8 +105,8 @@ process.stdin.on("end", () => {
       cyan: "\x1b[36m",
       green: "\x1b[32m",
       indigo: "\x1b[34m", // closest ANSI to indigo — reserved (no agent declares this color)
-      lime: "\x1b[92m", // bright green — reserved (no agent declares this color)
-      magenta: "\x1b[35m", // reserved (no agent declares this color)
+      lime: "\x1b[92m", // bright green — used by oss:shepherd
+      magenta: "\x1b[35m", // used by research:scientist
       orange: "\x1b[33m", // closest ANSI to orange
       pink: "\x1b[95m", // bright magenta
       purple: "\x1b[94m", // bright blue

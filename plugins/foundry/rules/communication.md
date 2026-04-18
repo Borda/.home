@@ -57,4 +57,4 @@ A labelled or annotated question (e.g. `[AskUserQuestion simulated] — What for
 
 ## Output Routing
 
-Full rules (including anti-overwrite counter-suffix and branch-slug format), breaking-findings format, and terminal colors: see `.claude/rules/quality-gates.md`.
+Full rules (including anti-overwrite counter-suffix and branch-slug format), breaking-findings format, and terminal colors: see `quality-gates.md`.

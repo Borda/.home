@@ -1,11 +1,11 @@
 {
   "author": {
     "name": "Jirka",
-    "url": "https://github.com/Borda/.ai-home"
+    "url": "https://github.com/Borda/AI-Rig"
   },
   "description": "OSS maintenance skills: analyse, resolve, review, release",
   "license": "MIT",
   "name": "oss",
-  "repository": "https://github.com/Borda/.ai-home",
+  "repository": "https://github.com/Borda/AI-Rig",
   "version": "0.1.0"
 }

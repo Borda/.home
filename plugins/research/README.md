@@ -28,19 +28,19 @@ ML improvement is expensive and iterative. The typical failure pattern is not "w
 ## ⚡ Quick start
 
 ```bash
-# Run from the directory that CONTAINS your Borda-AI-Home clone
-claude plugin marketplace add ./Borda-AI-Home
-claude plugin install research@borda-ai-home
+# Run from the directory that CONTAINS your Borda-AI-Rig clone
+claude plugin marketplace add ./Borda-AI-Rig
+claude plugin install research@borda-ai-rig
 ```
 
 <details>
 <summary>Install the full suite</summary>
 
 ```bash
-claude plugin install foundry@borda-ai-home   # base agents — strongly recommended
-claude plugin install oss@borda-ai-home
-claude plugin install develop@borda-ai-home
-claude plugin install research@borda-ai-home
+claude plugin install foundry@borda-ai-rig   # base agents — strongly recommended
+claude plugin install oss@borda-ai-rig
+claude plugin install develop@borda-ai-rig
+claude plugin install research@borda-ai-rig
 ```
 
 </details>
@@ -216,8 +216,8 @@ No user prompts; designed for unattended operation
 ### Upgrade
 
 ```bash
-cd Borda-AI-Home && git pull
-claude plugin install research@borda-ai-home
+cd Borda-AI-Rig && git pull
+claude plugin install research@borda-ai-rig
 ```
 
 ### Uninstall

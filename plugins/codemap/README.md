@@ -44,9 +44,9 @@ Every session starts the same way: the agent gropes through the codebase with Gl
 ## ⚡ Quick start
 
 ```bash
-# Run from the directory that CONTAINS your Borda-AI-Home clone
-claude plugin marketplace add ./Borda-AI-Home
-claude plugin install codemap@borda-ai-home
+# Run from the directory that CONTAINS your Borda-AI-Rig clone
+claude plugin marketplace add ./Borda-AI-Rig
+claude plugin install codemap@borda-ai-rig
 ```
 
 **Inside Claude Code** — `scan-index` and `scan-query` are on PATH automatically via the plugin's `bin/` directory. No shell config needed.
@@ -58,7 +58,7 @@ Add to `~/.zshrc` or `~/.bashrc`:
 
 ```bash
 # Picks up the latest installed version automatically
-CODEMAP_TOOLS=$(ls -d "$HOME/.claude/plugins/cache/borda-ai-home/codemap"/*/bin 2>/dev/null | sort -V | tail -1)
+CODEMAP_TOOLS=$(ls -d "$HOME/.claude/plugins/cache/borda-ai-rig/codemap"/*/bin 2>/dev/null | sort -V | tail -1)
 [ -n "$CODEMAP_TOOLS" ] && export PATH="$PATH:$CODEMAP_TOOLS"
 ```
 
@@ -472,8 +472,8 @@ If any Python code file changed after the index was built, a warning is printed 
 ### Upgrade
 
 ```bash
-cd Borda-AI-Home && git pull
-claude plugin install codemap@borda-ai-home
+cd Borda-AI-Rig && git pull
+claude plugin install codemap@borda-ai-rig
 ```
 
 ### Uninstall

@@ -58,7 +58,7 @@ Skills with `--team` mode: team spawning with fallback agents still works but pr
 ## Step 1: Pre-flight
 
 ```bash
-# From _shared/preflight-helpers.md — TTL 4 hours, keyed per binary
+# From plugins/foundry/skills/_shared/preflight-helpers.md — TTL 4 hours, keyed per binary
 preflight_ok() {
     local f=".claude/state/preflight/$1.ok"
     [ -f "$f" ] && [ $(($(date +%s) - $(cat "$f"))) -lt 14400 ]

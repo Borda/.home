@@ -171,7 +171,7 @@ If `REPLY_MODE=false`: skip Step 7 and end with the Confidence block now.
 
 The report at `$REPORT_FILE` is guaranteed to exist at this point — either reused via the fast-path (Step 2, `FAST_PATH=true`) or freshly written by Step 5. `$DRIFT` is set by Step 2 (`true` if new activity was detected, `false` otherwise).
 
-**Spawn shepherd** with the report path, the item number, and this prompt (note: shepherd runs in a forked context — all required context must be self-contained in the prompt):
+**Spawn oss:shepherd** () with the report path, the item number, and this prompt (note: shepherd runs in a forked context — all required context must be self-contained in the prompt):
 
 "Write your full output to `.reports/analyse/thread/output-reply-thread-<number>-$(date +%Y-%m-%d).md` using the Write tool. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\".reports/analyse/thread/output-reply-thread-<number>-<date>.md\",\"sentences\":N,\"resolved\":\"yes|no|partial\",\"confidence\":0.N,\"summary\":\"Reply: N sentences, resolved: yes|no|partial\"}` Read the report at `<path>` for context. If the item is an issue or discussion, also fetch the full thread (`gh issue view <number> --comments` or equivalent GraphQL for discussions) and read every comment."
 
