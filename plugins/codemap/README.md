@@ -12,7 +12,8 @@ Scan your Python project once. Every agent, skill, and developer session answers
 >
 > **Python first.** `scan-index` uses `ast.parse` to index `.py` files. Support for additional languages (TypeScript, Go, Rust) is planned — Python is the only language indexed today. Non-Python files are not scanned and will not appear in any query result.
 
-## 📋 Contents
+<details>
+<summary><strong>📋 Contents</strong></summary>
 
 - [Why](#-why)
 - [Key Principles](#-key-principles)
@@ -23,6 +24,8 @@ Scan your Python project once. Every agent, skill, and developer session answers
 - [Integrating codemap](#-integrating-codemap)
 - [Overview](#-overview)
 - [Plugin details](#-plugin-details)
+
+</details>
 
 ## 🎯 Why
 

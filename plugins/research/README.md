@@ -6,6 +6,20 @@ ML research plugin: two specialist agents and eight slash-command skills for lit
 >
 > Works standalone — foundry is not required. Without it, agent dispatches fall back to `general-purpose` with role descriptions (lower quality). Installing foundry unlocks specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) and is strongly recommended for production use.
 
+<details>
+<summary><strong>📋 Contents</strong></summary>
+
+- [Why](#-why)
+- [Key Principles](#-key-principles)
+- [Quick start](#-quick-start)
+- [How to Use](#-how-to-use)
+- [Overview](#-overview)
+- [Dependencies](#dependencies)
+- [Plugin details](#-plugin-details)
+- [Acknowledgments](#-acknowledgments)
+
+</details>
+
 ## 🎯 Why
 
 ML improvement is expensive and iterative. The typical failure pattern is not "we ran the wrong experiments" — it is running experiments without a methodology review, without reproducible baselines, without a rollback gate, and without capturing what was learned. Each failed run is not just wasted GPU hours; it is context that disappears.

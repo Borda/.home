@@ -1,0 +1,67 @@
+site_name: Borda's AI-Rig
+site_description: Claude Code plugin suite for Python/ML OSS development
+site_url: https://borda.github.io/.local/
+repo_url: https://github.com/Borda/.local
+repo_name: Borda/.local
+edit_uri: ""
+
+docs_dir: docs
+
+# README.md in docs/ is the repo-facing guide; exclude from site to avoid
+# conflict with index.md (both would map to the same index.html).
+exclude_docs: |
+  README.md
+
+theme:
+  name: material
+  palette:
+    - scheme: default
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-7
+        name: Switch to dark mode
+    - scheme: slate
+      primary: custom
+      accent: custom
+      toggle:
+        icon: material/brightness-4
+        name: Switch to light mode
+  font:
+    text: Inter
+    code: JetBrains Mono
+  features:
+    - navigation.tabs
+    - navigation.instant
+    - navigation.top
+    - content.code.copy
+    - search.highlight
+    - search.suggest
+
+extra_css:
+  - stylesheets/anthropic.css
+
+plugins:
+  - search
+  - callouts
+
+markdown_extensions:
+  - pymdownx.highlight:
+      anchor_linenums: true
+  - pymdownx.superfences
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - admonition
+  - pymdownx.details
+  - attr_list
+  - md_in_html
+  - toc:
+      permalink: true
+
+nav:
+  - Home: index.md
+  - Foundry: foundry.md
+  - OSS: oss.md
+  - Develop: develop.md
+  - Research: research.md
+  - Codemap: codemap.md

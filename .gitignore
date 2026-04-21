@@ -38,3 +38,6 @@ out/
 # Benchmarks and logs
 benchmarks/results/
 pytorch-lightning-master/
+
+# Documentation build artifacts
+site/

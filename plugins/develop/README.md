@@ -6,6 +6,19 @@ Development workflow plugin: six slash-command skills for scope planning, featur
 >
 > Works standalone — foundry is not required. Without it, agent dispatches fall back to `general-purpose` with role descriptions (lower quality). Installing foundry unlocks specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) and is strongly recommended for production use.
 
+<details>
+<summary><strong>📋 Contents</strong></summary>
+
+- [Why](#-why)
+- [Key Principles](#-key-principles)
+- [Quick start](#-quick-start)
+- [How to Use](#-how-to-use)
+- [Overview](#-overview)
+- [Dependencies](#dependencies)
+- [Plugin details](#-plugin-details)
+
+</details>
+
 ## 🎯 Why
 
 Most development mistakes happen before the first keystroke: implementing a feature nobody verified is needed, fixing a bug by guessing rather than reproducing it, refactoring without a safety net that catches regressions. The cost is not the wrong code — it's the downstream review, the revert, the second PR.

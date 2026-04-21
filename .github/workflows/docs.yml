@@ -1,0 +1,81 @@
+name: docs
+
+# Triggers: plugin README changes, docs source changes, or manual dispatch.
+# Required repo setup: Settings → Pages → Source = "GitHub Actions" (not a branch).
+on:
+  push:
+    branches: [main]
+    paths:
+      - "plugins/*/README.md"
+      - "docs/**"
+      - "mkdocs.yml"
+  workflow_dispatch:
+
+# Least-privilege permissions required for OIDC-based Pages deploy.
+# contents:read  — checkout
+# pages:write    — upload pages artifact
+# id-token:write — request OIDC JWT for trusted deploy (no PAT needed)
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+# Only one Pages deploy may run at a time.
+# cancel-in-progress:false ensures an in-flight deploy is never killed mid-publish.
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout (with symlinks)
+        uses: actions/checkout@v4
+        with:
+          # Symlinks in docs/ point to plugins/*/README.md.
+          # Default checkout preserves symlinks on Linux — no extra flag needed,
+          # but stated here explicitly so the dependency is visible.
+          persist-credentials: false
+
+      - name: Set up Python 3.12
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+          # Pin to exact minor so the build is reproducible across runner updates.
+
+      - name: Install MkDocs dependencies
+        # python -m pip ensures we use the pip that belongs to the selected Python,
+        # not a system pip that may point elsewhere.
+        run: python -m pip install --upgrade pip -r docs/requirements.txt
+
+      - name: Build docs (strict — warnings are errors)
+        # --strict turns every MkDocs warning into a build failure.
+        # Remove --strict only if a plugin emits unavoidable warnings.
+        run: python -m mkdocs build --strict
+
+      - name: Configure GitHub Pages
+        # Injects the correct base URL into the artifact so relative links work
+        # regardless of whether the site lives at the apex or a /repo/ sub-path.
+        uses: actions/configure-pages@v4
+
+      - name: Upload Pages artifact
+        uses: actions/upload-pages-artifact@v3
+        with:
+          # mkdocs build writes output to site/ by default (set in mkdocs.yml: site_dir).
+          path: site/
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    # "github-pages" is the reserved environment name for Pages OIDC deploys.
+    # Must exist under Settings → Environments (created automatically by Pages setup).
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - name: Deploy to GitHub Pages
+        id: deployment
+        uses: actions/deploy-pages@v4

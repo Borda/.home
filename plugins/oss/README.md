@@ -6,6 +6,19 @@ OSS workflow plugin for Python/ML open-source projects: two specialist agents an
 >
 > Works standalone — foundry is not required. Without it, agent dispatches fall back to `general-purpose` with role descriptions (lower quality). Installing foundry unlocks specialized agents (`foundry:sw-engineer`, `foundry:qa-specialist`, etc.) and is strongly recommended for production use.
 
+<details>
+<summary><strong>📋 Contents</strong></summary>
+
+- [Why](#-why)
+- [Key Principles](#-key-principles)
+- [Quick start](#-quick-start)
+- [How to Use](#-how-to-use)
+- [Overview](#-overview)
+- [Dependencies](#dependencies)
+- [Plugin details](#-plugin-details)
+
+</details>
+
 ## 🎯 Why
 
 Maintaining an open-source project means juggling three competing demands: reviewing code carefully enough to catch regressions, responding to contributors quickly enough that they stay engaged, and shipping releases confidently enough that users upgrade. Each of these is a context-switch tax.

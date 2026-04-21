@@ -6,6 +6,18 @@ Base plugin for Python/ML OSS development: 8 specialist agents, config-managemen
 >
 > For OSS workflows, install the `oss` plugin (`/oss:review`, `/oss:release`, …). For development workflows, install the `develop` plugin (`/develop:feature`, `/develop:fix`, …). For ML research, install the `research` plugin (`/research:run`, `/research:topic`, …).
 
+<details>
+<summary><strong>📋 Contents</strong></summary>
+
+- [Why](#-why)
+- [Key Principles](#-key-principles)
+- [Quick start](#-quick-start)
+- [How to Use](#-how-to-use)
+- [Overview](#-overview)
+- [Plugin details](#-plugin-details)
+
+</details>
+
 ## 🎯 Why
 
 Generic Claude Code is a generalist. It will help with code, but it does not know your project's release conventions, does not enforce SemVer, does not benchmark itself for accuracy drift, and will not catch when its own agent descriptions start conflicting with each other.
@@ -108,7 +120,7 @@ Use `link` to invoke foundry commands without a prefix (`/audit` instead of `/fo
 # Status: draft → blocking questions → ordered action plan with tagged invocations
 ```
 
-![Brainstorm live tree viewer — branch tree with detail panel](../../docs/assets/brainstorm-map-tree.png)
+![Brainstorm live tree viewer — branch tree with detail panel](assets/images/brainstorm-map-tree.png)
 
 ### Failure diagnosis
 
