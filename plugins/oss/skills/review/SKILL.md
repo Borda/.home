@@ -33,22 +33,17 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 
 <workflow>
 
+<!-- Agent Resolution: canonical table at plugins/oss/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). Check fail or uncertain → proceed as if foundry available — common case; fall back only if agent dispatch explicitly fails.
+```bash
+# Locate oss plugin shared dir — installed first, local workspace fallback
+_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
+[ -z "_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
+```
 
-Foundry **not** installed: substitute `foundry:X` with `general-purpose`, prepend role description plus `model: <model>` to spawn call:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:sw-engineer` | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
-| `foundry:qa-specialist` | `general-purpose` | `opus` | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.` |
-| `foundry:perf-optimizer` | `general-purpose` | `opus` | `You are a performance engineer. Profile before changing. Focus on CPU/GPU/memory/IO bottlenecks in Python/ML workloads.` |
-| `foundry:doc-scribe` | `general-purpose` | `sonnet` | `You are a documentation specialist. Write Google-style docstrings and keep README content accurate and concise.` |
-| `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
-| `foundry:solution-architect` | `general-purpose` | `opus` | `You are a system design specialist. Produce ADRs, interface specs, and API contracts — read code, produce specs only.` |
-
-Skills with `--team` mode: fallback agents work, lower quality.
+Read `$_OSS_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:solution-architect`.
 
 **Task hygiene**: Before creating tasks, call `TaskList`. Each found task:
 
@@ -126,7 +121,7 @@ Agent 1 uses this to prioritize: high `rdep_count` modules warrant deeper scruti
 
 Parse PR body (`gh pr view $CLEAN_ARGS`) for issue refs (`Closes #N`, `Fixes #N`, `Resolves #N`, `refs #N` — case-insensitive). Extract to `ISSUE_NUMS`. Cap 3.
 
-`ISSUE_NUMS` non-empty: spawn one **foundry:sw-engineer** per issue at Step 2 start (parallel with Codex co-review). Each issue agent:
+`ISSUE_NUMS` non-empty: spawn one **foundry:sw-engineer** per issue **at Step 2, after `$RUN_DIR` is initialized** (parallel with Codex co-review). Each issue agent:
 
 - Fetch issue: `gh issue view <N> --json title,body,comments,state,labels`
 - Fetch comments: `gh issue view <N> --comments`
@@ -171,7 +166,7 @@ After Codex writes `$RUN_DIR/codex.md`, extract seed list (≤10 items, `[{"loc"
 
 ## Step 3: Spawn sub-agents in parallel
 
-**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md`. File absent → warn the user: "foundry:init required: `.claude/skills/_shared/file-handoff-protocol.md` not found; install foundry plugin and run `foundry:init` to activate file-handoff protocol." Then continue without it. Run dir from Step 2 (`$RUN_DIR`).
+**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md`. File absent → warn the user: "file-handoff protocol not found — verify foundry plugin installed (`claude plugin list`); continuing without it." Then continue without it. Run dir from Step 2 (`$RUN_DIR`).
 
 <!-- Note: $RUN_DIR must be pre-expanded before inserting into spawn prompts — replace with the literal path string computed in Step 2 setup. -->
 
@@ -179,7 +174,7 @@ Replace `$RUN_DIR` below with actual path from Step 2.
 
 Launch agents simultaneously. Security augmentation folded into Agent 1. Agent 6 optional. Every agent prompt must end with:
 
-> "Write your FULL findings (all sections, Confidence block) to `$RUN_DIR/<agent-name>.md` using the Write tool — where `<agent-name>` is e.g. `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:solution-architect`. Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":1,\"medium\":2},\"file\":\"$RUN_DIR/<agent-name>.md\",\"confidence\":0.88}`"
+> "Write your FULL findings (all sections, Confidence block) to `$RUN_DIR/<agent-slug>.md` using the Write tool — where `<agent-slug>` uses hyphen separator (no colon), e.g. `foundry--sw-engineer.md`, `foundry--qa-specialist.md`, `foundry--perf-optimizer.md`, `foundry--doc-scribe.md`, `foundry--linting-expert.md`, `foundry--solution-architect.md`. Colons are invalid in macOS filenames. Then return to the caller ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"findings\":N,\"severity\":{\"critical\":0,\"high\":1,\"medium\":2},\"file\":\"$RUN_DIR/<agent-slug>.md\",\"confidence\":0.88}`"
 
 **Agent 1 — foundry:sw-engineer**: Review architecture, SOLID, type safety, error handling, code structure. Check Python anti-patterns (bare `except:`, `import *`, mutable defaults). Flag blocking vs suggestions.
 
@@ -268,7 +263,7 @@ git diff $(git merge-base HEAD origin/${TRUNK:-main}) HEAD -- CHANGELOG.md CHANG
 
 ## Step 5: Cross-validate critical/blocking findings
 
-Read and follow `.claude/skills/_shared/cross-validation-protocol.md`. File absent → warn the user: "foundry:init required: `.claude/skills/_shared/cross-validation-protocol.md` not found; install foundry plugin and run `foundry:init` to activate cross-validation. Skipping Step 5." Then skip Step 5.
+Read and follow `.claude/skills/_shared/cross-validation-protocol.md`. File absent → warn the user: "cross-validation protocol not found — verify foundry plugin installed (`claude plugin list`); skipping Step 5." Then skip Step 5.
 
 **Skill-specific**: same agent type that raised finding = verifier (e.g., foundry:sw-engineer verifies foundry:sw-engineer critical finding).
 
@@ -382,7 +377,7 @@ After consolidating, identify tasks Codex can implement — not style violations
 - Architectural issues, logic errors, security vulnerabilities, or behavioural changes
 - Any task where you cannot write a precise description without guessing
 
-Read `.claude/skills/_shared/codex-delegation.md`. File absent → warn the user: "foundry:init required: `.claude/skills/_shared/codex-delegation.md` not found; install foundry plugin and run `foundry:init` to activate Codex delegation criteria. Skipping Step 7 delegation." Then skip Step 7.
+Read `.claude/skills/_shared/codex-delegation.md`. File absent → warn the user: "codex-delegation criteria not found — verify foundry plugin installed (`claude plugin list`); skipping Step 7 delegation." Then skip Step 7.
 
 Example prompt: `"Add a test for StreamReader.read_chunk() in tests/test_reader.py — the method should raise ValueError when called after close(), currently no test covers this path."`
 

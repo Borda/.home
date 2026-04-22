@@ -62,18 +62,17 @@ STATE_DIR:                  .experiments/state/<run-id>/  (timestamped dir per r
 
 <workflow>
 
+<!-- Agent Resolution: canonical table at plugins/research/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `Glob(pattern="foundry*", path="$HOME/.claude/plugins/cache/")` returning results = installed. If check fails or uncertain, proceed as if foundry available — common case; fall back only if agent dispatch fails.
+```bash
+# Locate research plugin shared dir — installed first, local workspace fallback
+_RESEARCH_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/skills/_shared 2>/dev/null | head -1)
+[ -z "$_RESEARCH_SHARED" ] && _RESEARCH_SHARED="plugins/research/skills/_shared"
+```
 
-When foundry **not** installed, substitute `foundry:X` with `general-purpose`, prepend role description + `model: <model>` to spawn call:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:sw-engineer` | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
-| `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
-| `foundry:perf-optimizer` | `general-purpose` | `opus` | `You are a performance engineer. Profile before changing. Focus on CPU/GPU/memory/IO bottlenecks in Python/ML workloads.` |
-| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Generate architectural optimization hypotheses and annotate feasibility of proposed changes. Write findings to the specified output file.` |
+Read `$_RESEARCH_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:linting-expert`, `foundry:perf-optimizer`, `foundry:solution-architect`.
 
 ## Default Mode (Steps R1–R7)
 
@@ -281,9 +280,9 @@ Build context for ideation agent, write to file — do NOT accumulate inline in 
 
 ```bash
 # Collect signals
-git log --oneline -10 >.experiments/state/${RUN_ID}/context-${I}.md
-tail -10 .experiments/state/${RUN_ID}/experiments.jsonl >>.experiments/state/${RUN_ID}/context-${I}.md
-git diff --stat HEAD~5 HEAD >>.experiments/state/${RUN_ID}/context-${I}.md
+git log --oneline -10 >.experiments/state/${RUN_ID}/context-${I}.md  # timeout: 3000
+tail -10 .experiments/state/${RUN_ID}/experiments.jsonl >>.experiments/state/${RUN_ID}/context-${I}.md  # timeout: 5000
+git diff --stat HEAD~5 HEAD >>.experiments/state/${RUN_ID}/context-${I}.md  # timeout: 3000
 ```
 
 Prepend header block to `context-<i>.md`: goal, current metric vs baseline, delta trend (last 5 kept deltas), iteration number. Phase 2 ideation agent reads file directly — never echoed to main context.
@@ -398,14 +397,14 @@ TaskUpdate R5b subject: `R5b: Codex co-pilot — iter N done (<outcome>)`
 Stage only modified files (never `git add -A`):
 
 ```bash
-git add <files_modified from agent JSON>
-git commit -m "experiment(optimize/i<N>): <description>"
+git add <files_modified from agent JSON>  # timeout: 3000
+git commit -m "experiment(optimize/i<N>): <description>"  # timeout: 90000
 ```
 
 If pre-commit hooks fail:
 
 - Delegate to `foundry:linting-expert`: provide failing hook output and modified files; ask to fix. Max 2 attempts.
-- If still failing after 2 attempts: `git restore --staged .` + `git checkout -- .` to clean up, append `status: hook-blocked`, continue loop.
+- If still failing after 2 attempts: `git restore --staged .` + `git checkout -- .` to clean up (WARNING: `git checkout -- .` discards all uncommitted changes — appropriate here since loop iteration is atomic), append `status: hook-blocked`, continue loop.
 
 #### Phase 5 — Verify metric
 

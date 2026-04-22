@@ -11,27 +11,27 @@ disable-model-invocation: true
 
 Research-supervisor review of `program.md` — validates experimental methodology, emits APPROVED / NEEDS-REVISION / BLOCKED verdict before expensive run loop. Read-only; never modifies code or state.
 
-NOT for: running experiments (use `/research:run`); designing hypotheses (use `research:scientist` agent); config quality (`/audit`).
+NOT for: running experiments (use `/research:run`); designing hypotheses (use `research:scientist` agent); config quality (`/foundry:audit`).
 
 </objective>
 
 <workflow>
 
+<!-- Agent Resolution: canonical table at plugins/research/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `Glob(pattern="foundry*", path="$HOME/.claude/plugins/cache/")` returning results = installed. If check fails, proceed as if foundry available — common case; only fall back if agent dispatch explicitly fails.
+```bash
+# Locate research plugin shared dir — installed first, local workspace fallback
+_RESEARCH_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/skills/_shared 2>/dev/null | head -1)
+[ -z "_RESEARCH_SHARED" ] && _RESEARCH_SHARED="plugins/research/skills/_shared"
+```
 
-When foundry **not** installed, substitute `foundry:solution-architect` with `general-purpose`, prepend role description:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate architectural trade-offs, assess scope coverage, and identify missing dependencies. Output structured JSON only.` |
-
-`research:scientist` in same plugin as this skill — no fallback needed if research plugin installed.
+Read `$_RESEARCH_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:solution-architect`.
 
 ## --team flag (committee mode)
 
-If `--team` present in arguments: after verdict (Step J5/J6), spawn 2–3 independent `foundry:solution-architect` agents, each reading the program file and returning `{"verdict": "pass|conditional|fail", "findings": [...]}`. Aggregate by majority verdict. This = "committee" review mode.
+If `--team` present in arguments: after verdict (Step J5/J6), spawn 2–3 independent `foundry:solution-architect` agents using file-based handoff. Pre-compute output path before spawning: `COMMITTEE_DIR=".experiments/judge-committee-$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$COMMITTEE_DIR"` — each agent prompt must include: "Write your full review to `$COMMITTEE_DIR/architect-N.md` using the Write tool. Return ONLY: `{"verdict": "pass|conditional|fail", "findings": [...], "file": "<path>", "confidence": 0.N}`". Aggregate by majority verdict. This = "committee" review mode.
 
 # Judge Mode (Steps J1–J6)
 
@@ -87,8 +87,8 @@ Check each of 11 items. Produce findings list with severity. Each finding has: `
 Pre-compute run directory before spawning:
 
 ```bash
-RUN_DIR=".experiments/judge-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
-mkdir -p "$RUN_DIR"
+RUN_DIR=".experiments/judge-$(date -u +%Y-%m-%dT%H-%M-%SZ)"  # timeout: 5000
+mkdir -p "$RUN_DIR"                                                # timeout: 5000
 ```
 
 Spawn `foundry:solution-architect` agent via `Agent(subagent_type="foundry:solution-architect", prompt="...")` (uses `opusplan` for high reasoning quality) with this prompt:
@@ -235,7 +235,7 @@ Evaluate top-to-bottom; **first match wins**. BLOCKED always takes precedence �
 **Pre-compute**:
 
 ```bash
-BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')
+BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')  # timeout: 3000
 ```
 
 **Write full report** to `.temp/output-judge-$BRANCH-$(date +%Y-%m-%d).md`:

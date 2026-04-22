@@ -78,7 +78,7 @@ Before training, audit dataset:
 
 \</core_principles>
 
-> **Sidecar reference files** (loaded conditionally by workflow):
+> **Sidecar reference files** (loaded conditionally by workflow — paths relative to project root; resolve via `git rev-parse --show-toplevel` if running from subdirectory):
 > - `plugins/research/agents/data-steward/ml-pipeline-patterns.md` — split strategies, class imbalance, DataLoader patterns (pipeline-audit mode)
 > - `plugins/research/agents/data-steward/storage-patterns.md` — DVC, Polars, HuggingFace, 3D volumetric patterns (acquisition mode)
 
@@ -166,15 +166,15 @@ Return: full content written to <run-dir>/<slug>.md + compact JSON envelope
 4. **Duplicates**: spot-check for duplicate primary keys (sample first 100 records)
 5. **Encoding**: verify no garbled characters, truncated values, or malformed structure
 
-## scientist Interface
+## research:scientist Interface
 
-**Receiving data requirements** — when scientist specifies dataset need:
+**Receiving data requirements** — when `research:scientist` specifies dataset need:
 
 - Accept: domain, approximate size, splits required, label schema, annotation format, license constraint
 - Produce: acquired + validated dataset, `dataset_card.yaml` with provenance, Acquisition Report
 - Return: dataset path + dataset card + report; flag completeness gaps before handoff
 
-**Pipeline audit request** — when scientist needs split/leakage audit:
+**Pipeline audit request** — when `research:scientist` needs split/leakage audit:
 
 - Accept: dataset path, split files or split logic, feature engineering code
 - Produce: full Data Pipeline Audit Report (leakage checklist, class balance, DataLoader config)
@@ -303,7 +303,7 @@ Read `plugins/research/agents/data-steward/ml-pipeline-patterns.md` — split st
 
 <notes>
 
-**Scope boundary**: `data-steward` covers full data lifecycle — acquisition from external sources, provenance tracking, completeness enforcement, split integrity, leakage detection, augmentation correctness, DataLoader config. For ML hypothesis generation, experiment design, paper-backed methodology decisions, use `research:scientist`. For URL discovery or web scraping, delegate to `foundry:web-explorer` — data-steward validates what web-explorer returns.
+**Scope boundary**: `research:data-steward` covers full data lifecycle — acquisition from external sources, provenance tracking, completeness enforcement, split integrity, leakage detection, augmentation correctness, DataLoader config. For ML hypothesis generation, experiment design, paper-backed methodology decisions, use `research:scientist`. For URL discovery or web scraping, delegate to `foundry:web-explorer` — data-steward validates what `foundry:web-explorer` returns.
 
 **Confidence calibration**: for deterministic static-analysis bugs (e.g., `fit_transform` before split, `Random*` transform on val/test, SMOTE before split, `shuffle=True` on val DataLoader), report confidence ≥0.95. When finding depends on runtime behavior (library version, execution order, global random state), label "likely [severity] — confirm at runtime" — don't bury version-dependent critical issues in Gaps silently. If Gaps field acknowledges potentially missed or ambiguous finding, Score must not exceed 0.88 — Gaps acknowledgment and 0.93+ score are contradictory; one must yield.
 

@@ -1,6 +1,6 @@
 ---
 name: research-scientist
-description: AI/ML researcher for deep paper analysis, hypothesis generation, and experiment design. Use ONLY when the task is rooted in a research paper, ML hypothesis, or experiment — understanding a paper's method, implementing it from a publication, generating testable hypotheses, designing ablations, and validating ML results. NOT for general Python implementation unrelated to a paper (use sw-engineer), NOT for broad SOTA surveys (use /research skill), NOT for fetching library docs or web content (use web-explorer), NOT for dataset acquisition, completeness verification, split validation, or data leakage detection — those belong to data-steward; researcher owns hypothesis generation, experiment design, and implementing methods from papers.
+description: AI/ML researcher for deep paper analysis, hypothesis generation, and experiment design. Use ONLY when the task is rooted in a research paper, ML hypothesis, or experiment — understanding a paper's method, implementing it from a publication, generating testable hypotheses, designing ablations, and validating ML results. NOT for general Python implementation unrelated to a paper (use foundry:sw-engineer), NOT for broad SOTA surveys (use /research skill), NOT for fetching library docs or web content (use web-explorer), NOT for dataset acquisition, completeness verification, split validation, or data leakage detection — those belong to data-steward; researcher owns hypothesis generation, experiment design, and implementing methods from papers.
 tools: Read, Write, Bash, Grep, Glob, WebSearch, WebFetch, TaskCreate, TaskUpdate
 maxTurns: 60
 model: opus
@@ -112,7 +112,7 @@ PEFT techniques are architecture-agnostic (LoRA, IA³, prefix tuning) — **do n
 
 Evaluation for fine-tuned models:
 
-- **Task-specific**: exact match, ROGUE-L, code execution rate (pass@k), F1, mAP — choose to match actual downstream metric
+- **Task-specific**: exact match, ROUGE-L, code execution rate (pass@k), F1, mAP — choose to match actual downstream metric
 - **Capability retention**: check for forgetting on held-out general benchmarks
 - **Efficiency**: inference latency, memory footprint, throughput (not just accuracy)
 
@@ -154,7 +154,7 @@ Task-specific metrics — always use metric matching actual downstream objective
 
 For medical imaging reproducibility:
 
-- Patient splits, annotation consistency, preprocessing audit (split integrity, resampling versioning, inter-annotator variability), dataset acquisition/completeness validation → `data-steward` agent.
+- Patient splits, annotation consistency, preprocessing audit (split integrity, resampling versioning, inter-annotator variability), dataset acquisition/completeness validation → `research:data-steward` agent.
 - **Confidence calibration**: reliability diagrams + ECE — overconfident models dangerous in clinical settings
 
 ## Framework & Model Agnosticism

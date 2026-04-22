@@ -4,18 +4,17 @@
 
 All three = GitHub conversation threads — same analysis structure, different API fetch. `TYPE` set by auto-detection in SKILL.md (`issue`, `discussion`, or `pr`). `NUMBER` = item number (strip `discussion ` prefix if present).
 
+<!-- Agent Resolution: canonical table at plugins/oss/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). If check fails or uncertain, proceed as if foundry available — common case; fall back only if agent dispatch explicitly fails.
+```bash
+# Locate oss plugin shared dir — installed first, local workspace fallback
+_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
+[ -z "_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
+```
 
-When foundry **not** installed, substitute `foundry:X` with `general-purpose`, prepend role description plus `model: <model>` to spawn call:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:sw-engineer` | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
-| `foundry:qa-specialist` | `general-purpose` | `opus` | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.` |
-
-Skills with `--team` mode: team spawning with fallback agents still works but lower-quality output.
+Read `$_OSS_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`.
 
 **Cache check first**: if `$CACHE_FILE` exists — set by parent `analyse/SKILL.md` Cache layer; see that file for keying convention — read `item` and `comments` from it — skip primary fetch. Still run wide-net searches (never cached). For PRs: `gh pr checks` and `gh pr diff` never cached — always live.
 

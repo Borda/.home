@@ -35,19 +35,17 @@ Bare comment text → skip to Codex dispatch (Step 12).
 
 <workflow>
 
+<!-- Agent Resolution: canonical table at plugins/oss/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `ls ~/.claude/plugins/cache/ 2>/dev/null | grep -q foundry` (exit 0 = installed). On fail or uncertainty, assume foundry available — common case; fall back only if agent dispatch fails.
+```bash
+# Locate oss plugin shared dir — installed first, local workspace fallback
+_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
+[ -z "_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
+```
 
-Foundry **not** installed: substitute `foundry:X` with `general-purpose`, prepend role description + `model: <model>`:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:sw-engineer` | `general-purpose` | `opus` | `You are a senior Python software engineer. Write production-quality, type-safe code following SOLID principles.` |
-| `foundry:qa-specialist` | `general-purpose` | `opus` | `You are a QA specialist. Write deterministic, parametrized pytest tests covering edge cases and regressions.` |
-| `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
-
-Skills with `--team`: fallback agents work but lower quality.
+Read `$_OSS_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:linting-expert`.
 
 **Task hygiene**: Before creating tasks, call `TaskList`. For each task:
 
@@ -208,8 +206,8 @@ No PR# in header → skip Steps 3b and 4; work on current branch as-is. Skip to 
 Fetch full PR metadata in one call:
 
 ```bash
-gh pr view \
-    number,title,body,author,labels,isDraft,state, headRefName,baseRefName, headRepositoryOwner,headRepository,isCrossRepository,url, closingIssuesReferences <PR# >--json
+gh pr view <PR_NUMBER> \
+    --json number,title,body,author,labels,isDraft,state,headRefName,baseRefName,headRepositoryOwner,headRepository,isCrossRepository,url,closingIssuesReferences
 ```
 
 Extract and record:
@@ -225,15 +223,15 @@ Extract and record:
 Fetch full discussion:
 
 ```bash
-gh pr view <PR# >--comments                        # PR-level comments + timeline
-gh api repos/{owner}/{repo}/pulls/ <PR# >/reviews  # formal reviews (Approve / Request Changes)
-gh api repos/{owner}/{repo}/pulls/ <PR# >/comments # inline code comments with file + line
+gh pr view <PR_NUMBER> --comments                        # PR-level comments + timeline
+gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/reviews  # formal reviews (Approve / Request Changes)
+gh api repos/{owner}/{repo}/pulls/<PR_NUMBER>/comments # inline code comments with file + line
 ```
 
 Non-empty `CLOSING_ISSUES` → fetch each linked issue:
 
 ```bash
-gh issue view title,body <issue# >--json
+gh issue view <ISSUE_NUMBER> --json title,body
 ```
 
 ### Synthesize contribution motivation
@@ -677,7 +675,7 @@ git push "$FORK_REMOTE" HEAD:"$HEAD_REF" # timeout: 30000
 Verify push reached GitHub:
 
 ```bash
-gh pr view headRefOid,commits --jq '.commits[-3:] | .[].messageHeadline' <PR# >--json # timeout: 6000
+gh pr view <PR_NUMBER> --json headRefOid,commits --jq '.commits[-3:] | .[].messageHeadline' # timeout: 6000
 ```
 
 Confirm latest commit headlines match what was just committed.

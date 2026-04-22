@@ -174,7 +174,7 @@ Trigger when: 3+ distinct method families exist AND field has no clear leading m
 ```
 # Substitute pre-computed values — do not pass raw $(date) expressions into spawn prompts
 You are an researcher teammate researching: [topic].
-Read ~/.claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
+Read ${HOME}/.claude/TEAM_PROTOCOL.md — use AgentSpeak v2 for inter-agent messages.
 Your cluster: [method family N] (e.g., "attention-free architectures" vs "linear attention variants").
 Research the top 3 methods in your cluster: comparison table + recommendation given constraints.
 Write your full findings (comparison table, analysis, Confidence block) to `.temp/output-research-<teammate-name>-$BRANCH-<date>.md` using the Write tool.

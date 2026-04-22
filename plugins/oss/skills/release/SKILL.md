@@ -74,8 +74,9 @@ git diff --stat $(echo "$RANGE" | sed 's/\.\./\ /') # timeout: 3000
 
 # PR titles, bodies, and labels for merged PRs (richer context than commits)
 TRUNK=$(git remote show origin 2>/dev/null | grep 'HEAD branch' | { read -r _ _ val; echo "${val:-main}"; })
-gh pr list --state merged --base "${TRUNK:-main}" --limit 100 \  # timeout: 15000
---json number,title,body,labels,mergedAt,author 2>/dev/null
+# timeout: 15000
+gh pr list --state merged --base "${TRUNK:-main}" --limit 100 \
+    --json number,title,body,labels,mergedAt,author 2>/dev/null
 ```
 
 Cross-reference commit bodies against Pull Request (PR) descriptions — canonical source of truth for *why* change was made. `BREAKING CHANGE:` footer = breaking change regardless of PR label.
@@ -200,6 +201,9 @@ VERSION="${REST%% *}"
 DATE=$(date +%Y-%m-%d)
 LAST_TAG=$(git describe --tags --abbrev=0 2>/dev/null || git rev-list --max-parents=0 HEAD)
 RANGE="$LAST_TAG..HEAD"
+# Resolve skill directory — required by Phase 1 audit and Phase 3 template reads
+SKILL_DIR="$(find ~/.claude/plugins -path "*/oss/skills/release" -type d 2>/dev/null | head -1)"  # timeout: 5000
+[ -z "$SKILL_DIR" ] && SKILL_DIR="plugins/oss/skills/release"
 ```
 
 ### Phase 1: Readiness audit

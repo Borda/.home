@@ -53,11 +53,11 @@ If `--compare <run-id-2>` present: load second run identically from `.experiment
 **Pre-compute run directory**:
 
 ```bash
-BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')
+BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')  # timeout: 3000
 ```
 
 ```bash
-RUN_DIR=".experiments/retro-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
+RUN_DIR=".experiments/retro-$(date -u +%Y-%m-%dT%H-%M-%SZ)"  # timeout: 3000
 mkdir -p "$RUN_DIR/scripts"
 ```
 
@@ -270,6 +270,7 @@ Hypotheses:    <N> next steps generated
 -> saved to .temp/output-retro-<branch>-<date>.md
 ---
 Next: /research:run <program.md> --hypothesis <RUN_DIR>/hypotheses.jsonl
+     /research:fortify <commit>    ← stress-test top hypothesis before full re-run
 ```
 
 ## Notes

@@ -150,7 +150,13 @@ Write variant configs to `$FORTIFY_DIR/variants.jsonl` via Write tool — one JS
 
 Run each variant **sequentially** to avoid git worktree conflicts.
 
-**On interrupt** (user abort or unexpected error mid-loop): run `git worktree prune` (`timeout: 15000`) to clean up any partially created worktrees before exiting.
+**Before loop — store original working directory:**
+
+```bash
+ORIG_DIR="$(pwd)"  # timeout: 3000
+```
+
+**On interrupt** (user abort or unexpected error mid-loop): `cd "$ORIG_DIR"` first, then run `git worktree prune` (`timeout: 15000`) to clean up any partially created worktrees before exiting.
 
 For each variant in `variants.jsonl`:
 
@@ -197,7 +203,7 @@ Record guard result: `"pass"` (exit 0) or `"fail"` (non-zero).
 **4f. Cleanup worktree (INVARIANT — must execute even if 4c/4d/4e fail):**
 
 ```bash
-cd <original working directory>  # timeout: 3000
+cd "$ORIG_DIR"  # timeout: 3000
 ```
 
 ```bash

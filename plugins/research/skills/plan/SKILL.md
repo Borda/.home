@@ -17,18 +17,17 @@ NOT for: running experiments (use `/research:run`); methodology validation (use 
 
 <workflow>
 
+<!-- Agent Resolution: canonical table at plugins/research/skills/_shared/agent-resolution.md -->
+
 ## Agent Resolution
 
-> **Foundry plugin check**: run `Glob(pattern="foundry*", path="$HOME/.claude/plugins/cache/")` returning results = installed. Check fails → proceed as if foundry available — common case; fall back only if agent dispatch explicitly fails.
+```bash
+# Locate research plugin shared dir — installed first, local workspace fallback
+_RESEARCH_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/skills/_shared 2>/dev/null | head -1)
+[ -z "_RESEARCH_SHARED" ] && _RESEARCH_SHARED="plugins/research/skills/_shared"
+```
 
-foundry **not** installed → substitute with `general-purpose`, prepend role description:
-
-| foundry agent | Fallback | Model | Role description prefix |
-| --- | --- | --- | --- |
-| `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate scope coverage and architectural dependencies. Return structured JSON only.` |
-| `foundry:perf-optimizer` | `general-purpose` | `opus` | `You are a performance engineer. Validate that metric_cmd measures the right characteristic and guard_cmd is comprehensive. Return structured JSON only.` |
-
-`research:scientist` same plugin — no fallback needed.
+Read `$_RESEARCH_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:solution-architect`, `foundry:perf-optimizer`.
 
 ## Plan Mode (Steps P-P0–P-P3)
 
@@ -50,8 +49,10 @@ Parse `<input>` from arguments. Determine: **file path** or **goal string**:
 Run baseline profiling:
 
 ```bash
-python3 -m cProfile -s cumtime "$ARGUMENTS" 2>&1 | head -40
-time python3 "$ARGUMENTS"
+python3 -m cProfile -s cumtime "$ARGUMENTS" 2>&1 | head -40  # timeout: 60000
+PROFILE_EXIT=${PIPESTATUS[0]}
+[ $PROFILE_EXIT -ne 0 ] && echo "cProfile failed (exit $PROFILE_EXIT)" && exit 1
+time python3 "$ARGUMENTS"  # timeout: 60000
 ```
 
 Present top 5 bottleneck functions. Ask:
@@ -112,7 +113,7 @@ scope_files:     [files the ideation agent may modify]
 compute:         local | colab | docker
 ```
 
-Dry-run both commands before presenting. Failure → flag error, propose corrections. Do not proceed to P-P3 until user confirms or edits.
+Dry-run both commands before presenting (add `# timeout: 60000` to any timed bash calls — user commands may run for minutes). Failure → flag error, propose corrections. Do not proceed to P-P3 until user confirms or edits.
 
 ### Step P-P2b: Agent validation (pre-write)
 
