@@ -17,7 +17,7 @@ Spawn specialized sub-agents in parallel. Consolidate findings into structured f
 <inputs>
 
 - **$ARGUMENTS**: PR number or report path.
-  - If a number given (e.g. `42`): review PR diff
+  - If a number given (e.g. `42` or `#42`): review PR diff
   - `--reply`: spawn oss:shepherd to draft contributor-facing PR comment. Path ending in `.md` → spawn oss:shepherd from that report, skip new review.
   - **Scope**: Python source only. Non-Python file → state out of scope, suggest tool, no findings.
   - **Local files**: use `/develop:review` for local files or current git diff.
@@ -64,6 +64,11 @@ if [[ "$ARGUMENTS" == *"--reply"* ]]; then
     CLEAN_ARGS="${ARGUMENTS//--reply/}"
     CLEAN_ARGS="${CLEAN_ARGS#"${CLEAN_ARGS%%[![:space:]]*}"}"
 fi
+```
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+CLEAN_ARGS="${CLEAN_ARGS#\#}"
 ```
 
 ```bash

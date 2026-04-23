@@ -54,7 +54,7 @@ Read `$_DEV_SHARED/runner-detection.md` — sets `$TEST_CMD` (full suite) and `$
 
 # Debug Mode
 
-> **Argument type detection**: if `$ARGUMENTS` is a positive integer, treat as GitHub issue number and fetch with `gh issue view`. If text (contains spaces, letters, or special chars), treat as symptom description.
+> **Argument type detection**: if `$ARGUMENTS` is a positive integer (or prefixed with `#`, e.g. `#123`), treat as GitHub issue number and fetch with `gh issue view`. If text (contains spaces, letters, or special chars), treat as symptom description.
 
 ## Step 1: Understand the symptom
 
@@ -74,6 +74,11 @@ LOOKBACK=$(( COMMIT_COUNT < 5 ? COMMIT_COUNT : 5 ))
 ```
 
 If GitHub issue number provided:
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+ARGUMENTS="${ARGUMENTS#\#}"
+```
 
 ```bash
 gh issue view <number> --comments

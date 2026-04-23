@@ -17,7 +17,7 @@ Analyze GitHub threads + repo health. Help maintainers triage, respond, decide f
 <inputs>
 
 - **$ARGUMENTS**: one of:
-  - `N` (number) — any GitHub thread: issue, PR, or discussion; auto-detects type
+  - `N` (number, plain `123` or `#123`) — any GitHub thread: issue, PR, or discussion; auto-detects type
   - `health` — repo issue/PR/discussion health overview with duplicate detection
   - `ecosystem` — downstream consumer impact analysis for library maintainers
   - `--reply` — only valid with `N`; spawns shepherd to draft contributor-facing reply after thread analysis. Silently ignored for `health` and `ecosystem`.
@@ -44,6 +44,11 @@ if [[ "$ARGUMENTS" == *"--reply"* ]]; then
     CLEAN_ARGS="${ARGUMENTS//--reply/}"
     CLEAN_ARGS="${CLEAN_ARGS#"${CLEAN_ARGS%%[![:space:]]*}"}"
 fi # timeout: 5000
+```
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+CLEAN_ARGS="${CLEAN_ARGS#\#}"
 ```
 
 `REPLY_MODE` only meaningful when `$CLEAN_ARGS` is number — silently ignored for `health` and `ecosystem`.

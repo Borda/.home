@@ -61,6 +61,13 @@ Read `$_DEV_SHARED/runner-detection.md` — sets `$TEST_CMD` (full suite) and `$
 
 Gather full context before writing any code:
 
+> **Argument type detection**: if `$ARGUMENTS` is a positive integer (or prefixed with `#`, e.g. `#123`), treat as GitHub issue number and fetch with `gh issue view`. If text, treat as feature description.
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+ARGUMENTS="${ARGUMENTS#\#}"
+```
+
 ```bash
 # If issue number: fetch the full issue with comments
 gh issue view <number> --comments

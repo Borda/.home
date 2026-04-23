@@ -1,7 +1,7 @@
 ---
 name: fix
 description: Reproduce-first bug resolution — capture bug in failing regression test, apply minimal fix, run quality stack and review loop.
-argument-hint: <symptom or issue #>
+argument-hint: <symptom or issue # (plain 123 or #123)>
 effort: medium
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true
@@ -76,7 +76,12 @@ Diagnosis file format (`.plans/active/debug_<slug>.md`):
 
 Gather all available context about bug:
 
-> **Argument type detection**: if `$ARGUMENTS` is a positive integer, treat as GitHub issue number and fetch with `gh issue view`. If text (contains spaces, letters, or special chars), treat as symptom description.
+> **Argument type detection**: if `$ARGUMENTS` is a positive integer (or prefixed with `#`, e.g. `#123`), treat as GitHub issue number and fetch with `gh issue view`. If text (contains spaces, letters, or special chars), treat as symptom description.
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+ARGUMENTS="${ARGUMENTS#\#}"
+```
 
 ```bash
 # If issue number: fetch the full issue with comments

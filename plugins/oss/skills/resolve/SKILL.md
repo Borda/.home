@@ -26,7 +26,7 @@ Bare comment text → skip to Codex dispatch (Step 12).
 
 - **$ARGUMENTS**: one of:
   - Omitted → **review-handoff mode**: auto-detect PR from most recent `.temp/output-review-*.md`
-  - PR number (e.g. `42`) or GitHub PR URL → **pr mode**
+  - PR number (e.g. `42` or `#42`) or GitHub PR URL → **pr mode**
   - `report` (bare word) → **report mode**: latest review findings as action items; no GitHub re-fetch
   - `42 report` or `<URL> report` → **pr + report mode**: aggregate live GitHub comments + review report, deduplicated in one pass
   - Bare review comment text → **comment dispatch mode** (jumps to Step 12)
@@ -138,6 +138,11 @@ PR found → set `$ARGUMENTS = <N>`, proceed PR mode. Print: `→ Resolved PR #<
 No PR number extractable → print: "Review output does not reference a PR — provide a PR number explicitly: `/resolve <PR#>`" and exit 1.
 
 Parse $ARGUMENTS:
+
+```bash
+# Strip leading '#' so both '42' and '#42' work
+ARGUMENTS="${ARGUMENTS#\#}"
+```
 
 - Matches `<number> report` or `<URL> report` → **pr + report mode**: strip `report` suffix, set PR# from remaining token; find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → warn but continue in pr mode
 - Equals bare word `report` → **report mode**: find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → stop with: "No review report found in .temp/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
@@ -279,11 +284,11 @@ Print action item table:
 ```markdown
 ### Action Items — PR #<number>
 
-| Type | Author | Status | Summary | File:Line |
-|------|--------|--------|---------|-----------|
-| [req] | @reviewer | pending | rename param `x` to `count` | src/foo.py:42 |
-| [suggest] | @maintainer | pending | add docstring | — |
-| [question] | @reviewer | pending | why not use X instead? | — |
+| # | Type | Author | Status | Summary | File:Line |
+|---|------|--------|--------|---------|-----------|
+| 1 | [req] | @reviewer | pending | rename param `x` to `count` | src/foo.py:42 |
+| 2 | [suggest] | @maintainer | pending | add docstring | — |
+| 3 | [question] | @reviewer | pending | why not use X instead? | — |
 ```
 
 > **Guard**: `[req]` items > 15 → print list, `AskUserQuestion` for subset (up to 4 grouped options, first = "(Recommended)") before continuing.
@@ -697,11 +702,11 @@ Then print:
 
 ### Action Items
 
-| Type | Author | Status | Summary | File:Line |
-|------|--------|--------|---------|-----------|
-| [req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 |
-| [suggest] | @maintainer | ✓ resolved | add docstring | — |
-| [question] | @reviewer | ⊘ answered inline — existing approach is correct per linked issue #42 | why not use X? | — |
+| # | Type | Author | Status | Summary | File:Line |
+|---|------|--------|--------|---------|-----------|
+| 1 | [req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 |
+| 2 | [suggest] | @maintainer | ✓ resolved | add docstring | — |
+| 3 | [question] | @reviewer | ⊘ answered inline — existing approach is correct per linked issue #42 | why not use X? | — |
 
 ### Lint + QA
 <linting-expert summary: N fixes applied | or "no violations"> / <foundry:qa-specialist summary: N blocking fixed, N warnings | or "clean">
