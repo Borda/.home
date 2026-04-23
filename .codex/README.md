@@ -51,7 +51,7 @@ cp -r .codex/ ~/.codex/      # activate globally
 
 ### Reference table
 
-All agents are standardized on `gpt-5.4`. Differentiation is via reasoning effort and role instructions.
+All agents are standardized on `gpt-5.4-mini`. Differentiation is via reasoning effort and role instructions.
 
 | Agent                  | Effort | Purpose                                                                 |
 | ---------------------- | ------ | ----------------------------------------------------------------------- |
@@ -91,8 +91,8 @@ When to address by name vs letting Codex decide:
 
 Session defaults:
 
-- `model = "gpt-5.4"`
-- `review_model = "gpt-5.4"`
+- `model = "gpt-5.4-mini"`
+- `review_model = "gpt-5.4-mini"`
 - `approval_policy = "on-request"`
 - `sandbox_mode = "workspace-write"`
 
@@ -116,9 +116,9 @@ codex --profile fast-edit "fix the typo in the docstring"
 | Profile       | What changes                                                        | When to use                                                  |
 | ------------- | ------------------------------------------------------------------- | ------------------------------------------------------------ |
 | `cautious`    | `approval_policy = "untrusted"`                                     | Unfamiliar codebases, production systems, destructive ops    |
-| `fast-edit`   | `model = "gpt-5-codex"`, medium reasoning, low verbosity, 2 threads | Narrow mechanical edits where speed > depth                  |
+| `fast-edit`   | `model = "gpt-5.4-mini"`, medium reasoning, low verbosity, 2 threads | Narrow mechanical edits where speed > depth                  |
 | `fresh-docs`  | `web_search = "live"`, concise summaries                            | Questions about volatile docs, library versions, API changes |
-| `deep-review` | `model = "gpt-5.4"`, `xhigh` reasoning, live web search             | Broad/high-risk changes needing maximum review depth         |
+| `deep-review` | `model = "gpt-5.4-mini"`, `xhigh` reasoning, live web search        | Broad/high-risk changes needing maximum review depth         |
 
 ## 🧭 Skills In Codex
 

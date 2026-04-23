@@ -2,8 +2,8 @@
 # OpenAI Codex CLI — Borda project config (Rust CLI v0.105+, TOML only)
 # `config_file` paths are relative to this file
 
-model                              = "gpt-5.4"
-review_model                       = "gpt-5.4"
+model                              = "gpt-5.4-mini"
+review_model                       = "gpt-5.4-mini"
 model_reasoning_effort             = "medium"
 model_reasoning_summary            = "auto"
 approval_policy                    = "on-request"
@@ -38,7 +38,7 @@ url = "https://developers.openai.com/mcp"
 approval_policy = "untrusted"
 
 [profiles.fast-edit]
-model = "gpt-5-codex"
+model = "gpt-5.4-mini"
 model_reasoning_effort = "medium"
 model_reasoning_summary = "concise"
 model_verbosity = "low"
@@ -49,7 +49,7 @@ web_search = "live"
 model_reasoning_summary = "concise"
 
 [profiles.deep-review]
-model = "gpt-5.4"
+model = "gpt-5.4-mini"
 model_reasoning_effort = "xhigh"
 web_search = "live"
 model_reasoning_summary = "concise"

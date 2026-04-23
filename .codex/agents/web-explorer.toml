@@ -1,5 +1,5 @@
 name                    = "web-explorer"
-model                   = "gpt-5.4"
+model                   = "gpt-5.4-mini"
 model_reasoning_effort  = "medium"
 model_reasoning_summary = "concise"
 approval_policy         = "on-request"

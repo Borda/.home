@@ -30,11 +30,11 @@ check_contains() {
 check_model() {
   local file="$1"
   local label="$2"
-  if grep -q 'model[[:space:]]*=[[:space:]]*"gpt-5.4"' "$file"; then
+  if grep -q 'model[[:space:]]*=[[:space:]]*"gpt-5.4-mini"' "$file"; then
     echo "$label:model=ok" >> "$OUT_DIR/checks.txt"
   else
     echo "$label:model=fail" >> "$OUT_DIR/checks.txt"
-    echo "model-not-gpt-5.4:$file" >> "$OUT_DIR/leaks.txt"
+    echo "model-not-gpt-5.4-mini:$file" >> "$OUT_DIR/leaks.txt"
     FAILS=$((FAILS + 1))
     LEAKS=$((LEAKS + 1))
   fi
