@@ -8,7 +8,7 @@
 
 Handover + team protocol compliance. Included in `all`. Use explicit `communication` target to run this mode in isolation.
 
-Target agent: `self-mentor`.
+Target agent: `curator`.
 
 ### Domain
 
@@ -40,11 +40,11 @@ is a critical violation
 
 **N override** (communication problems high-complexity — tighter N prevents context window overflow in pipeline subagent): fast=3, full=5. Do NOT use global FULL_N=10 for this mode.
 
-Mark "Calibrate communication" in_progress. Use standard pipeline template from `.claude/skills/calibrate/templates/pipeline-prompt.md` with `<TARGET>=self-mentor` and `<DOMAIN>` set to domain string above. Required substitutions: `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>`. Spawn **single** `general-purpose` pipeline subagent — runs self-mentor against synthetic agent responses, full/compact response pairs, and team transcripts with injected violations.
+Mark "Calibrate communication" in_progress. Use standard pipeline template from `.claude/skills/calibrate/templates/pipeline-prompt.md` with `<TARGET>=curator` and `<DOMAIN>` set to domain string above. Required substitutions: `<TARGET>`, `<DOMAIN>`, `<N>`, `<TIMESTAMP>`, `<MODE>`, `<AB_MODE>`. Spawn **single** `general-purpose` pipeline subagent — runs curator against synthetic agent responses, full/compact response pairs, and team transcripts with injected violations.
 
-**Phase 2 batching**: instruct pipeline to spawn Phase 2 target agents in **batches of 3** (not all at once), collecting acknowledgments between batches. Each self-mentor response ~1–4KB of prompt + response context; batching prevents accumulation of all N problem inputs in pipeline's context simultaneously. Add to pipeline prompt: "Spawn Phase 2 agents in batches of 3 — await all acknowledgments in a batch before spawning the next. Maximum batches: ceil(N/3) — for fast (N=3) that is 1 batch; for full (N=5) that is 2 batches."
+**Phase 2 batching**: instruct pipeline to spawn Phase 2 target agents in **batches of 3** (not all at once), collecting acknowledgments between batches. Each curator response ~1–4KB of prompt + response context; batching prevents accumulation of all N problem inputs in pipeline's context simultaneously. Add to pipeline prompt: "Spawn Phase 2 agents in batches of 3 — await all acknowledgments in a batch before spawning the next. Maximum batches: ceil(N/3) — for fast (N=3) that is 1 batch; for full (N=5) that is 2 batches."
 
-Run dir: `.reports/calibrate/<TIMESTAMP>/self-mentor/` (relative to project root)
+Run dir: `.reports/calibrate/<TIMESTAMP>/curator/` (relative to project root)
 
 ### Active instruction — token optimization (additional scoring measure)
 

@@ -1,6 +1,6 @@
 **Re: Compress natural language in checklist to caveman format**
 
-Each invocation ask self-mentor to check:
+Each invocation ask curator to check:
 
 - **Purpose and logical coherence**: role clearly defined? Scope right — not too broad, not too narrow? New user know when to reach for it vs similar one?
 - **Structural completeness**: required sections present, tags balanced, step numbering sequential

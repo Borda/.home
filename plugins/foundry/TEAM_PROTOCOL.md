@@ -72,7 +72,7 @@ Status code always first. Task ID (`T#`) always precedes file shortcode.
 | `QA` | qa-specialist | `DS` | doc-scribe |
 | `LE` | linting-expert | `CG` | ci-guardian |
 | `DT` | data-steward | `WE` | web-explorer |
-| `OM` | shepherd | `SM` | self-mentor |
+| `OM` | shepherd | `SM` | curator |
 
 ## Project File Shortcodes (`.claude/` config)
 

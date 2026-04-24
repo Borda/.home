@@ -165,6 +165,12 @@
       [data-theme="dark"] .panel-field--skill-lean .panel-field-label {
         color: #bf5af2;
       }
+      [data-theme="dark"] .panel-field--rejection-reason {
+        background: rgba(255, 59, 48, 0.12);
+      }
+      [data-theme="dark"] .panel-field--rejection-reason .panel-field-label {
+        color: #ff6961;
+      }
 
       .badge {
         display: inline-flex;
@@ -505,6 +511,14 @@
         color: #af52de;
       }
 
+      .panel-field--rejection-reason {
+        border-left-color: #ff3b30;
+        background: rgba(255, 59, 48, 0.06);
+      }
+      .panel-field--rejection-reason .panel-field-label {
+        color: #ff3b30;
+      }
+
       @media (prefers-color-scheme: dark) {
         .panel-field--core-idea {
           background: rgba(0, 113, 227, 0.12);
@@ -529,6 +543,12 @@
         }
         .panel-field--skill-lean .panel-field-label {
           color: #bf5af2;
+        }
+        .panel-field--rejection-reason {
+          background: rgba(255, 59, 48, 0.12);
+        }
+        .panel-field--rejection-reason .panel-field-label {
+          color: #ff6961;
         }
       }
 
@@ -639,6 +659,10 @@
               <div class="panel-field-label">🟣 Skill Lean</div>
               <div class="panel-field-value" id="panelSkillLean"></div>
             </div>
+            <div class="panel-field panel-field--rejection-reason" id="panelRejectionReasonField" style="display: none">
+              <div class="panel-field-label">🔴 Rejected — reason</div>
+              <div class="panel-field-value" id="panelRejectionReason"></div>
+            </div>
           </div>
         </div>
       </div>
@@ -684,6 +708,8 @@
         var panelTensionEl = document.getElementById("panelTension");
         var panelTradesAwayEl = document.getElementById("panelTradesAway");
         var panelSkillLeanEl = document.getElementById("panelSkillLean");
+        var panelRejectionReasonEl = document.getElementById("panelRejectionReason");
+        var panelRejectionReasonFieldEl = document.getElementById("panelRejectionReasonField");
         var panelStatusEl = document.getElementById("panelStatus");
         var fetchErrorDotEl = document.getElementById("fetchErrorDot");
         var staleBarEl = document.getElementById("staleBar");
@@ -1050,6 +1076,9 @@
                   mt.label +
                   "</button>";
               }
+            } else if (!mergeTargetId && node.merge_target) {
+              // merge_target is a plain label string (no node ID) — show as non-navigable text
+              mergeTargetBtnHtml = ' <span style="color:var(--text-secondary)">\u2192 ' + node.merge_target + "</span>";
             }
             badgeHtml += 'badge-complete">' + STATUS_EMOJI.merged + " Merged" + mergeTargetBtnHtml;
           } else if (effectiveStatus === "resolved") {
@@ -1088,6 +1117,15 @@
           panelTensionEl.textContent = node.tension || "";
           panelTradesAwayEl.textContent = node.trades_away || "";
           panelSkillLeanEl.textContent = node.skill_lean || "";
+
+          // Show rejection reason for rejected branches
+          if (node.rejection_reason) {
+            panelRejectionReasonEl.textContent = node.rejection_reason;
+            panelRejectionReasonFieldEl.style.display = "";
+          } else {
+            panelRejectionReasonEl.textContent = "";
+            panelRejectionReasonFieldEl.style.display = "none";
+          }
         }
 
         function getEffectiveSelectedId() {

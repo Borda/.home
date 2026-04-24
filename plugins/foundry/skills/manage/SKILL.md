@@ -1,6 +1,6 @@
 ---
 name: manage
-description: Create, update, or delete agents, skills, rules, and hooks with full cross-reference propagation. Non-trivial writes (agent/skill content-edits and creates) are delegated to foundry:self-mentor subagents; hook content-edits are delegated to foundry:sw-engineer; large cross-ref fan-outs (> 3 files) also delegate. The parent orchestrates and handles MEMORY.md, README, audit, and the final report. Also manages settings.json permissions atomically with permissions-guide.md.
+description: Create, update, or delete agents, skills, rules, and hooks with full cross-reference propagation. Non-trivial writes (agent/skill content-edits and creates) are delegated to foundry:curator subagents; hook content-edits are delegated to foundry:sw-engineer; large cross-ref fan-outs (> 3 files) also delegate. The parent orchestrates and handles MEMORY.md, README, audit, and the final report. Also manages settings.json permissions atomically with permissions-guide.md.
 argument-hint: create <agent|skill|rule> <name> "desc" | update <name> [new-name|"change"|spec.md] | delete <name> | add perm <rule> "desc" "use-case" | remove perm <rule>
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
@@ -9,7 +9,7 @@ effort: high
 
 <objective>
 
-Manage lifecycle of agents, skills, rules, hooks in `.claude/`. Handles creation with rich domain content, atomic renames with cross-ref propagation, content editing (agent/skill edits → foundry:self-mentor; hook edits → foundry:sw-engineer; rule edits inline), clean deletion with broken-ref cleanup. Keeps MEMORY.md inventory in sync with disk.
+Manage lifecycle of agents, skills, rules, hooks in `.claude/`. Handles creation with rich domain content, atomic renames with cross-ref propagation, content editing (agent/skill edits → foundry:curator; hook edits → foundry:sw-engineer; rule edits inline), clean deletion with broken-ref cleanup. Keeps MEMORY.md inventory in sync with disk.
 
 </objective>
 
@@ -20,8 +20,8 @@ Manage lifecycle of agents, skills, rules, hooks in `.claude/`. Handles creation
   - `create skill <name> "description"` — create new skill with workflow scaffold
   - `create rule <name> "description"` — create new rule file with frontmatter and sections
   - `update <name> <new-name>` — rename; type auto-detected from disk
-  - `update <name> "change description"` — content-edit; agent/skill → foundry:self-mentor, hook → foundry:sw-engineer, rule → inline
-  - `update <name> <spec-file.md>` — content-edit from spec file; agent/skill → foundry:self-mentor, hook → foundry:sw-engineer, rule → inline
+  - `update <name> "change description"` — content-edit; agent/skill → foundry:curator, hook → foundry:sw-engineer, rule → inline
+  - `update <name> <spec-file.md>` — content-edit from spec file; agent/skill → foundry:curator, hook → foundry:sw-engineer, rule → inline
   - `delete <name>` — delete; type auto-detected from disk (agents, skills, rules, hooks); asks user if ambiguous
   - `add perm <rule> "description" "use case"` — add permission to settings.json allow list and permissions-guide.md
   - `remove perm <rule>` — remove permission from settings.json allow list and permissions-guide.md
@@ -39,8 +39,8 @@ Manage lifecycle of agents, skills, rules, hooks in `.claude/`. Handles creation
 **Update second-argument discrimination**:
 
 - Two bare kebab-case args (second arg no spaces, no `.md` extension) → **rename mode**
-- One name + quoted string → **content-edit mode** (agent/skill: foundry:self-mentor; hook: foundry:sw-engineer; rule: inline)
-- One name + path ending in `.md` → **content-edit mode** (agent/skill: foundry:self-mentor; hook: foundry:sw-engineer; rule: inline)
+- One name + quoted string → **content-edit mode** (agent/skill: foundry:curator; hook: foundry:sw-engineer; rule: inline)
+- One name + path ending in `.md` → **content-edit mode** (agent/skill: foundry:curator; hook: foundry:sw-engineer; rule: inline)
 
 **Examples:**
 
@@ -178,12 +178,12 @@ Extract names inline from Glob results — strip `.claude/agents/` prefix and `.
 
 3. Choose model based on role complexity:
 
-   - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, foundry:self-mentor)
+   - `opusplan` — plan-gated roles (solution-architect, oss:shepherd, foundry:curator)
    - `opus` — complex implementation roles (foundry:sw-engineer, foundry:qa-specialist, research:scientist, foundry:perf-optimizer)
    - `sonnet` — focused execution roles (research:data-steward, foundry:web-explorer, foundry:doc-scribe)
    - `haiku` — high-frequency diagnostics roles (linting-expert, oss:ci-guardian)
 
-4. Spawn **foundry:self-mentor** subagent to generate and write agent file:
+4. Spawn **foundry:curator** subagent to generate and write agent file:
 
 ```markdown
 Read the agent scaffold template at `.claude/skills/manage/templates/agent-scaffold.md`.
@@ -196,8 +196,8 @@ Return ONLY: {"status":"done","file":".claude/agents/<name>.md","lines":N,"confi
 ```
 
 <!-- Health monitoring (CLAUDE.md §8): create checkpoint after spawn:
-     LAUNCH_AT=$(date +%s); touch /tmp/manage-check-self-mentor-agent
- Every 5 min: find .claude/agents -newer /tmp/manage-check-self-mentor-agent -name "<name>.md" | wc -l
+     LAUNCH_AT=$(date +%s); touch /tmp/manage-check-curator-agent
+ Every 5 min: find .claude/agents -newer /tmp/manage-check-curator-agent -name "<name>.md" | wc -l
      Hard cutoff: 15 min of no activity → surface partial results with ⏱ -->
 
 ### Mode: Create Skill
@@ -216,7 +216,7 @@ Return ONLY: {"status":"done","file":".claude/agents/<name>.md","lines":N,"confi
    - Read returned summary; extract: valid frontmatter fields (`name`, `description`, `argument-hint`,`disable-model-invocation`, `user-invocable`, `allowed-tools`, `model`, `effort`, `shell`, `paths`, `context`, `agent`, `hooks`), new fields
    - Note new fields worth including. Adjust template to reflect current schema. Include `model` or `context: fork` only when skill's purpose clearly benefits.
 
-2. Spawn **foundry:self-mentor** subagent to create directory and generate skill file:
+2. Spawn **foundry:curator** subagent to create directory and generate skill file:
 
 ```markdown
 Run: `mkdir -p .claude/skills/<name>` using the Bash tool.
@@ -230,8 +230,8 @@ Return ONLY: {"status":"done","file":".claude/skills/<name>/SKILL.md","lines":N,
 ```
 
 <!-- Health monitoring (CLAUDE.md §8): create checkpoint after spawn:
-     LAUNCH_AT=$(date +%s); touch /tmp/manage-check-self-mentor-skill
- Every 5 min: find .claude/skills -newer /tmp/manage-check-self-mentor-skill -name "SKILL.md" | wc -l
+     LAUNCH_AT=$(date +%s); touch /tmp/manage-check-curator-skill
+ Every 5 min: find .claude/skills -newer /tmp/manage-check-curator-skill -name "SKILL.md" | wc -l
      Hard cutoff: 15 min of no activity → surface partial results with ⏱ -->
 
 ### Mode: Update Agent
@@ -284,7 +284,7 @@ rm -r .claude/skills/<name>  # timeout: 5000
 1. Determine change directive:
    - Quoted description → use as-is
    - Spec file path → Read spec file; use content as directive
-2. Spawn **foundry:self-mentor** subagent:
+2. Spawn **foundry:curator** subagent:
 
 ```markdown
 Read `.claude/agents/<name>.md`.
@@ -303,7 +303,7 @@ Use `description_changed` from returned JSON to decide whether Steps 5–7 need 
 ### Mode: Content-Edit Skill
 
 1. Determine change directive (same as Content-Edit Agent).
-2. Spawn **foundry:self-mentor** subagent:
+2. Spawn **foundry:curator** subagent:
 
 ```markdown
 Read `.claude/skills/<name>/SKILL.md`.
@@ -373,7 +373,7 @@ rm .claude/rules/<name>.md # timeout: 5000
 
 ### Mode: Content-Edit Hook
 
-Hook files are JavaScript — delegate to **foundry:sw-engineer** (not foundry:self-mentor):
+Hook files are JavaScript — delegate to **foundry:sw-engineer** (not foundry:curator):
 
 1. Determine change directive (same as Content-Edit Agent).
 2. Spawn **foundry:sw-engineer** subagent:
@@ -486,7 +486,7 @@ Use Grep to find all references:
 - Pattern `<name>`, file `.claude/CLAUDE.md`, output mode `content`
 - Pattern `<name>`, file `README.md`, output mode `content`
 
-**For update (rename):** Count files grep returns. **≤ 3 files**: apply inline with Edit tool. **> 3 files**: spawn **foundry:self-mentor** subagent:
+**For update (rename):** Count files grep returns. **≤ 3 files**: apply inline with Edit tool. **> 3 files**: spawn **foundry:curator** subagent:
 
 ```text
 Apply these cross-reference updates (<old-name> → <new-name>):
@@ -566,7 +566,7 @@ Run `/audit` to validate created/modified files. **Skip if invoked with `--skip-
 /audit
 ```
 
-For targeted check of only affected file, spawn **foundry:self-mentor** directly:
+For targeted check of only affected file, spawn **foundry:curator** directly:
 
 - For `create`: audit new file for structural completeness, cross-ref validity, content quality
 - For `update`: audit renamed file, verify no stale references remain
@@ -600,7 +600,7 @@ End response with `## Confidence` block per CLAUDE.md output standards.
 - **Cross-ref grep is broad**: searches bare kebab-case names across all markdown files — catches backtick references, prose mentions, spawn directives, inventory lists
 - **MEMORY.md inventory**: always regenerated from disk, never manually calculated — prevents drift
 - **Rule files have no `name:` frontmatter** — filename IS identifier. Renames only change file on disk and update cross-references; no frontmatter `name:` field to update.
-- **Non-trivial write delegation** — agent/skill content-edits and creates delegated to `foundry:self-mentor` subagents to prevent main-context inflation (200–600 line files). Rule content-edits stay inline (≤ 80 lines). Cross-ref propagation (Step 5) delegates to `foundry:self-mentor` when > 3 files need updating. Subagent returns compact JSON envelope; parent handles MEMORY.md (Step 6), README (Step 7), audit (Step 9), final report.
+- **Non-trivial write delegation** — agent/skill content-edits and creates delegated to `foundry:curator` subagents to prevent main-context inflation (200–600 line files). Rule content-edits stay inline (≤ 80 lines). Cross-ref propagation (Step 5) delegates to `foundry:curator` when > 3 files need updating. Subagent returns compact JSON envelope; parent handles MEMORY.md (Step 6), README (Step 7), audit (Step 9), final report.
 - **Type auto-detection**: `update` and `delete` search all four dirs in parallel (agents, skills, rules, hooks); name is unique identifier. Two entities share name (rare) → `AskUserQuestion` resolves.
 - **Content-edit vs rename discrimination**: bare kebab-case second arg = rename; quoted string or `.md` path = content-edit. Unambiguous — names never contain spaces or end in `.md`.
 - Follow-up chains:

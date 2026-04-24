@@ -148,6 +148,6 @@ config_file = "agents/solution-architect.toml"
 description = "Web and external-doc research: package versions, changelogs, migration guides, release notes, API reference extraction."
 config_file = "agents/web-explorer.toml"
 
-[agents.self-mentor]
+[agents.curator]
 description = "Configuration quality reviewer: detect duplication, drift, stale references, weak gates, and instruction hygiene issues."
-config_file = "agents/self-mentor.toml"
+config_file = "agents/curator.toml"

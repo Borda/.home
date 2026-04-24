@@ -1,6 +1,6 @@
 # 🏭 foundry — Claude Code Plugin
 
-OSS Claude Code config: 9 specialist agents, 8 skills, event-driven hooks, and a self-improvement loop for professional AI-assisted development.
+OSS Claude Code config: 10 specialist agents, 9 skills, event-driven hooks, and a self-improvement loop for professional AI-assisted development.
 
 > For OSS workflows, also install the `oss` plugin (`/oss:review`, `/oss:release`, ...). For development workflows, install `develop` (`/develop:feature`, `/develop:fix`, ...). For ML research, install `research` (`/research:run`, `/research:topic`, ...).
 
@@ -22,6 +22,7 @@ ______________________________________________________________________
   - [`/foundry:investigate`](#foundryinvestigate)
   - [`/foundry:distill`](#foundrydistill)
   - [`/foundry:session`](#foundrysession)
+  - [`/foundry:create`](#foundrycreate)
 - [Agents reference](#agents-reference)
   - [foundry:sw-engineer](#foundrysw-engineer)
   - [foundry:solution-architect](#foundrysolution-architect)
@@ -30,8 +31,9 @@ ______________________________________________________________________
   - [foundry:perf-optimizer](#foundryperf-optimizer)
   - [foundry:doc-scribe](#foundrydoc-scribe)
   - [foundry:web-explorer](#foundryweb-explorer)
-  - [foundry:self-mentor](#foundryself-mentor)
+  - [foundry:curator](#foundrycurator)
   - [foundry:challenger](#foundrychallenger)
+  - [foundry:creator](#foundrycreator)
 - [Agent relationships](#agent-relationships)
 - [Rules installed](#rules-installed)
 - [Configuration](#configuration)
@@ -47,7 +49,7 @@ ______________________________________________________________________
 
 ## 🤔 What is foundry?
 
-foundry is the base infrastructure plugin for Claude Code on Python and ML OSS projects. It gives Claude Code a team of nine non-overlapping specialist agents — each with deep, calibrated domain knowledge — paired with skills for managing their lifecycle, benchmarking their accuracy, and feeding corrections back into their instructions.
+foundry is the base infrastructure plugin for Claude Code on Python and ML OSS projects. It gives Claude Code a team of ten non-overlapping specialist agents — each with deep, calibrated domain knowledge — paired with skills for managing their lifecycle, benchmarking their accuracy, and feeding corrections back into their instructions.
 
 Without foundry, Claude Code is a generalist. It helps with code but does not know your release conventions, does not enforce routing to the right specialist, and has no mechanism to measure or improve its own accuracy over time. foundry packages all of that infrastructure in a single installable plugin.
 
@@ -210,7 +212,7 @@ Benchmarks agents and skills against synthetic problems with defined ground trut
 
 **Modes**:
 
-- `agents` — all 9 specialist agents
+- `agents` — all 10 specialist agents
 - `skills` — `/foundry:audit` and `/oss:review`
 - `routing` — measures orchestrator dispatch accuracy for synthetic task prompts
 - `communication` — team protocol compliance, file-handoff protocol violations
@@ -242,9 +244,9 @@ Create, update, or delete agents, skills, rules, and hooks with full cross-refer
 /foundry:manage remove perm "Bash(jq:*)"
 ```
 
-**Create**: fetches the latest Claude Code agent/skill frontmatter schema, picks an unused color, assigns a model tier based on role complexity, then delegates content generation to `foundry:self-mentor`. Checks for overlap with existing agents before creating.
+**Create**: fetches the latest Claude Code agent/skill frontmatter schema, picks an unused color, assigns a model tier based on role complexity, then delegates content generation to `foundry:curator`. Checks for overlap with existing agents before creating.
 
-**Update**: auto-detects type from disk. Rename is atomic (write-before-delete). Content edits are delegated to `foundry:self-mentor` (agents/skills) or `foundry:sw-engineer` (hooks). Propagates description changes to cross-references when more than 3 files are affected.
+**Update**: auto-detects type from disk. Rename is atomic (write-before-delete). Content edits are delegated to `foundry:curator` (agents/skills) or `foundry:sw-engineer` (hooks). Propagates description changes to cross-references when more than 3 files are affected.
 
 **Delete**: removes the file, cleans up broken references across `.claude/`, updates MEMORY.md and README.
 
@@ -347,9 +349,35 @@ Items are stored in project-scoped memory (`~/.claude/projects/<slug>/memory/ses
 
 ______________________________________________________________________
 
+### `/foundry:create`
+
+Interactive outline co-creation for developer advocacy content. Collects format, audience profile, four-beat arc, and voice/tone through structured questions; detects out-of-scope requests; surfaces editorial conflicts; writes approved outline for `foundry:creator` to execute.
+
+```text
+/foundry:create "tracing Python microservices with OpenTelemetry"
+/foundry:create "why your CI pipeline is lying to you"
+/foundry:create                   # no topic — skill asks interactively
+```
+
+**Supported formats**: blog post, Marp slide deck (conference/meetup talk), social thread (Twitter/LinkedIn), talk abstract (CFP submission), lightning talk (5–10 min).
+
+**Out-of-scope detection**: refuses FAQs, comparison tables, and reference docs at Step 1, redirecting to `foundry:doc-scribe`.
+
+**Editorial conflict detection**: if the brief implies an expert-level topic for a beginner audience (or vice versa), the skill surfaces the mismatch explicitly before writing.
+
+Writes `.plans/content/<slug>-outline.md`. Hand off to `foundry:creator` after approval:
+
+```text
+@foundry:creator
+```
+
+Max 5 `AskUserQuestion` interactions for a well-specified brief (format, audience, arc, voice). Skips interactive steps if all choices are provided in the initial brief.
+
+______________________________________________________________________
+
 ## 🤖 Agents reference
 
-All eight agents are available by their full plugin-prefixed name. In spawn directives and `subagent_type` values, always use the full prefix (`foundry:sw-engineer`, not `sw-engineer`).
+All ten agents are available by their full plugin-prefixed name. In spawn directives and `subagent_type` values, always use the full prefix (`foundry:sw-engineer`, not `sw-engineer`).
 
 ### foundry:sw-engineer
 
@@ -359,7 +387,7 @@ All eight agents are available by their full plugin-prefixed name. In spawn dire
 
 **Model**: `opus`
 
-**Not for**: docstrings (use `foundry:doc-scribe`), configuring ruff/mypy (use `foundry:linting-expert`), system design decisions (use `foundry:solution-architect`), test quality analysis (use `foundry:qa-specialist`), performance profiling (use `foundry:perf-optimizer`), ML paper implementations (use `research:scientist`), editing `.claude/` config files (use `foundry:self-mentor`).
+**Not for**: docstrings (use `foundry:doc-scribe`), configuring ruff/mypy (use `foundry:linting-expert`), system design decisions (use `foundry:solution-architect`), test quality analysis (use `foundry:qa-specialist`), performance profiling (use `foundry:perf-optimizer`), ML paper implementations (use `research:scientist`), editing `.claude/` config files (use `foundry:curator`).
 
 Runs in an isolated worktree by default to keep changes sandboxed until review.
 
@@ -449,7 +477,7 @@ Feeds `research:scientist` — fetches current docs and papers; scientist interp
 
 ______________________________________________________________________
 
-### foundry:self-mentor
+### foundry:curator
 
 **Role**: quality guardian of Claude config markdown files — agents, skills, and rules.
 
@@ -471,9 +499,23 @@ ______________________________________________________________________
 
 **Model**: `opusplan` (plan-gated Opus)
 
-**Not for**: designing plans or ADRs (use `foundry:solution-architect`), writing tests (use `foundry:qa-specialist`), config file quality review (use `foundry:self-mentor`).
+**Not for**: designing plans or ADRs (use `foundry:solution-architect`), writing tests (use `foundry:qa-specialist`), config file quality review (use `foundry:curator`).
 
 Read-only — never writes or edits files. Runs by default in all `/develop:*` skills and `/oss:review` — skip with `--no-challenge`.
+
+______________________________________________________________________
+
+### foundry:creator
+
+**Role**: developer advocacy content specialist for outward-facing narrative artifacts.
+
+**Use for**: generating complete blog posts, Marp slide decks, social threads, talk abstracts, and lightning talk outlines in one autonomous pass. Reads an approved outline file (`.plans/content/<slug>-outline.md`) produced by `/foundry:create`. Applies a four-beat story arc (Problem→Journey→Insight→Action) calibrated to the target audience level.
+
+**Model**: `sonnet`
+
+**Not for**: in-code documentation, docstrings, or API references (use `foundry:doc-scribe`), release notes or changelogs (use `oss:shepherd`), structured reference content such as FAQs or comparison tables (redirect to `foundry:doc-scribe`).
+
+Always downstream of `/foundry:create` — reads the approved outline file and generates the full artifact. The two-phase system: `/foundry:create` (interactive intake → outline) then `@foundry:creator` (autonomous generation → artifact).
 
 ______________________________________________________________________
 
@@ -485,10 +527,11 @@ Agents form a directed pipeline, not a flat pool:
 - `foundry:doc-scribe` is always **downstream** — documents finalized code, never shapes design
 - `foundry:qa-specialist` runs **parallel** to `foundry:sw-engineer` during review, or downstream after implementation
 - `foundry:challenger` is **pre-implementation** — challenges plans and proposals before any code is written; use before `foundry:sw-engineer`
-- `foundry:self-mentor` is **orthogonal** — audits `.claude/` config files, not user code
+- `foundry:curator` is **orthogonal** — audits `.claude/` config files, not user code
 - `foundry:web-explorer` **feeds** `research:scientist` — fetches current docs and papers; scientist interprets
+- `foundry:creator` is always **downstream** of `/foundry:create` — reads the approved outline file; never generates content without a prior outline
 
-**Model tiering**: reasoning agents (`foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`) use `opus`; plan-gated roles (`foundry:solution-architect`, `foundry:self-mentor`, `foundry:challenger`) use `opusplan`; execution agents (`foundry:doc-scribe`, `foundry:web-explorer`) use `sonnet`; high-frequency diagnostics (`foundry:linting-expert`) use `haiku`.
+**Model tiering**: reasoning agents (`foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`) use `opus`; plan-gated roles (`foundry:solution-architect`, `foundry:curator`, `foundry:challenger`) use `opusplan`; execution agents (`foundry:doc-scribe`, `foundry:web-explorer`, `foundry:creator`) use `sonnet`; high-frequency diagnostics (`foundry:linting-expert`) use `haiku`.
 
 ______________________________________________________________________
 
@@ -563,9 +606,9 @@ Each pipeline subagent has a 10-minute hard cutoff (15 minutes when Codex is act
 
 Model tier is chosen by role complexity at creation time: `opusplan` for plan-gated roles, `opus` for complex implementation, `sonnet` for focused execution, `haiku` for high-frequency diagnostics. To fix after creation: `/foundry:manage update <name> "change model to sonnet"`.
 
-**`foundry:self-mentor` returns low confidence during `/foundry:audit`**
+**`foundry:curator` returns low confidence during `/foundry:audit`**
 
-The audit re-runs the agent with the specific gap named in its `Gaps:` field. If confidence remains below 0.7 after one retry, the gap is surfaced with a warning in the final report for manual review. Add recurring gaps to `foundry:self-mentor`'s antipatterns section: `/foundry:manage update foundry-self-mentor "add gap X to antipatterns_to_flag"`.
+The audit re-runs the agent with the specific gap named in its `Gaps:` field. If confidence remains below 0.7 after one retry, the gap is surfaced with a warning in the final report for manual review. Add recurring gaps to `foundry:curator`'s antipatterns section: `/foundry:manage update foundry-curator "add gap X to antipatterns_to_flag"`.
 
 **`jq` not found warning during `/foundry:audit setup`**
 
@@ -590,8 +633,8 @@ plugins/foundry/
 │   ├── plugin.json              version + metadata
 │   ├── permissions-allow.json   allow-list merged by /foundry:init
 │   └── permissions-deny.json    deny-list merged by /foundry:init
-├── agents/                      9 specialist agent files
-├── skills/                      8 skill directories (audit, brainstorm, calibrate, distill,
+├── agents/                      10 specialist agent files
+├── skills/                      9 skill directories (audit, brainstorm, calibrate, create, distill,
 │                                    init, investigate, manage, session)
 ├── rules/                       10 rule files symlinked to ~/.claude/rules/ by /foundry:init
 ├── CLAUDE.md                    workflow rules distributed via /foundry:init

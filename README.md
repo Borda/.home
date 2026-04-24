@@ -21,7 +21,7 @@ Personal AI coding assistant configuration for Python/ML OSS development. Versio
 
 ## 🎯 Why
 
-Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 13 specialist agents and 20+ slash-command skill workflows across four focused plugins, in a version-controlled, continuously benchmarked setup optimized for:
+Managing AI coding workflows for Python/ML OSS is complex — you need domain-aware agents, not generic chat. This config packages 14 specialist agents and 20+ slash-command skill workflows across four focused plugins, in a version-controlled, continuously benchmarked setup optimized for:
 
 - Python/ML OSS libraries requiring SemVer discipline and deprecation cycles
 - ML training and inference codebases needing GPU profiling and data pipeline validation
@@ -115,7 +115,7 @@ AI-Rig/
 │   ├── foundry/            # Base plugin: agents, hooks, audit/manage/calibrate/brainstorm/…
 │   │   ├── .claude-plugin/
 │   │   │   └── plugin.json # plugin manifest
-│   │   ├── agents/         # 9 foundry agents (canonical source)
+│   │   ├── agents/         # 10 foundry agents (canonical source)
 │   │   ├── skills/         # foundry skills (canonical source)
 │   │   ├── rules/          # rule files (canonical source; symlinked from .claude/rules/)
 │   │   ├── CLAUDE.md       # workflow rules (symlinked from .claude/CLAUDE.md)
@@ -153,21 +153,22 @@ AI-Rig/
 
 Specialist roles with deep domain knowledge — requested by name, or auto-selected by Claude Code and Codex CLI.
 
-| Agent                  | Claude [plugins] | Codex | Purpose                                                                                                             |
-| ---------------------- | ---------------- | ----- | ------------------------------------------------------------------------------------------------------------------- |
-| **doc-scribe**         | 🟠 foundry       | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references                                                           |
-| **linting-expert**     | 🟠 foundry       | ✓     | ruff, mypy, pre-commit, type annotations                                                                            |
-| **perf-optimizer**     | 🟠 foundry       | —     | Profile-first CPU/GPU/memory/I/O, torch.compile                                                                     |
-| **qa-specialist**      | 🟠 foundry       | ✓     | pytest, hypothesis, mutation testing, ML test patterns                                                              |
-| **self-mentor**        | 🟠 foundry       | ✓     | Config quality review, duplication detection, cross-ref audit                                                       |
-| **solution-architect** | 🟠 foundry       | ✓     | System design, ADRs, API surface, migration plans                                                                   |
-| **sw-engineer**        | 🟠 foundry       | ✓     | Architecture, implementation, SOLID principles, type safety                                                         |
-| **web-explorer**       | 🟠 foundry       | ✓     | API version comparison, migration guides, PyPI tracking                                                             |
-| **challenger**         | 🟠 foundry       | —     | Adversarial plan/architecture/code review; default-on in all develop skills + oss:review (`--no-challenge` to skip) |
-| **ci-guardian**        | 🟢 oss           | ✓     | GitHub Actions, test matrices, flaky test detection, caching                                                        |
-| **shepherd**           | 🟢 oss           | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing                                                       |
-| **data-steward**       | 🟣 research      | ✓     | Dataset versioning, split validation, leakage detection                                                             |
-| **scientist**          | 🟣 research      | —     | Paper analysis, hypothesis generation, experiment design                                                            |
+| Agent                  | Claude [plugins] | Codex | Purpose                                                                                                                                                                               |
+| ---------------------- | ---------------- | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| **doc-scribe**         | 🟠 foundry       | ✓     | Google/Napoleon docstrings, Sphinx/mkdocs, API references                                                                                                                             |
+| **linting-expert**     | 🟠 foundry       | ✓     | ruff, mypy, pre-commit, type annotations                                                                                                                                              |
+| **perf-optimizer**     | 🟠 foundry       | —     | Profile-first CPU/GPU/memory/I/O, torch.compile                                                                                                                                       |
+| **qa-specialist**      | 🟠 foundry       | ✓     | pytest, hypothesis, mutation testing, ML test patterns                                                                                                                                |
+| **curator**            | 🟠 foundry       | ✓     | Config quality review, duplication detection, cross-ref audit                                                                                                                         |
+| **solution-architect** | 🟠 foundry       | ✓     | System design, ADRs, API surface, migration plans                                                                                                                                     |
+| **sw-engineer**        | 🟠 foundry       | ✓     | Architecture, implementation, SOLID principles, type safety                                                                                                                           |
+| **web-explorer**       | 🟠 foundry       | ✓     | API version comparison, migration guides, PyPI tracking                                                                                                                               |
+| **challenger**         | 🟠 foundry       | —     | Adversarial plan/architecture/code review; default-on in all develop skills + oss:review (`--no-challenge` to skip)                                                                   |
+| **creator**            | 🟠 foundry       | —     | Blog posts, Marp slide decks, social threads, talk abstracts — four-beat narrative arc (Problem→Journey→Insight→Action) calibrated to audience; reads `/foundry:create` outline files |
+| **ci-guardian**        | 🟢 oss           | ✓     | GitHub Actions, test matrices, flaky test detection, caching                                                                                                                          |
+| **shepherd**           | 🟢 oss           | ✓     | Issue triage, PR review, SemVer, releases, trusted publishing                                                                                                                         |
+| **data-steward**       | 🟣 research      | ✓     | Dataset versioning, split validation, leakage detection                                                                                                                               |
+| **scientist**          | 🟣 research      | —     | Paper analysis, hypothesis generation, experiment design                                                                                                                              |
 
 ## 🤖 Claude Code
 
@@ -181,13 +182,14 @@ After running `/foundry:init link`, foundry skills are available without a prefi
 
 | Skill                  | What It Does                                                                                                                                                                                                            |
 | ---------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 🟠 `/brainstorm`       | `/brainstorm <idea>` — clarifying questions → approaches → spec → self-mentor review → approval gate; `breakdown <spec>` — ordered task table with per-task skill tags                                                  |
+| 🟠 `/brainstorm`       | `/brainstorm <idea>` — clarifying questions → approaches → spec → curator review → approval gate; `breakdown <spec>` — ordered task table with per-task skill tags                                                      |
 | 🟠 `/manage`           | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                                           |
 | 🟠 `/investigate`      | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                         |
 | 🟠 `/session`          | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                         |
 | 🟠 `/audit`            | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements                                                               |
 | 🟠 `/calibrate`        | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                |
 | 🟠 `/distill`          | Suggest new agents/skills, prune memory, consolidate lessons into rules; `external <source>` analyses an external plugin/skill/agent resource and produces a scored adoption proposal with install-as-is recommendation |
+| 🟠 `/create`           | Interactive outline co-creation for developer advocacy content — format, audience, arc, voice → `.plans/content/<slug>-outline.md`; hand-off to `foundry:creator` for one-shot generation                               |
 | 🔵 `/develop:plan`     | Scope analysis and implementation planning without code changes                                                                                                                                                         |
 | 🔵 `/develop:feature`  | TDD-first feature implementation: codebase analysis, demo test, TDD loop, docs, review                                                                                                                                  |
 | 🔵 `/develop:fix`      | Reproduce-first bug fixes: regression test, minimal fix, quality stack                                                                                                                                                  |
@@ -282,7 +284,7 @@ Skills chain naturally — the output of one becomes the input for the next.
 
 ```text
 /brainstorm "integrate OpenSpace MCP for skill evolution"
-# clarifying questions → 2–3 approaches → spec saved to .plans/blueprint/ → self-mentor review → approval
+# clarifying questions → 2–3 approaches → spec saved to .plans/blueprint/ → curator review → approval
 
 /brainstorm breakdown .plans/blueprint/2026-03-31-openspace-mcp-integration.md
 # reads spec → ordered task table with per-task skill/command tags:

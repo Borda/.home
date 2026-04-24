@@ -346,7 +346,7 @@ Determine target file path:
 - Agent: `.claude/agents/<TARGET>.md`
 - Skill: `.claude/skills/<TARGET>/SKILL.md` (strip leading `/` from target name)
 
-Spawn **self-mentor** subagent using **Agent tool** — never via Bash or CLI. Pass only **file path** and **report path** — do NOT paste file contents into prompt; self-mentor reads files itself:
+Spawn **curator** subagent using **Agent tool** — never via Bash or CLI. Pass only **file path** and **report path** — do NOT paste file contents into prompt; curator reads files itself:
 
 > You are reviewing calibration benchmark result and proposing instruction improvements.
 >
@@ -372,7 +372,7 @@ Spawn **self-mentor** subagent using **Agent tool** — never via Bash or CLI. P
 > **Rationale**: one sentence — why this closes the gap
 > ```
 
-Write self-mentor response verbatim to `.reports/calibrate/<TIMESTAMP>/<TARGET>/proposal.md`. Ask self-mentor to end proposed changes with `## Confidence` block per CLAUDE.md output standards.
+Write curator response verbatim to `.reports/calibrate/<TIMESTAMP>/<TARGET>/proposal.md`. Ask curator to end proposed changes with `## Confidence` block per CLAUDE.md output standards.
 
 ### Return value
 

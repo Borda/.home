@@ -703,6 +703,8 @@ Then print:
 
 ### Action Items
 
+**MUST render as markdown table; never use key-value list, prose, or separator-delimited format regardless of cell length.**
+
 | # | Type | Author | Status | Summary | File:Line | Notes |
 |---|------|--------|--------|---------|-----------|-------|
 | 1 | [req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 | — |

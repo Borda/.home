@@ -11,7 +11,7 @@ Problem domain by agent:
 - `sw-engineer` → Python bugs: type errors, logic errors, anti-patterns, bare `except:`, mutable defaults
 - `qa-specialist` → coverage gaps: uncovered edge cases, missing exception tests, Machine Learning (ML) non-determinism
 - `linting-expert` → violations: ruff rules, mypy errors, annotation gaps
-- `self-mentor` → config issues: broken cross-refs, missing workflow blocks, wrong model, step gaps; handover compliance: malformed JSON envelopes; context discipline: spawn prompt bloat, AgentSpeak v2 violations
+- `curator` → config issues: broken cross-refs, missing workflow blocks, wrong model, step gaps; handover compliance: malformed JSON envelopes; context discipline: spawn prompt bloat, AgentSpeak v2 violations
 - `doc-scribe` → docs gaps: missing docstrings, missing Google style sections, broken examples
 - `perf-optimizer` → perf issues: unnecessary loops, repeated computation, wrong dtype, missing vectorisation
 - `oss:ci-guardian` → Continuous Integration (CI) issues: non-pinned action Secure Hash Algorithms (SHAs), missing cache, inefficient matrix

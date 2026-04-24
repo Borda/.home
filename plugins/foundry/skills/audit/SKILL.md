@@ -9,7 +9,7 @@ effort: high
 
 <objective>
 
-Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/*/` agent and skill files: every agent file, every skill file, every rule file, settings.json, and hooks. Spawns `foundry:self-mentor` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — infinite loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings and auto-fixes at the requested level: `fix high` (critical+high only), `fix medium` (critical+high+medium, default fix level), or `fix all` (all findings including low).
+Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/*/` agent and skill files: every agent file, every skill file, every rule file, settings.json, and hooks. Spawns `foundry:curator` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — infinite loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings and auto-fixes at the requested level: `fix high` (critical+high only), `fix medium` (critical+high+medium, default fix level), or `fix all` (all findings including low).
 
 </objective>
 
@@ -26,8 +26,8 @@ Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/
   - `skills` — restrict sweep to skill files only, report only
   - `rules` — restrict sweep to rule files only, report only
   - `communication` — restrict sweep to communication governance files: `rules/communication.md`, `rules/quality-gates.md`, `TEAM_PROTOCOL.md`, `skills/_shared/file-handoff-protocol.md`
-  - `setup` — restrict sweep to system-configuration files: `settings.json`, `permissions-guide.md`, hooks, `MEMORY.md`, `README.md`, plugin integration, and post-install user state (Checks 1–11, 30, I1, I2, I3); Step 3 runs for `init` SKILL.md only (one foundry:self-mentor spawn); Checks I1–I3 read `~/.claude/` not `.claude/`
-  - `plugin` — restrict sweep to plugin integration only: codex plugin (Check 7), foundry plugin + init validation (Check 8, including 8g); Step 3 runs for `init` SKILL.md only (one foundry:self-mentor spawn)
+  - `setup` — restrict sweep to system-configuration files: `settings.json`, `permissions-guide.md`, hooks, `MEMORY.md`, `README.md`, plugin integration, and post-install user state (Checks 1–11, 30, I1, I2, I3); Step 3 runs for `init` SKILL.md only (one foundry:curator spawn); Checks I1–I3 read `~/.claude/` not `.claude/`
+  - `plugin` — restrict sweep to plugin integration only: codex plugin (Check 7), foundry plugin + init validation (Check 8, including 8g); Step 3 runs for `init` SKILL.md only (one foundry:curator spawn)
   - `plugins` — full audit of all plugins: per-file audit of every `plugins/*/agents/*.md` and `plugins/*/skills/*/SKILL.md` + integration checks (7, 8) for each plugin found
   - `plugins <name>` — same as `plugins` but scoped to one plugin: per-file audit of `plugins/<name>/agents/*.md` and `plugins/<name>/skills/*/SKILL.md` + integration checks; `<name>` must match a directory under `plugins/` (e.g. `plugins foundry`, `plugins oss`, `plugins research`)
   - Scope and fix level can be combined: `agents fix medium`, `rules fix all`, `plugins foundry fix all` — scope always precedes `fix`
@@ -36,7 +36,7 @@ Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/
 </inputs>
 
 <constants>
-<!-- Background agent health monitoring (CLAUDE.md §8) — applies to Step 3 foundry:self-mentor spawns -->
+<!-- Background agent health monitoring (CLAUDE.md §8) — applies to Step 3 foundry:curator spawns -->
 MONITOR_INTERVAL=300   # 5 minutes between polls
 HARD_CUTOFF=900        # 15 minutes of no file activity → declare timed out
 EXTENSION=300          # one +5 min extension if output file explains delay
@@ -159,19 +159,19 @@ Merge project and plugin results into a single flat inventory. Record full paths
 - `setup`/`plugin` (bare) scope — no agent/skill collection from plugins; see setup/plugin notes below
 - Full sweep (no scope) — collect everything
 
-**Setup scope**: when `$SCOPE` is `setup`, also collect `plugins/foundry/skills/init/SKILL.md` for the Step 3 foundry:self-mentor spawn — this is the only per-file spawn in setup scope. Checks I1–I3 (from `checks-install.md`) run in Step 4 against `~/.claude/` to validate post-install user state.
+**Setup scope**: when `$SCOPE` is `setup`, also collect `plugins/foundry/skills/init/SKILL.md` for the Step 3 foundry:curator spawn — this is the only per-file spawn in setup scope. Checks I1–I3 (from `checks-install.md`) run in Step 4 against `~/.claude/` to validate post-install user state.
 
 **`plugins <name>` scope**: verify `plugins/<name>/` exists before proceeding — abort with `! BREAKING: plugins/<name>/ not found` if absent. Collect `plugins/<name>/skills/init/SKILL.md` for Step 3 in addition to all agents and skills in that plugin. **`plugins` (no name)**: iterate all subdirectories under `plugins/` that contain an `agents/` or `skills/` directory.
 
-## Step 3: Per-file audit via foundry:self-mentor
+## Step 3: Per-file audit via foundry:curator
 
-**Context management** — with 12+ agents and 14+ skills, accumulating full foundry:self-mentor responses in context causes overflow before aggregation. Use file-based findings to keep the main context lean.
+**Context management** — with 12+ agents and 14+ skills, accumulating full foundry:curator responses in context causes overflow before aggregation. Use file-based findings to keep the main context lean.
 
-**Hard rule — no pre-reading**: Never call Read on an agent or skill file before spawning foundry:self-mentor on it. The spawned agent does the reading. The orchestrator only reads the returned JSON envelope. Pre-reading 41 KB agent/skill files into main context before spawning defeats the entire purpose of delegation and will cause context overflow at scale.
+**Hard rule — no pre-reading**: Never call Read on an agent or skill file before spawning foundry:curator on it. The spawned agent does the reading. The orchestrator only reads the returned JSON envelope. Pre-reading 41 KB agent/skill files into main context before spawning defeats the entire purpose of delegation and will cause context overflow at scale.
 
 **Batching rule**: For scopes with >5 files, always batch into groups of up to 10 — never spawn one agent per file at scale, as this creates N parallel agents each inflating the coordinator context with their JSON envelope. Batching is the default for any scope larger than 5 files; one-per-file spawning is only acceptable for ≤5 files.
 
-**Scope-restricted runs**: for a scoped run (e.g. `/audit skills`, `/audit agents`) targeting fewer than 5 files, spawn one batched foundry:self-mentor for ALL files in scope — not one agent per file. Read only the one relevant template file for the active scope (not all 4 template files).
+**Scope-restricted runs**: for a scoped run (e.g. `/audit skills`, `/audit agents`) targeting fewer than 5 files, spawn one batched foundry:curator for ALL files in scope — not one agent per file. Read only the one relevant template file for the active scope (not all 4 template files).
 
 Set up the run directory once before spawning any agents:
 
@@ -181,9 +181,9 @@ mkdir -p "$RUN_DIR"                                     # timeout: 5000
 echo "Run dir: $RUN_DIR"
 ```
 
-Spawn **foundry:self-mentor** agents in batches of up to 10 files per agent (default) — or one batch for all files if scope ≤5 files. The spawn prompt for each agent must:
+Spawn **foundry:curator** agents in batches of up to 10 files per agent (default) — or one batch for all files if scope ≤5 files. The spawn prompt for each agent must:
 
-1. Include the content from `.claude/skills/audit/templates/self-mentor-prompt.md`
+1. Include the content from `.claude/skills/audit/templates/curator-prompt.md`
 2. Include the disk inventory from Step 2 (agent/skill list for cross-reference validation)
 3. End with:
 
@@ -229,7 +229,7 @@ Every `$MONITOR_INTERVAL` seconds, run `find $RUN_DIR -newer "$AUDIT_CHECKPOINT"
 > | `communication` | `checks-shared.md` (run only: 15, 16, 12, 13, 29) |
 > | No scope (full) | all 4 files |
 
-**Delegation for full-sweep runs**: for full-sweep runs (no scope restriction), spawn a dedicated `foundry:self-mentor` agent to execute Step 4 checks for each scope group, passing the relevant template file path and RUN_DIR. Use one agent per scope group: agents-checks (reads `checks-agents.md` + relevant `checks-shared.md` entries), skills-checks (reads `checks-skills.md` + relevant `checks-shared.md` entries), shared-checks (reads `checks-shared.md`), and setup-checks (reads `checks-setup.md` + `checks-install.md`). Each agent writes its findings to `<RUN_DIR>/system-checks-<scope>.md` and returns only a JSON envelope. The orchestrator does NOT read the template files itself in this case — it passes only the file path to the spawned agent.
+**Delegation for full-sweep runs**: for full-sweep runs (no scope restriction), spawn a dedicated `foundry:curator` agent to execute Step 4 checks for each scope group, passing the relevant template file path and RUN_DIR. Use one agent per scope group: agents-checks (reads `checks-agents.md` + relevant `checks-shared.md` entries), skills-checks (reads `checks-skills.md` + relevant `checks-shared.md` entries), shared-checks (reads `checks-shared.md`), and setup-checks (reads `checks-setup.md` + `checks-install.md`). Each agent writes its findings to `<RUN_DIR>/system-checks-<scope>.md` and returns only a JSON envelope. The orchestrator does NOT read the template files itself in this case — it passes only the file path to the spawned agent.
 
 Run the following checks. Use native tools first (Glob, Grep, Read); Bash only for pipeline operations the native tools cannot do.
 
@@ -252,9 +252,9 @@ Do not leave overlap findings as vague "potential duplication" notes. The audit 
 - `skills` — Checks 14, 15, 21, 17, 12, 23, 22, 13, 24, 25, 26, 27, 28, 29 (files: `.claude/skills/*/SKILL.md` + `plugins/*/skills/*/SKILL.md`)
 - `rules` — Checks 18, 12, 13, 29
 - `communication` — Checks 15, 16, 12, 13, 29
-- `setup` — Checks 1, 2, 3, 4, 5, 9, 10, 11, 7, 6, 8, 30, I1, I2, I3 (Step 3: one foundry:self-mentor spawn for `init` SKILL.md only; I1–I3 read `~/.claude/`)
-- `plugin` — Checks 7, 8 (Step 3: one foundry:self-mentor spawn for `plugins/foundry/skills/init/SKILL.md` only)
-- `plugins` — Checks 7, 8, 14, 15, 19, 20, 17, 12, 13, 25, 22, 26, 21, 23, 24, 27, 28, 29 (files: all `plugins/*/agents/*.md` + `plugins/*/skills/*/SKILL.md`; Step 3: foundry:self-mentor batches for all plugin agents + skills + each plugin's init SKILL.md)
+- `setup` — Checks 1, 2, 3, 4, 5, 9, 10, 11, 7, 6, 8, 30, I1, I2, I3 (Step 3: one foundry:curator spawn for `init` SKILL.md only; I1–I3 read `~/.claude/`)
+- `plugin` — Checks 7, 8 (Step 3: one foundry:curator spawn for `plugins/foundry/skills/init/SKILL.md` only)
+- `plugins` — Checks 7, 8, 14, 15, 19, 20, 17, 12, 13, 25, 22, 26, 21, 23, 24, 27, 28, 29 (files: all `plugins/*/agents/*.md` + `plugins/*/skills/*/SKILL.md`; Step 3: foundry:curator batches for all plugin agents + skills + each plugin's init SKILL.md)
 - `plugins <name>` — same check list as `plugins`, scoped to `plugins/<name>/` only
 - No scope argument — run all checks
 
@@ -316,7 +316,7 @@ After all checks complete: collect all `⚠` lines, write the full details to `$
 
 ## Step 5: Aggregate and classify findings
 
-**Delegate aggregation to a consolidator agent** to avoid flooding the main context with all agent findings. Spawn a **foundry:self-mentor** consolidator agent with this prompt:
+**Delegate aggregation to a consolidator agent** to avoid flooding the main context with all agent findings. Spawn a **foundry:curator** consolidator agent with this prompt:
 
 > "Read all finding files in `<RUN_DIR>/` (\*.md files from Steps 3–4, including `docs-freshness.md` if present). Apply the severity classification from `.claude/skills/audit/severity-table.md`. Antipatterns that indicate severity under-classification are also in that file. Group all findings by severity (critical, high, medium, low). Apply the one-finding-per-issue rule: when a single location has multiple distinct problems at different severities, emit one finding entry per problem. Write the aggregated severity table to `<RUN_DIR>/aggregate.md` using the Write tool. Also write `<RUN_DIR>/summary.jsonl` — one compact JSON object per line, one line per finding: `{"file":"<basename>","sev":"high|medium|low","id":"H1","one_line":"<finding description>"}`. This file is what the orchestrator will read; aggregate.md is for human review only. Return ONLY a compact JSON envelope on your final line — nothing else after it: `{\"status\":\"done\",\"file\":\"<RUN_DIR>/aggregate.md\",\"findings\":N,\"severity\":{\"critical\":N,\"high\":N,\"medium\":N,\"low\":N},\"confidence\":0.N,\"summary\":\"N findings total: C critical, H high, M medium, L low\"}`"
 
@@ -326,7 +326,7 @@ Main context receives only that one-liner. The orchestrator MUST NOT read `aggre
 
 Read and follow the cross-validation protocol from `.claude/skills/_shared/cross-validation-protocol.md`.
 
-**Skill-specific**: the verifier agent is always **foundry:self-mentor**.
+**Skill-specific**: the verifier agent is always **foundry:curator**.
 
 ## Step 7: Report findings
 
@@ -387,7 +387,7 @@ Apply this hierarchy to every fix action at all severity levels.
 
 Choose the fix agent based on file type:
 
-- **`.claude/agents/*.md` and `.claude/skills/*/SKILL.md`** → spawn **foundry:self-mentor** — it has domain expertise in config quality and has `Write`/`Edit` tools
+- **`.claude/agents/*.md` and `.claude/skills/*/SKILL.md`** → spawn **foundry:curator** — it has domain expertise in config quality and has `Write`/`Edit` tools
 - **Code files** (`.py`, `.js`, `.ts`, etc.) → spawn **foundry:sw-engineer**
 
 **Phase 4 delegation rule**: fix-phase edits that touch >3 files should be delegated to a `foundry:sw-engineer` agent rather than applied inline — pass it the list of findings and target file paths; it applies Edit calls and returns a compact status JSON.
@@ -405,9 +405,9 @@ When the finding count exceeds 10 or `fix all` was passed, spawn a dedicated **a
 ```markdown
 Read `<RUN_DIR>/summary.jsonl` — this is the findings list (one JSON object per line).
 Read `.claude/skills/audit/templates/fix-prompt.md` for the per-file fix prompt template.
-For each unique file in the findings list, spawn one fix agent (foundry:self-mentor for .md files, foundry:sw-engineer for .js/.py files) with all findings for that file batched into a single prompt.
+For each unique file in the findings list, spawn one fix agent (foundry:curator for .md files, foundry:sw-engineer for .js/.py files) with all findings for that file batched into a single prompt.
 Issue all fix spawns in a single response for parallelism.
-After all fix agents complete, spawn foundry:self-mentor re-audit agents (one per changed file) to confirm fixes held.
+After all fix agents complete, spawn foundry:curator re-audit agents (one per changed file) to confirm fixes held.
 Write a completion summary to `<RUN_DIR>/fix-summary.md`:
   - findings_total: N
   - fixed: N
@@ -433,7 +433,7 @@ After all subagents complete, collect their results and proceed to Step 10.
 
 ## Step 9: Codex cross-file check
 
-After all Step 8 fix agents complete and before foundry:self-mentor re-audit:
+After all Step 8 fix agents complete and before foundry:curator re-audit:
 
 Read `.claude/skills/_shared/codex-prepass.md` and run the Codex pre-pass on the combined diff of all fixes.
 
@@ -441,7 +441,7 @@ Treat any findings as additional issues entering Step 10's re-audit scope. Skip 
 
 ## Step 10: Re-audit modified files + confidence check
 
-For every file changed in Step 8, spawn **foundry:self-mentor** again to confirm the fix resolved the finding and no new issues were introduced. Use the same file-based approach as Step 3 — write full re-audit findings to `<RUN_DIR>/<file-basename>-reaudit.md` and return ONLY a compact JSON envelope: `{"status":"done","file":"<RUN_DIR>/<file-basename>-reaudit.md","findings":N,"severity":{"critical":N,"high":N,"medium":N,"low":N},"confidence":0.N,"summary":"<filename>: fix confirmed, N residual findings"}`
+For every file changed in Step 8, spawn **foundry:curator** again to confirm the fix resolved the finding and no new issues were introduced. Use the same file-based approach as Step 3 — write full re-audit findings to `<RUN_DIR>/<file-basename>-reaudit.md` and return ONLY a compact JSON envelope: `{"status":"done","file":"<RUN_DIR>/<file-basename>-reaudit.md","findings":N,"severity":{"critical":N,"high":N,"medium":N,"low":N},"confidence":0.N,"summary":"<filename>: fix confirmed, N residual findings"}`
 
 ```bash
 # Spot-check: confirm the previously broken reference no longer appears
@@ -450,12 +450,12 @@ grep -n "<broken-name>" <fixed-file>
 
 **Confidence re-run**: parse each confidence score from the one-line summaries (Step 3) and re-audit summaries (Step 10). For any file where **Score < 0.7**:
 
-1. Re-spawn foundry:self-mentor on that file with the specific gap from the `Gaps:` field addressed in the prompt (e.g., "pay special attention to async error paths — previous pass flagged this as a gap")
+1. Re-spawn foundry:curator on that file with the specific gap from the `Gaps:` field addressed in the prompt (e.g., "pay special attention to async error paths — previous pass flagged this as a gap")
 2. If confidence is still < 0.7 after one retry: flag to user with ⚠ and include the gap in the final report — do not silently drop it
-3. Recurring low-confidence gaps (same gap on same file across multiple audit runs) → candidate for adding to foundry:self-mentor's `\<antipatterns_to_flag>` or the agent's own instructions
+3. Recurring low-confidence gaps (same gap on same file across multiple audit runs) → candidate for adding to foundry:curator's `\<antipatterns_to_flag>` or the agent's own instructions
 
 ```bash
-# Parse confidence scores from foundry:self-mentor outputs (regex on task result text)
+# Parse confidence scores from foundry:curator outputs (regex on task result text)
 # Score: 0.82  → extract 0.82
 # Flag any < 0.7 for targeted re-run
 ```
@@ -571,12 +571,12 @@ Call `AskUserQuestion` tool — do NOT write options as plain text first. Map op
 - **settings.json is hands-off**: missing permissions are always reported, never auto-edited — structural JSON edits risk breaking Claude Code's config loading
 - **Dead loops need human judgment**: a cycle in follow-up chains might be intentional (e.g., refactor → review → fix → refactor) — flag and explain, don't auto-remove
 - **Convergence loop replaces cycle cap**: the fix loop runs until zero fixable findings remain or the 5-pass hard limit is hit — see Step 10 for the full protocol
-- **Relationship to self-mentor**: `foundry:self-mentor` is a single-file reactive audit; `/audit` is the system-wide sweep that runs foundry:self-mentor at scale and adds cross-file checks
+- **Relationship to curator**: `foundry:curator` is a single-file reactive audit; `/audit` is the system-wide sweep that runs foundry:curator at scale and adds cross-file checks
 - `general-purpose` is a built-in Claude Code agent type (no `.claude/agents/general-purpose.md` file needed); no custom system prompt, all tools available.
 - **Paths must be portable**: `.claude/` for project-relative paths, `~/` or `$HOME/` for home paths — never a literal `/Users/<name>/` or `/home/<name>/` path (shown here as anti-examples only); this rule applies to ALL config files including `settings.json`
 - **Bash error logging**: if a bash block in Pre-flight checks or Step 4 fails unexpectedly, append a JSONL line to `.claude/logs/audit-errors.jsonl` (`{"ts":"<ISO>","check":"<N>","error":"<message>"}`) for post-mortem — do not swallow errors silently.
-- **Parallel execution rule**: After Step 2 (file collection), launch Steps 3 and 4 in the same response — all foundry:self-mentor agent spawns AND all system-wide bash checks must be issued together. Do NOT run Step 3 first and Step 4 second. Aggregation (Step 5) waits for both to complete. The docs-freshness web-explorer (within Step 4) also launches in that same parallel batch.
-- **Token cost**: Step 3 (foundry:self-mentor spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
+- **Parallel execution rule**: After Step 2 (file collection), launch Steps 3 and 4 in the same response — all foundry:curator agent spawns AND all system-wide bash checks must be issued together. Do NOT run Step 3 first and Step 4 second. Aggregation (Step 5) waits for both to complete. The docs-freshness web-explorer (within Step 4) also launches in that same parallel batch.
+- **Token cost**: Step 3 (foundry:curator spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
 - **Skill-creator complement**: For testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official skill-creator utility from Anthropic. `/audit` checks structural quality; `skill-creator` validates that the right skill is selected by Claude Code's dispatcher when the user types a command.
 - Follow-up chains:
   - Audit clean → `/foundry:init` to propagate verified config to `~/.claude/`

@@ -66,7 +66,7 @@ All agents are standardized on `gpt-5.4-mini`. Differentiation is via reasoning 
 | **oss-shepherd**       | high   | Issue triage, PR review, SemVer, pyDeprecate, release checklist         |
 | **solution-architect** | high   | System design, ADRs, API compatibility, migration planning              |
 | **web-explorer**       | medium | External docs/release-note extraction and evidence gathering            |
-| **self-mentor**        | medium | Config quality checks, drift/leak detection, workflow hygiene           |
+| **curator**            | medium | Config quality checks, drift/leak detection, workflow hygiene           |
 
 ### Spawn rules
 
@@ -102,7 +102,7 @@ Reasoning allocation:
 | ---------- | --------------------------------------------------------------------- | ------------------------------------------------------ |
 | **xhigh**  | qa-specialist, security-auditor                                       | Adversarial: exhaustive search for what could go wrong |
 | **high**   | sw-engineer, squeezer, data-steward, oss-shepherd, solution-architect | Analytical: depth without unbounded budget             |
-| **medium** | doc-scribe, ci-guardian, linting-expert, web-explorer, self-mentor    | Writing/config/research balance                        |
+| **medium** | doc-scribe, ci-guardian, linting-expert, web-explorer, curator        | Writing/config/research balance                        |
 
 ### Profiles
 
@@ -153,7 +153,7 @@ Agent targeting examples:
 ```text
 use the qa-specialist to review tests/ for missing edge cases
 use the solution-architect to produce a minimal migration plan for this API change
-use the self-mentor to review .codex drift and weak gates
+use the curator to review .codex drift and weak gates
 ```
 
 ## 🪙 RTK Integration

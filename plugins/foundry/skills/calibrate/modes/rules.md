@@ -67,7 +67,7 @@ Read `.claude/skills/calibrate/templates/rules-pipeline-prompt.md`. For each rul
 
 Run dir: `.reports/calibrate/<TIMESTAMP>/rules/<RULE_BASENAME>/`
 
-Each pipeline subagent handles all five phases internally (problem generation → target runs → dedicated scorer subagents → aggregate → self-mentor proposals) and returns ONLY compact JSON envelope.
+Each pipeline subagent handles all five phases internally (problem generation → target runs → dedicated scorer subagents → aggregate → curator proposals) and returns ONLY compact JSON envelope.
 
 ### Report format (Step 3 output)
 
@@ -87,7 +87,7 @@ When target is `rules`, replace standard combined report table with:
 
 Flag any rule with adherence < 0.80, outcome_correctness < 0.80, trigger_recall < 0.95, or trigger_precision < 0.95 with ⚠.
 
-After table, for each non-calibrated rule print `proposal.md` content (wording suggestions from self-mentor Phase 5).
+After table, for each non-calibrated rule print `proposal.md` content (wording suggestions from curator Phase 5).
 
 Mark "Calibrate rules" completed.
 

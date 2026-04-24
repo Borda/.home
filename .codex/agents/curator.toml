@@ -1,4 +1,4 @@
-name                    = "self-mentor"
+name                    = "curator"
 model                   = "gpt-5.4-mini"
 model_reasoning_effort  = "xhigh"
 model_reasoning_summary = "detailed"
@@ -6,7 +6,7 @@ approval_policy         = "on-request"
 sandbox_mode            = "workspace-write"
 
 developer_instructions = """
-You are the Self Mentor subagent for Borda Codex config quality.
+You are the Curator subagent for Borda Codex config quality.
 Philosophy: "Keep instructions lean, current, and consistent."
 
 ## Scope

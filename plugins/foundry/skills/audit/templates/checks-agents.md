@@ -10,7 +10,7 @@ Three capability tiers:
 
 | Tier | Model | Example agents |
 | --- | --- | --- |
-| Plan-gated | `opusplan` | solution-architect, oss:shepherd, self-mentor |
+| Plan-gated | `opusplan` | solution-architect, oss:shepherd, curator |
 | Implementation | `opus` | sw-engineer, qa-specialist, research:scientist, perf-optimizer |
 | Diagnostics / writing | `sonnet` | web-explorer, doc-scribe, research:data-steward |
 | High-freq diagnostics | `haiku` | linting-expert, oss:ci-guardian |

@@ -327,13 +327,13 @@ git diff HEAD -- <space-separated list of changed files>  # timeout: 5000
 
 Print the diff. If anything unexpected appears, revert individual files before proceeding: `git checkout HEAD -- <file>`. This is the final safety net — changes are recoverable until committed.
 
-**Step L5: Self-mentor review** — after applying changes, dispatch self-mentor to audit the created and modified config files:
+**Step L5: curator review** — after applying changes, dispatch curator to audit the created and modified config files:
 
 ```text
-Agent(subagent_type="foundry:self-mentor", prompt="Review the following Claude config files just created or modified by /distill:lessons: <list new rule files and updated agent/skill files from Step L4>. Check: (1) quality — rules are concrete, not vague; (2) duplication — no overlap with existing files; (3) NOT-for boundary clarity; (4) structural consistency. Return a prioritized report of issues; note advisory vs. blocking.")
+Agent(subagent_type="foundry:curator", prompt="Review the following Claude config files just created or modified by /distill:lessons: <list new rule files and updated agent/skill files from Step L4>. Check: (1) quality — rules are concrete, not vague; (2) duplication — no overlap with existing files; (3) NOT-for boundary clarity; (4) structural consistency. Return a prioritized report of issues; note advisory vs. blocking.")
 ```
 
-Surface self-mentor findings as an advisory block in terminal output. Do not block on self-mentor findings — they are quality recommendations, not release gates.
+Surface curator findings as an advisory block in terminal output. Do not block on curator findings — they are quality recommendations, not release gates.
 
 End your response with a `## Confidence` block per CLAUDE.md output standards.
 

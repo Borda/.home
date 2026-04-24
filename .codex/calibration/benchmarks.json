@@ -1,6 +1,6 @@
 {
   "agents": {
-    "self-mentor": [
+    "curator": [
       "Review Checklist",
       "calibration coverage"
     ],

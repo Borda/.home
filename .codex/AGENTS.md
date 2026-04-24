@@ -137,14 +137,14 @@ Parent agent responsibilities:
 - `oss-shepherd`: issue triage, maintainer review, SemVer and release governance
 - `solution-architect`: architecture planning, API contracts, migration design
 - `web-explorer`: authoritative external docs/changelogs/API delta research
-- `self-mentor`: configuration drift, instruction overlap, calibration/gate hygiene
+- `curator`: configuration drift, instruction overlap, calibration/gate hygiene
 
 ### Collaboration team patterns
 
 - Architecture/public API changes: `solution-architect` + `sw-engineer` + `qa-specialist` + `doc-scribe`
 - Security-sensitive features: `security-auditor` + `sw-engineer` + `qa-specialist`
 - Data pipeline changes: `data-steward` + `sw-engineer` + `qa-specialist`
-- Toolchain/CI quality changes: `ci-guardian` + `linting-expert` + `self-mentor`
+- Toolchain/CI quality changes: `ci-guardian` + `linting-expert` + `curator`
 - External migration/release-note driven changes: `web-explorer` + `solution-architect` + `sw-engineer`
 - Release readiness: `oss-shepherd` + `ci-guardian` + `doc-scribe` + `qa-specialist`
 
@@ -237,7 +237,7 @@ Parent agent responsibilities:
 - Exact references and source-backed evidence are required for decisions
 - Volatile ecosystem/tooling behavior could invalidate cached assumptions
 
-### Spawn `self-mentor` when:
+### Spawn `curator` when:
 
 - Config/skill/agent drift or duplication is suspected
 - Routing quality, calibration leakage, or weak gate coverage is reported

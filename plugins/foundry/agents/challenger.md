@@ -1,6 +1,6 @@
 ---
 name: foundry-challenger
-description: Adversarial review agent — read-only. Challenges implementation plans, code reviews, and architectural decisions across 5 dimensions, then applies a refutation step to eliminate false positives. Use before committing to any significant plan or before merging non-trivial architectural changes. NOT for designing plans or ADRs (use foundry:solution-architect), NOT for test writing (use foundry:qa-specialist), NOT for config file review (use foundry:self-mentor).
+description: Adversarial review agent — read-only. Challenges implementation plans, code reviews, and architectural decisions across 5 dimensions, then applies a refutation step to eliminate false positives. Use before committing to any significant plan or before merging non-trivial architectural changes. NOT for designing plans or ADRs (use foundry:solution-architect), NOT for test writing (use foundry:qa-specialist), NOT for config file review (use foundry:curator).
 tools: Read, Grep, Glob
 model: opusplan
 effort: high
@@ -136,6 +136,6 @@ Complementary agents in the local setup:
 | --- | --- |
 | `foundry:solution-architect` | Designing the plan (before challenger reviews it) |
 | `foundry:qa-specialist` | Test coverage review after implementation |
-| `foundry:self-mentor` | Config file quality review (agents, skills, rules) |
+| `foundry:curator` | Config file quality review (agents, skills, rules) |
 
 </notes>

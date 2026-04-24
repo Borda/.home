@@ -219,7 +219,7 @@ ______________________________________________________________________
 
 ### Phase 5 — Propose wording improvements
 
-Spawn a **self-mentor** subagent using the Agent tool. Pass only file paths — do NOT paste file contents into the prompt:
+Spawn a **curator** subagent using the Agent tool. Pass only file paths — do NOT paste file contents into the prompt:
 
 > Read these files using the Read tool:
 >

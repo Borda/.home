@@ -97,7 +97,7 @@ Mark "A/B test capability proposals" completed.
 ### Capability Changes
 | # | Feature | Target | Δrecall | ΔF1 | Result |
 |---|---------|--------|---------|-----|--------|
-| 1 | ... | agents/self-mentor.md | +0.04 | +0.02 | ✓ accepted |
+| 1 | ... | agents/curator.md | +0.04 | +0.02 | ✓ accepted |
 | 2 | ... | agents/sw-engineer.md | −0.02 | +0.01 | ✗ reverted |
 
 ### Next Steps

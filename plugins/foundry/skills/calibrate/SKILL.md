@@ -24,7 +24,7 @@ Calibration data drives improvement loop: systematic gaps → instruction update
     - `agents` — all agents only (full agent list in `modes/agents.md`)
     - `skills` — calibratable skills only (`/audit`, `/oss:review` *(requires oss plugin)*)
     - `routing` — routing accuracy test: measures how accurately `general-purpose` orchestrator selects correct `subagent_type` for synthetic task prompts (not per-agent quality benchmark; included in `all`)
-    - `communication` — handover + team protocol compliance: runs `self-mentor` against synthetic agent responses and team transcripts with injected protocol violations (missing JSON envelope, missing `summary`, AgentSpeak v2 breaches); included in `all`
+    - `communication` — handover + team protocol compliance: runs `curator` against synthetic agent responses and team transcripts with injected protocol violations (missing JSON envelope, missing `summary`, AgentSpeak v2 breaches); included in `all`
     - `rules` — rule adherence test: for each global rule file (no `paths:`) and each path-scoped rule when matching file is in context, generates synthetic tasks that should trigger rule's key directives, measures whether `general-purpose` agent with rule loaded correctly applies them; reports rules that are ignored, misapplied, or redundant; included in `all`
     - `<agent-name>` — single agent (e.g., `foundry:sw-engineer`)
     - `/audit` or `/oss:review` — single skill
