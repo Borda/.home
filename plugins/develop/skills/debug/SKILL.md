@@ -27,7 +27,7 @@ _DEV_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/develop/*/skills/_shar
 [ -z "$_DEV_SHARED" ] && _DEV_SHARED="plugins/develop/skills/_shared"
 ```
 
-Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`.
+Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:challenger`.
 
 **Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
 
@@ -164,6 +164,7 @@ Evidence: <key signals that confirmed the hypothesis>
 
 ```bash
 SLUG=$(echo "<symptom first 4 words>" | tr ' ' '-' | tr '[:upper:]' '[:lower:]' | tr -cd '[:alnum:]-')
+[ -z "$SLUG" ] && SLUG="unnamed-$(date +%s)"
 DIAG_FILE=".plans/active/debug_${SLUG}.md"
 mkdir -p .plans/active
 ```
@@ -186,7 +187,7 @@ Write `$DIAG_FILE` with this structure:
 <high|medium|low>
 ```
 
-Hand off: `-> /develop:fix --diagnosis $DIAG_FILE` from Step 2 (regression test). Root cause already known — fix's Step 1 analysis is complete.
+Hand off: `-> /develop:fix --diagnosis $DIAG_FILE`. Root cause already known — fix's Step 1 analysis is complete.
 
 ## Final Report
 
@@ -196,11 +197,13 @@ After root cause confirmed and handoff to `/develop:fix` complete, emit terminal
 Root Cause: <one sentence>
 File(s): <suspect files>
 Evidence: <key signals>
-→ Handed off to /develop:fix --diagnosis $DIAG_FILE from Step 2
+→ Handed off to /develop:fix --diagnosis $DIAG_FILE
 
 ## Confidence
 **Score**: 0.N — [high ≥0.9 | moderate 0.8–0.9 | low <0.8 ⚠]
-**Gaps**: [e.g., unverified alternative hypotheses, hypothesis only — not confirmed via test reproduction]
+**Gaps**:
+- [e.g., unverified alternative hypotheses, hypothesis only — not confirmed via test reproduction]
+
 **Refinements**: N passes.
 ```
 
@@ -232,6 +235,7 @@ Your hypothesis: [hypothesis N]. Investigate ONLY this root cause.
 Report findings to @lead using deltaT# or epsilonT# codes.
 Compact Instructions: preserve file paths, errors, line numbers. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal completion in your final delta message: "Status: complete | blocked — <reason>".
+Write your full analysis to .plans/active/debug-hypothesis-[N]-[timestamp].md using the Write tool. Return ONLY compact JSON: {"status":"done","file":"<path>","findings":N,"confidence":0.N}.
 ```
 
 </workflow>

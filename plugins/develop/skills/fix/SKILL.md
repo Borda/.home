@@ -1,7 +1,7 @@
 ---
 name: fix
 description: Reproduce-first bug resolution — capture bug in failing regression test, apply minimal fix, run quality stack and review loop.
-argument-hint: <symptom or issue # (plain 123 or #123)> [--no-challenge]
+argument-hint: <symptom or issue # (plain 123 or #123)> [--plan <path>] [--diagnosis <path>] [--no-challenge]
 effort: medium
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true
@@ -25,9 +25,11 @@ NOT for: unknown failures without traceback (use `/foundry:investigate`); `.clau
 # Locate develop plugin shared dir — installed first, local workspace fallback
 _DEV_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/develop/*/skills/_shared 2>/dev/null | head -1)
 [ -z "$_DEV_SHARED" ] && _DEV_SHARED="plugins/develop/skills/_shared"
+_FOUNDRY_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared 2>/dev/null | head -1)
+[ -z "$_FOUNDRY_SHARED" ] && _FOUNDRY_SHARED=".claude/skills/_shared"
 ```
 
-Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`.
+Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:challenger`.
 
 ## Anti-Rationalizations
 
@@ -68,6 +70,13 @@ If `PLAN_FILE` is set: Read `$PLAN_FILE`, extract `Affected files`, `Risks`, `Su
 
 **Optional `--diagnosis <path>`**: if provided (from a preceding `/develop:debug` session), read the diagnosis file first. Skip codebase analysis — root cause, suspect files, and evidence are pre-populated. Proceed directly to Step 2 (regression test).
 
+```bash
+# Extract --diagnosis path from arguments
+DIAG_FILE="${ARGUMENTS##*--diagnosis }"
+DIAG_FILE="${DIAG_FILE%% *}"
+[ "$DIAG_FILE" = "$ARGUMENTS" ] && DIAG_FILE=""
+```
+
 Diagnosis file format (`.plans/active/debug_<slug>.md`):
 - Root Cause — pre-confirmed hypothesis
 - Suspect Files — files to focus on
@@ -100,16 +109,7 @@ If error message or pattern provided: use Grep tool (pattern `<error_pattern>`, 
 $PYTEST_CMD --tb=long <test_path> -v 2>&1 | tail -40
 ```
 
-**Structural context** (codemap, if installed) — soft PATH check, silently skip if `scan-query` not found:
-
-```bash
-PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
-if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
-    scan-query central --top 5
-fi
-```
-
-If results returned: prepend `## Structural Context (codemap)` block to foundry:sw-engineer spawn prompt with hotspot JSON. If `scan-query` not found or index missing: proceed silently — do not mention codemap to user.
+Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
 
 Spawn **foundry:sw-engineer** agent to analyze failing code path and identify:
 
@@ -253,7 +253,7 @@ Use scan to prioritize which criteria below get deepest scrutiny.
 
 **After 3 cycles**: if substantive issues remain, stop — surface to user before proceeding.
 
-Read `.claude/skills/_shared/quality-stack.md` (if file not found -> skip quality stack entirely, note "foundry plugin not installed — quality stack skipped" in Final Report) and execute Branch Safety Guard, Quality Stack, Codex Pre-pass, Progressive Review Loop, and Codex Mechanical Delegation steps.
+Read `$_FOUNDRY_SHARED/quality-stack.md` (if file not found → skip quality stack entirely, note "foundry quality-stack not found at installed path — stack skipped" in Final Report) and execute Branch Safety Guard, Quality Stack, Codex Pre-pass, Progressive Review Loop, and Codex Mechanical Delegation steps.
 
 ## Final Report
 
@@ -285,13 +285,15 @@ Read `.claude/skills/_shared/quality-stack.md` (if file not found -> skip qualit
 
 ## Confidence
 **Score**: 0.N — [high >=0.9 | moderate 0.8-0.9 | low <0.8]
-**Gaps**: [e.g., could not reproduce locally, partial traceback only, fix not runtime-tested]
+**Gaps**:
+- [e.g., could not reproduce locally, partial traceback only, fix not runtime-tested]
+
 **Refinements**: N passes.
 ```
 
 ## Team Assignments
 
-**When to use team mode**: root cause unclear after Step 1, OR bug spans 3+ modules.
+**When to use team mode**: root cause unclear after Step 1, OR bug spans 3+ modules AND user accepted "Proceed anyway" at scope gate.
 
 - **Teammate 1-3 (foundry:sw-engineer x 2-3, model=opus)**: each investigates distinct root-cause hypothesis independently
 
@@ -311,6 +313,7 @@ Your hypothesis: [hypothesis N]. Investigate ONLY this root cause.
 Report findings to @lead using deltaT# or epsilonT# codes.
 Compact Instructions: preserve file paths, errors, line numbers. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal your completion in your final delta message: "Status: complete | blocked — <reason>".
+Write your full analysis to .plans/active/fix-hypothesis-[N]-[timestamp].md using the Write tool. Return ONLY compact JSON: {"status":"done","file":"<path>","findings":N,"confidence":0.N}.
 ```
 
 </workflow>

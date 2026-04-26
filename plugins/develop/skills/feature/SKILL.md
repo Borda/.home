@@ -1,7 +1,7 @@
 ---
 name: feature
 description: TDD-first feature development — crystallise API as a demo test, drive implementation to pass it, run quality stack and progressive review loop.
-argument-hint: <goal> [--no-challenge]
+argument-hint: <goal> [--plan <path>] [--no-challenge]
 effort: high
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion, WebFetch
 disable-model-invocation: true
@@ -25,9 +25,11 @@ NOT for: bug fixes (use `/develop:fix`); `.claude/` config changes (use `/foundr
 # Locate develop plugin shared dir — installed first, local workspace fallback
 _DEV_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/develop/*/skills/_shared 2>/dev/null | head -1)
 [ -z "$_DEV_SHARED" ] && _DEV_SHARED="plugins/develop/skills/_shared"
+_FOUNDRY_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared 2>/dev/null | head -1)
+[ -z "$_FOUNDRY_SHARED" ] && _FOUNDRY_SHARED=".claude/skills/_shared"
 ```
 
-Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:doc-scribe`, `foundry:linting-expert`.
+Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:challenger`.
 
 ## Anti-Rationalizations
 
@@ -52,6 +54,13 @@ Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback tabl
 Read `$_DEV_SHARED/runner-detection.md` — sets `$TEST_CMD` (full suite) and `$PYTEST_CMD` (pytest flags). Run at skill start.
 
 **Optional `--plan <path>`**: if `$ARGUMENTS` ends with `--plan <path>`, read the plan file first. Extract `Affected files`, `Risks`, `Suggested approach` — use these to populate Step 1 analysis instead of cold codebase exploration. Skip agent feasibility re-check (already done in `/develop:plan`). Store plan path as `PLAN_FILE`.
+
+```bash
+# Extract --plan path from arguments
+PLAN_FILE="${ARGUMENTS##*--plan }"
+PLAN_FILE="${PLAN_FILE%% *}"
+[ "$PLAN_FILE" = "$ARGUMENTS" ] && PLAN_FILE=""
+```
 
 **Checkpoint init**: create `.developments/<TS>/checkpoint.md` (where `TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)`). After each major step (1, 2, 3, 4, 5), append `step: N — completed` to this file. On skill start, check for an existing `.developments/*/checkpoint.md` — if found, offer to resume from the last completed step.
 
@@ -79,16 +88,7 @@ gh issue view <number> --comments
 
 If free-text description provided: use Grep tool (pattern `<keyword>`, glob `**/*.py`) to search related code. Path hint: use `src/` if that directory exists, otherwise search from project root (`.`).
 
-**Structural context** (codemap, if installed) — soft PATH check, silently skip if `scan-query` not found:
-
-```bash
-PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
-if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
-    scan-query central --top 5
-fi
-```
-
-If results returned: prepend `## Structural Context (codemap)` block to foundry:sw-engineer spawn prompt with hotspot JSON. Gives analysis agent immediate complexity awareness without cold Glob/Grep exploration. If `scan-query` not found or index missing: proceed silently — don't mention codemap to user.
+Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
 
 Spawn **foundry:sw-engineer** agent to analyse codebase and produce:
 
@@ -104,7 +104,7 @@ Spawn **foundry:sw-engineer** agent to analyse codebase and produce:
 
 Present analysis summary before proceeding.
 
-## Step 1.5: Source verification (when using external APIs or version-sensitive libraries)
+## Optional Step: Source Verification (when using external APIs or version-sensitive libraries)
 
 Skip if feature calls no external library APIs — no new framework features, no third-party SDK methods, no stdlib functions changed in recent Python version.
 
@@ -205,24 +205,21 @@ Both forms must:
 - Show happy-path end-to-end flow user would first reach for
 - **Fail or error** against current code (feature doesn't exist yet)
 
-```bash
-# Doctest form: confirm it fails
-$PYTEST_CMD --doctest-modules <module>.py -v 2>&1 | tail -10
-
-# Script form: confirm it errors (ImportError, AttributeError, NotImplementedError)
-python examples/demo_<feature>.py 2>&1 | tail -5
-```
-
-**Gate**: demo must fail or error. Check exit code — do not rely on output text alone:
+**Gate**: demo must fail or error.
 
 ```bash
-# Exit code must be non-zero (failure expected)
-GATE_EXIT=${PIPESTATUS[0]}
-if [ $GATE_EXIT -eq 0 ]; then
+# Run demo and capture exit code in same Bash call — PIPESTATUS lost across separate calls
+# Doctest form:
+$PYTEST_CMD --doctest-modules <module>.py -v 2>&1 | tail -10; GATE_EXIT=${PIPESTATUS[0]}
+
+# Script form (use instead of doctest when applicable):
+# python examples/demo_<feature>.py 2>&1 | tail -5; GATE_EXIT=$?
+
+if [ "${GATE_EXIT:-0}" -eq 0 ]; then
     echo "⚠ GATE FAIL: demo passed (exit 0) — feature may already exist; revisit Step 1"
-    exit 1
+else
+    echo "✓ GATE OK: demo failed as expected (exit $GATE_EXIT)"
 fi
-echo "✓ GATE OK: demo failed as expected (exit $GATE_EXIT)"
 ```
 
 If `GATE_EXIT -eq 0`: stop. Do not proceed. Revisit Step 1 — feature may already be implemented or test is wrong.
@@ -365,7 +362,7 @@ Agent must Read each affected source file before writing docstrings — do not w
 $PYTEST_CMD --doctest-modules <target_module> -v 2>&1 | tail -20
 ```
 
-Read `.claude/skills/_shared/quality-stack.md` (if file not found → skip quality stack entirely, note "foundry plugin not installed — quality stack skipped" in Final Report) and execute Branch Safety Guard, Quality Stack, Codex Pre-pass, Progressive Review Loop, and Codex Mechanical Delegation steps.
+Read `$_FOUNDRY_SHARED/quality-stack.md` (if file not found → skip quality stack entirely, note "foundry quality-stack not found at installed path — stack skipped" in Final Report) and execute Branch Safety Guard, Quality Stack, Codex Pre-pass, Progressive Review Loop, and Codex Mechanical Delegation steps.
 
 ## Final Report
 
@@ -400,7 +397,9 @@ Read `.claude/skills/_shared/quality-stack.md` (if file not found → skip quali
 
 ## Confidence
 **Score**: 0.N — [high ≥0.9 | moderate 0.8–0.9 | low <0.8 ⚠]
-**Gaps**: [e.g., review cycle incomplete, edge cases not fully explored]
+**Gaps**:
+- [e.g., review cycle incomplete, edge cases not fully explored]
+
 **Refinements**: N passes.
 ```
 
@@ -428,6 +427,7 @@ Your task: [specific responsibility].
 [If QA]: include security checks for any auth/payment/data-handling code.
 Compact Instructions: preserve file paths, test results, API signatures. Discard verbose tool output.
 Task tracking: do NOT call TaskCreate or TaskUpdate — the lead owns all task state. Signal your completion in your final delta message: "Status: complete | blocked — <reason>".
+Write your full analysis to .plans/active/feature-[role]-[timestamp].md using the Write tool. Return ONLY compact JSON: {"status":"done","file":"<path>","findings":N,"confidence":0.N}.
 ```
 
 </workflow>

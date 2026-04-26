@@ -27,7 +27,7 @@ _DEV_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/develop/*/skills/_shar
 [ -z "$_DEV_SHARED" ] && _DEV_SHARED="plugins/develop/skills/_shared"
 ```
 
-Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:linting-expert`.
+Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:linting-expert`, `foundry:challenger`.
 
 **Checkpoint**: plan is single-pass — `.plans/active/<slug>` file existence serves as implicit resume signal. No `.developments/` checkpoint needed; if skill interrupted, re-run `/develop:plan` to regenerate (plan makes no code changes).
 
@@ -57,16 +57,7 @@ Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback tabl
 
 Determine task type and affected surface.
 
-**Structural context** (codemap, if installed) — soft PATH check, silently skip if `scan-query` not found:
-
-```bash
-PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
-if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
-    scan-query central --top 5
-fi
-```
-
-If results returned: prepend `## Structural Context (codemap)` block to foundry:sw-engineer spawn prompt with hotspot JSON. Gives agent complexity picture for sizing effort and identifying risky modules before codebase exploration. If `scan-query` not found or index missing: proceed silently — do not mention codemap to user.
+Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
 
 Spawn **foundry:sw-engineer** agent with full goal text from `$ARGUMENTS`. Agent should:
 
@@ -80,7 +71,7 @@ Agent returns findings inline (no file handoff — output short).
 
 ## Step 2: Structured plan
 
-Derive filename slug from goal: first 4-5 meaningful words, lowercase, hyphen-separated (e.g. `"improve caching in data loader"` -> `plan_improve-caching-data-loader.md`). Write plan to `.plans/active/<slug>` (create or overwrite). Store full path as `PLAN_FILE` — used in Steps 3 and Final output.
+Derive filename slug from goal: first 4-5 meaningful words, lowercase, hyphen-separated (e.g. `"improve caching in data loader"` -> `plan_improve-caching-data-loader.md`). If `.plans/active/<slug>` already exists, append counter suffix (`-2`, `-3`, etc.) before writing — never silently overwrite existing plan. Store full path as `PLAN_FILE` — used in Steps 3 and Final output.
 
 ```markdown
 # Plan: <goal>
@@ -128,7 +119,7 @@ Derive filename slug from goal: first 4-5 meaningful words, lowercase, hyphen-se
 Spawn execution agents for classification in parallel. Each reads `<PLAN_FILE>`, returns **only** compact JSON — no prose, no analysis:
 
 - **feature**: foundry:sw-engineer, foundry:qa-specialist, foundry:linting-expert
-- **fix**: foundry:sw-engineer, foundry:qa-specialist
+- **fix**: foundry:sw-engineer, foundry:qa-specialist, foundry:linting-expert
 - **refactor**: foundry:sw-engineer, foundry:linting-expert, foundry:qa-specialist
 
 Each agent receives only plan file path and role — no conversation history, no unrelated context. Prompt (substitute `<ROLE>` and `<PLAN_FILE>`):
@@ -138,6 +129,7 @@ Each agent receives only plan file path and role — no conversation history, no
 **Parse-failure handling**: agent responses may not be valid JSON (especially fallback `general-purpose` agents that wrap JSON in prose). Before processing:
 
 1. Attempt to extract JSON object using pattern `\{[^{}]*(?:\{[^{}]*\}[^{}]*)?\}` from response
+   **Caveat**: regex matches first `{...}` substring — if response contains example JSON in prose before the real response (e.g., "here is the format: `{...}` and my result: `{...}`"), extract the LAST match, not the first. Prefer matching the `"a":"<ROLE>"` pattern as anchor.
 2. If extraction succeeds: use extracted object
 3. If extraction fails entirely: treat response as `{"a":"<ROLE>","ok":false,"blockers":["agent returned non-JSON response"],"q":[],"concerns":[]}` and enter resolution loop with re-query
 

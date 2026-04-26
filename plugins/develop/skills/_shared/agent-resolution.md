@@ -15,3 +15,5 @@ If foundry **not** installed, substitute `foundry:X` with `general-purpose`, pre
 | `foundry:challenger` | `general-purpose` | `opus` | `You are an adversarial reviewer. Challenge the proposed plan or design across 5 dimensions: Assumptions, Missing Cases, Security Risks, Architectural Concerns, Complexity Creep. Apply a refutation step — try to disprove each challenge before keeping it. Report only challenges that survive refutation.` |
 
 Skills with `--team` mode: team spawning with fallback agents works but lower-quality output. Apply fallback only for agents the skill actually dispatches to.
+
+**Model aliases on fallback**: challenger and solution-architect default to `opus`; doc-scribe defaults to `sonnet`; linting-expert defaults to `haiku`. When substituting with `general-purpose`, prepend role description and target model to spawn prompt: `"Act as <role>. Use <model> quality reasoning."` — general-purpose agent inherits session model otherwise.

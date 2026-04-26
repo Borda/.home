@@ -28,15 +28,17 @@ NOT for: GitHub PR review (use `/oss:review <PR#>`); GitHub thread analysis or P
 
 <constants>
 CHALLENGE_ENABLED=true  # set to false via --no-challenge
-<!-- Background agent health monitoring (CLAUDE.md §8) — applies to Step 3 parallel agent spawns -->
-MONITOR_INTERVAL=300   # 5 minutes between polls
-HARD_CUTOFF=900        # 15 minutes of no file activity → declare timed out
-EXTENSION=300          # one +5 min extension if output file explains delay
+<!-- Background agent health monitoring (CLAUDE.md §8) — Agent calls are synchronous; no Bash polling between calls.
+     Constants below document intended timeout thresholds for framework-level enforcement, NOT active poll variables.
+     If an agent does not return: use Read tool on $RUN_DIR/<agent-name>.md for partial results; mark ⏱ in report. -->
+MONITOR_INTERVAL=300   # 5 min between polls (framework target)
+HARD_CUTOFF=900        # 15 min no-response → declare timed out
+EXTENSION=300          # one +5 min extension if output explains delay
 </constants>
 
 <workflow>
 
-<!-- Structural pattern shared with oss:review — coordinate changes between develop:review and oss:review when modifying agent spawn logic, file-handoff protocol, or consolidation steps -->
+<!-- Shared pattern with oss:review — coordinate on agent spawn logic, file-handoff, consolidation changes -->
 
 <!-- Agent Resolution: canonical table at plugins/develop/skills/_shared/agent-resolution.md -->
 
@@ -46,17 +48,13 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 # Locate develop plugin shared dir — installed first, local workspace fallback
 _DEV_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/develop/*/skills/_shared 2>/dev/null | head -1)
 [ -z "$_DEV_SHARED" ] && _DEV_SHARED="plugins/develop/skills/_shared"
+_FOUNDRY_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared 2>/dev/null | head -1)
+[ -z "$_FOUNDRY_SHARED" ] && _FOUNDRY_SHARED=".claude/skills/_shared"
 ```
 
 Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:qa-specialist`, `foundry:perf-optimizer`, `foundry:doc-scribe`, `foundry:linting-expert`, `foundry:solution-architect`.
 
-**Task hygiene**: Before creating tasks, call `TaskList`. For each found task:
-
-- `completed` if work clearly done
-- `deleted` if orphaned / no longer relevant
-- keep `in_progress` only if genuinely continuing
-
-**Task tracking**: TaskCreate for each major phase. Mark in_progress/completed throughout. Loop retry or scope change → new task.
+Read `$_DEV_SHARED/task-hygiene.md`.
 
 ## Step 1: Identify scope
 
@@ -97,6 +95,10 @@ Use classification to skip optional agents:
 
 ### Structural context (codemap, if installed)
 
+Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
+
+Extended scan for changed modules (review-specific):
+
 ```bash
 PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
 if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
@@ -104,7 +106,6 @@ if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; t
     # Note: this derivation assumes src-layout (files under src/). Files outside src/ (e.g.
     # scripts/, tools/) produce module names that may not be valid importable modules.
     # scan-query will return empty for these — not an error, just no structural context.
-    scan-query central --top 5 2>/dev/null  # timeout: 5000
     for mod in $CHANGED_MODS; do scan-query rdeps "$mod" 2>/dev/null; done  # timeout: 5000
 fi
 ```
@@ -124,7 +125,7 @@ Set up run directory:
 TIMESTAMP=$(date -u +%Y-%m-%dT%H-%M-%SZ)
 RUN_DIR=".reports/review/$TIMESTAMP"
 mkdir -p "$RUN_DIR"  # timeout: 5000
-RUN_DIR_LITERAL="$RUN_DIR"  # pre-expand for spawn prompt substitution  # timeout: 1000
+RUN_DIR_LITERAL="$RUN_DIR"
 ```
 
 Check availability:
@@ -137,14 +138,15 @@ If Codex available:
 
 ```bash
 CODEX_OUT="$RUN_DIR/codex.md"
-Agent(subagent_type="codex:codex-rescue", prompt="Adversarial review of $TARGET: look for bugs, missed edge cases, incorrect logic, and inconsistencies with existing code patterns. Read-only: do not apply fixes. Write findings to $RUN_DIR/codex.md.")
 ```
+
+Spawn `codex:codex-rescue` agent with prompt: "Adversarial review of $TARGET: look for bugs, missed edge cases, incorrect logic, and inconsistencies with existing code patterns. Read-only: do not apply fixes. Write findings to $RUN_DIR/codex.md."
 
 After Codex writes `$RUN_DIR/codex.md`, extract compact seed list (≤10 items, `[{"loc":"file:line","note":"..."}]`) to inject into agent prompts in Step 3 as pre-flagged issues to verify or dismiss. Codex skipped or found nothing → proceed with empty seed.
 
 ## Step 3: Spawn sub-agents in parallel
 
-**File-based handoff**: read `.claude/skills/_shared/file-handoff-protocol.md`. Run directory created in Step 2 (`$RUN_DIR`).
+**File-based handoff**: read `$_FOUNDRY_SHARED/file-handoff-protocol.md`. Run directory created in Step 2 (`$RUN_DIR`).
 
 <!-- $RUN_DIR pre-expanded into $RUN_DIR_LITERAL — substitute $RUN_DIR_LITERAL (never bare $RUN_DIR) when embedding paths in Agent spawn prompt strings. -->
 
@@ -169,7 +171,7 @@ if command -v jq >/dev/null 2>&1; then
     else
         REVIEW_CHECKLIST="${OSS_ROOT}/skills/review/checklist.md"
         if [ ! -f "$REVIEW_CHECKLIST" ]; then
-            echo "⚠ oss:review checklist not found at $REVIEW_CHECKLIST — Agent 1 will skip checklist patterns; continuing without it"
+            echo "⚠ oss plugin not available or checklist missing — continuing without it (optional enhancement)"
             REVIEW_CHECKLIST=""
         else
             echo "Checklist: $REVIEW_CHECKLIST"
@@ -231,7 +233,7 @@ If an agent does not return within `$HARD_CUTOFF` seconds: use the Read tool on 
 
 ## Step 4: Cross-validate critical/blocking findings
 
-Read and follow cross-validation protocol from `.claude/skills/_shared/cross-validation-protocol.md`. File absent → skip Step 4.
+Read and follow cross-validation protocol from `$_FOUNDRY_SHARED/cross-validation-protocol.md`. File absent → skip Step 4.
 
 **Skill-specific**: use **same agent type** that raised finding as verifier (e.g., foundry:sw-engineer verifies foundry:sw-engineer's critical finding).
 
@@ -297,9 +299,9 @@ Main context receives only one-liner verdict.
 
 After parsing confidence scores: any agent scored < 0.7 → prepend **⚠ LOW CONFIDENCE** to that agent's findings section, explicitly state gap. Never silently drop uncertain findings.
 
-<!-- Extended Fields live in .claude/skills/_shared/terminal-summaries.md — if that file is absent, omit the extended fields block -->
+<!-- Extended Fields live in $_FOUNDRY_SHARED/terminal-summaries.md — if that file is absent, omit the extended fields block -->
 
-Read compact terminal summary template from `.claude/skills/_shared/terminal-summaries.md` — use **PR Summary** template. Replace `[entity-line]` with `Review — [target]`, replace `[skill-specific path]` with `.temp/output-review-$BRANCH-$DATE.md`. Print block to terminal.
+Read compact terminal summary template from `$_FOUNDRY_SHARED/terminal-summaries.md` — use **PR Summary** template. Replace `[entity-line]` with `Review — [target]`, replace `[skill-specific path]` with `.temp/output-review-$BRANCH-$DATE.md`. Print block to terminal.
 
 Note: the PR Summary template includes a `CI:` field — for local file review (no CI pipeline), populate with local test suite pass/fail status, or omit the field entirely.
 
@@ -320,7 +322,7 @@ After consolidating, identify tasks Codex can implement directly — not style v
 - Architectural issues, logic errors, security vulnerabilities, behavioural changes
 - Any task where accurate description requires guessing
 
-Read `.claude/skills/_shared/codex-delegation.md`, apply delegation criteria defined there.
+Read `$_FOUNDRY_SHARED/codex-delegation.md`, apply delegation criteria defined there.
 
 Print `### Codex Delegation` section to terminal only when tasks actually delegated — omit entirely if nothing delegated.
 
