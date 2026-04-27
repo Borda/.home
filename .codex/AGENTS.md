@@ -12,6 +12,24 @@ This file is the global baseline for Borda projects. Project-local `AGENTS.md` f
 
 For docs, dependencies, CI/CD, releases, security, and deprecations, prefer current primary sources over memory or cached assumptions. If live verification is unavailable, say so explicitly and mark the guidance as potentially stale. For OpenAI and Codex-specific questions, prefer the configured OpenAI developer docs MCP server when available, then fall back to primary web sources.
 
+## Execution Discipline
+
+- For non-trivial work, define the scope, owned files, and acceptance criteria before editing. If the task has 3+ meaningful steps or any design tradeoff, create or update a short plan first.
+- Prefer the smallest reversible change that solves the actual problem. If a fix feels speculative, stop and re-scope before widening the blast radius.
+- Use subagents when a task splits cleanly into disjoint file ownership or parallel verification. Keep the prompt tight and task-specific; do not duplicate the main thread's full context.
+- Treat verification as part of the work, not a follow-up. Do not mark a task complete until the relevant lint, tests, or other gates have been run and the result can be explained concretely.
+- When multiple agents contribute, keep handoffs compact and ownership clear. Never redo another agent's work unless you are resolving a conflict or an explicit gap.
+- If progress stalls or the path starts to drift, re-plan instead of forcing the current approach through.
+- When confidence is limited, say so explicitly and separate verified facts from hypotheses.
+
+## Coordination Discipline
+
+- Keep a live plan for multi-step work and update it as the task changes shape. Use it as the session's task ledger.
+- One owner per file set at a time. If another thread or agent already owns the same surface, coordinate instead of overwriting.
+- For broader analysis or review output, prefer a durable artifact under `.reports/codex/<skill>/<timestamp>/` and keep the final chat summary compact.
+- When using parallel agents, treat their outputs as inputs to consolidation, not as interchangeable opinions. Reconcile conflicts explicitly.
+- If a conclusion depends on an assumption rather than a verified fact, mark it as a hypothesis in the summary or artifact.
+
 ## Runtime Profiles
 
 The default profile is optimized for everyday agentic coding work. Use profiles instead of editing the base config for common mode switches:

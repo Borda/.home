@@ -23,55 +23,62 @@ Run a linear implementation loop with strict gates.
 
 1. Create run directory.
 
-```bash
-TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-OUT_DIR=".reports/codex/develop/$TS"
-mkdir -p "$OUT_DIR"
-```
+   ```bash
+   TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+   OUT_DIR=".reports/codex/develop/$TS"
+   mkdir -p "$OUT_DIR"
+   ```
 
 2. Record baseline diff and branch.
 
-```bash
-git rev-parse --abbrev-ref HEAD >"$OUT_DIR/branch.txt"
-git diff --stat >"$OUT_DIR/before.diffstat"
-```
+   ```bash
+   git rev-parse --abbrev-ref HEAD >"$OUT_DIR/branch.txt"
+   git diff --stat >"$OUT_DIR/before.diffstat"
+   ```
 
-3. Implement minimal change.
-4. Run shared quality gates.
+3. Define the narrowest reversible change, ownership, and acceptance criteria. If the task is 3+ steps or has design tradeoffs, update the plan before editing.
 
-```bash
-.codex/skills/_shared/run-gates.sh \
-    --out "$OUT_DIR" \
-    --lint "${LINT_CMD:-uv run --no-sync ruff check .}" \
-    --format "${FORMAT_CMD:-uv run --no-sync ruff format --check .}" \
-    --types "${TYPES_CMD:-uv run --no-sync mypy src/}" \
-    --tests "${TESTS_CMD:-uv run --no-sync pytest -q}" \
-    --review "${REVIEW_CMD:-git diff --check}"
-```
+4. Implement minimal change.
 
-5. Classify findings using `../_shared/severity-map.md`.
-6. Write mandatory result artifact.
+5. Run shared quality gates.
 
-```bash
-.codex/skills/_shared/write-result.sh \
-    --out "$OUT_DIR/result.json" \
-    --status "$STATUS" \
-    --checks-run "lint,format,types,tests,review" \
-    --checks-failed "$CHECKS_FAILED" \
-    --critical "$CRITICAL" \
-    --high "$HIGH" \
-    --medium "$MEDIUM" \
-    --low "$LOW" \
-    --confidence "$CONFIDENCE" \
-    --artifact-path "$OUT_DIR/result.json"
-```
+   ```bash
+   .codex/skills/_shared/run-gates.sh \
+       --out "$OUT_DIR" \
+       --lint "${LINT_CMD:-uv run --no-sync ruff check .}" \
+       --format "${FORMAT_CMD:-uv run --no-sync ruff format --check .}" \
+       --types "${TYPES_CMD:-uv run --no-sync mypy src/}" \
+       --tests "${TESTS_CMD:-uv run --no-sync pytest -q}" \
+       --review "${REVIEW_CMD:-git diff --check}"
+   ```
+
+6. Review the changed files and the gate output before deciding pass/fail.
+
+7. Classify findings using `../_shared/severity-map.md`.
+
+8. Write mandatory result artifact.
+
+   ```bash
+   .codex/skills/_shared/write-result.sh \
+       --out "$OUT_DIR/result.json" \
+       --status "$STATUS" \
+       --checks-run "lint,format,types,tests,review" \
+       --checks-failed "$CHECKS_FAILED" \
+       --critical "$CRITICAL" \
+       --high "$HIGH" \
+       --medium "$MEDIUM" \
+       --low "$LOW" \
+       --confidence "$CONFIDENCE" \
+       --artifact-path "$OUT_DIR/result.json"
+   ```
 
 ## Fail-fast Rules
 
 1. Missing `goal` or `done_when` => fail.
 2. Shared gate script missing => fail.
 3. Any critical finding => fail.
-4. Result artifact missing => fail.
+4. Ambiguous scope or missing ownership => fail.
+5. Result artifact missing => fail.
 
 ## Output Contract
 

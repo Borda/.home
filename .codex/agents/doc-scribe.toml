@@ -1,6 +1,7 @@
 # .codex/agents/doc-scribe.toml
 
 name                    = "doc-scribe"
+description             = "Documentation: 6-point Google/Napoleon docstring structure, README stewardship, CHANGELOG management."
 model                   = "gpt-5.4-mini"
 model_reasoning_effort  = "medium"
 model_reasoning_summary = "concise"

@@ -11,7 +11,7 @@ Run a linear research loop with source validation.
 
 1. Define research question and constraints.
 2. Gather primary sources.
-3. Summarize findings with citations and confidence.
+3. Summarize findings with citations, confidence, and explicit caveats where sources are incomplete or stale.
 4. Translate findings into actionable next steps.
 5. Decide gate result (`pass` or `fail`).
 6. Write artifact to `.reports/codex/research/<timestamp>/result.json`.

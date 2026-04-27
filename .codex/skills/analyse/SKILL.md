@@ -11,7 +11,7 @@ Run a linear analysis loop.
 
 1. Define the analysis question and scope.
 2. Gather evidence from code, diffs, and optional external sources.
-3. Produce structured findings and confidence.
+3. Produce structured findings, confidence, and explicit gaps or hypotheses where evidence is incomplete.
 4. Run required checks from `../_shared/quality-gates.md`.
 5. Decide gate result (`pass` or `fail`).
 6. Write artifact to `.reports/codex/analyse/<timestamp>/result.json`.

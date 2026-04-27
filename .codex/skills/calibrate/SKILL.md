@@ -28,6 +28,12 @@ Run a linear calibration loop for codex workflow integrity.
 5. Recommend minimal fixes for blocking gaps.
 6. Write artifact to `.reports/codex/calibrate/<timestamp>/result.json`.
 
+## Usage Notes
+
+- Use after any meaningful agent or skill instruction change to confirm routing and output shape still match the configured stack.
+- Treat `leaks_found` as the primary drift signal and `checks_failed` as the mechanical gate signal.
+- If the run surfaces missing registration or pattern mismatches, prefer a minimal config fix and rerun before widening the change.
+
 ## Output Contract
 
 Use shared gate schema from `../_shared/quality-gates.md`.

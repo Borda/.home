@@ -21,47 +21,49 @@ Run a linear resolve loop for findings closure.
 
 1. Create run directory.
 
-```bash
-TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
-OUT_DIR=".reports/codex/resolve/$TS"
-mkdir -p "$OUT_DIR"
-```
+   ```bash
+   TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)
+   OUT_DIR=".reports/codex/resolve/$TS"
+   mkdir -p "$OUT_DIR"
+   ```
 
 2. Validate and copy findings source.
 
-```bash
-cp "$FINDINGS_SOURCE" "$OUT_DIR/findings-input.txt"
-```
+   ```bash
+   cp "$FINDINGS_SOURCE" "$OUT_DIR/findings-input.txt"
+   ```
 
 3. Apply fixes in priority order: `critical` -> `high` -> `medium`.
+
 4. Run shared quality gates.
 
-```bash
-.codex/skills/_shared/run-gates.sh \
-    --out "$OUT_DIR" \
-    --lint "${LINT_CMD:-uv run --no-sync ruff check .}" \
-    --format "${FORMAT_CMD:-uv run --no-sync ruff format --check .}" \
-    --types "${TYPES_CMD:-uv run --no-sync mypy src/}" \
-    --tests "${TESTS_CMD:-uv run --no-sync pytest -q}" \
-    --review "${REVIEW_CMD:-git diff --check}"
-```
+   ```bash
+   .codex/skills/_shared/run-gates.sh \
+       --out "$OUT_DIR" \
+       --lint "${LINT_CMD:-uv run --no-sync ruff check .}" \
+       --format "${FORMAT_CMD:-uv run --no-sync ruff format --check .}" \
+       --types "${TYPES_CMD:-uv run --no-sync mypy src/}" \
+       --tests "${TESTS_CMD:-uv run --no-sync pytest -q}" \
+       --review "${REVIEW_CMD:-git diff --check}"
+   ```
 
 5. Write unresolved findings to `$OUT_DIR/unresolved.txt`.
+
 6. Write mandatory result artifact.
 
-```bash
-.codex/skills/_shared/write-result.sh \
-    --out "$OUT_DIR/result.json" \
-    --status "$STATUS" \
-    --checks-run "lint,format,types,tests,review" \
-    --checks-failed "$CHECKS_FAILED" \
-    --critical "$CRITICAL" \
-    --high "$HIGH" \
-    --medium "$MEDIUM" \
-    --low "$LOW" \
-    --confidence "$CONFIDENCE" \
-    --artifact-path "$OUT_DIR/result.json"
-```
+   ```bash
+   .codex/skills/_shared/write-result.sh \
+       --out "$OUT_DIR/result.json" \
+       --status "$STATUS" \
+       --checks-run "lint,format,types,tests,review" \
+       --checks-failed "$CHECKS_FAILED" \
+       --critical "$CRITICAL" \
+       --high "$HIGH" \
+       --medium "$MEDIUM" \
+       --low "$LOW" \
+       --confidence "$CONFIDENCE" \
+       --artifact-path "$OUT_DIR/result.json"
+   ```
 
 ## Fail-fast Rules
 

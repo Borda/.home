@@ -22,7 +22,7 @@ check_contains() {
   if ! grep -qi "$pattern" "$file"; then
     echo "missing:$pattern:$file" >> "$OUT_DIR/leaks.txt"
     LEAKS=$((LEAKS + 1))
-    return 1
+    return 0
   fi
   return 0
 }
@@ -38,6 +38,7 @@ check_model() {
     FAILS=$((FAILS + 1))
     LEAKS=$((LEAKS + 1))
   fi
+  return 0
 }
 
 echo "calibration-start:$TS" > "$OUT_DIR/checks.txt"

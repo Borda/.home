@@ -1,6 +1,7 @@
 # .codex/agents/oss-shepherd.toml
 
 name                    = "oss-shepherd"
+description             = "OSS lifecycle: issue triage, PR review, SemVer decisions, pyDeprecate, release checklist, trusted publishing."
 model                   = "gpt-5.4-mini"
 model_reasoning_effort  = "high"
 model_reasoning_summary = "auto"
