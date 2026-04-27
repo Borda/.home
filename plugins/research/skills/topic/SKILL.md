@@ -1,11 +1,10 @@
 ---
 name: topic
 description: Research State of the Art (SOTA) literature for an Artificial Intelligence / Machine Learning (AI/ML) topic, method, or architecture. Finds relevant papers, builds a comparison table, recommends the best implementation strategy for the current codebase, and optionally produces a phased implementation plan mapped to the codebase. Delegates deep analysis to the research:scientist agent and codebase mapping to foundry:solution-architect.
-argument-hint: <topic> [--team]
+argument-hint: <topic> [--team] | plan [<output.md>]
 allowed-tools: Read, Write, Grep, Glob, Agent, WebSearch, WebFetch, TaskCreate, TaskUpdate, AskUserQuestion
-context: fork
 effort: high
-model: opus
+disable-model-invocation: true
 ---
 
 <objective>
@@ -89,6 +88,7 @@ Then return ONLY a compact JSON envelope on your final line — nothing else aft
 ```
 
 **Health monitoring** — Agent tool synchronous; Claude awaits researcher response natively (no Bash checkpoint available). If researcher doesn't return within `$HARD_CUTOFF` seconds (~15 min), use Read tool to surface partial results from `.temp/`, continue with what found; mark timed-out agents with ⏱ in report.
+<!-- TODO: reconcile Agent(...) synchrony vs Bash poll pattern (C12) — synchronous Agent calls here cannot use file-activity polling; HARD_CUTOFF is the only liveness mechanism -->
 
 **If Agent tool unavailable** (running as subagent where nested spawning blocked), skip Agent call, conduct research inline: use WebSearch and WebFetch to find top 5 papers, synthesize comparison table yourself. Notify user: "Note: researcher agent could not be spawned in this context — conducting research inline."
 
@@ -203,7 +203,7 @@ Produce sequenced, dependency-ordered implementation plan from SOTA research fin
 
 **Input detection** (parse argument after `plan`):
 
-- No argument → **auto-detect**: use Glob (pattern `**/output-research-*.md`, path `.temp/`) to find recent research outputs; exclude paths containing `-plan-` or `-codebase-`; sort by modification time descending; pick most recent. Print `→ Using: <path>` before proceeding. If no file found, stop: "No recent research output found — run `/research <topic>` first."
+- No argument → **auto-detect**: use Glob (pattern `**/output-research-*.md`, path `.temp/`) to find recent research outputs; exclude paths containing `-plan-` or `-codebase-`; sort by modification time descending; pick most recent. Print `→ Using: <path>` before proceeding. If no file found, stop: "No recent research output found — run `/research:topic <topic>` first."
 - Ends in `.md` → treat as path to existing research output file; skip to Step P1-B
 
 ### Step P1: Gather research findings
@@ -212,7 +212,7 @@ Produce sequenced, dependency-ordered implementation plan from SOTA research fin
 
 **P1-B — From existing output**: Read file at given path directly. Extract same sections.
 
-**Validation**: file must contain clear **Recommendation** section naming specific method. If missing or ambiguous, stop: "Research output does not contain a clear method recommendation — run `/research <topic>` first, then pass the output path."
+**Validation**: file must contain clear **Recommendation** section naming specific method. If missing or ambiguous, stop: "Research output does not contain a clear method recommendation — run `/research:topic <topic>` first, then pass the output path."
 
 Before spawning in Steps P2–P3, pre-compute output path components: `YYYY=$(date +%Y); MM=$(date +%m); DATE=$(date +%Y-%m-%d)` `BRANCH=$(git branch --show-current 2>/dev/null | tr '/' '-' || echo 'main')` <!-- same pattern as Step 2a date/branch block -->
 

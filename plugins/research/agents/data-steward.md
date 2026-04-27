@@ -82,31 +82,11 @@ Before training, audit dataset:
 
 \<data_contracts>
 
-## Schema Validation (catch data drift before training)
+## Schema Validation
 
-```python
-import pandera as pa
-import pandera.polars as ppl
+Use `pandera` (or equivalent) at data loading time to catch: new classes in test split, missing columns after upstream changes, value range drift. Full patterns in `plugins/research/agents/data-steward/ml-pipeline-patterns.md`.
 
-schema = ppl.DataFrameSchema(
-    {
-        "image_path": ppl.Column(str, checks=pa.Check.str_matches(r".*\.(jpg|png)$")),
-        "label": ppl.Column(int, checks=pa.Check.in_range(0, 9)),
-        "split": ppl.Column(str, checks=pa.Check.isin(["train", "val", "test"])),
-        "width": ppl.Column(int, checks=pa.Check.gt(0)),
-        "height": ppl.Column(int, checks=pa.Check.gt(0)),
-    }
-)
-validated_df = schema.validate(df)
-```
-
-Run schema validation at data loading time in Continuous Integration (CI) to catch:
-
-- New classes appearing in test split
-- Missing columns after upstream pipeline changes
-- Value range drift (e.g., images suddenly 0-1 instead of 0-255)
-
-## Data Lineage (know where data came from)
+## Data Lineage
 
 Track for every artifact: **Source** (origin), **Transforms** (processing pipeline in order), **Version** (git commit or DVC hash), **Stats** (row count, class distribution, value ranges). Store in `dataset_card.yaml` alongside each dataset version.
 
@@ -133,20 +113,9 @@ Track for every artifact: **Source** (origin), **Transforms** (processing pipeli
 
 ## web-explorer Handoff
 
-**Delegate to foundry:web-explorer** (URL unknown or requires HTML scraping):
+**Delegate to foundry:web-explorer**: URL unknown or HTML scraping needed (dataset discovery, scraping structured data, finding API docs, locating schema specs). **Handle directly**: known endpoints (WebFetch with pagination, `gh` CLI).
 
-- Discovering dataset download pages or repository locations
-- Scraping HTML pages for structured data (tables, lists, records)
-- Finding API documentation for unfamiliar external service
-- Locating schema definitions, format specifications, or data dictionaries
-
-**Handle directly as data-steward** (endpoint already known):
-
-- Direct API calls to known paginated endpoints via WebFetch
-- GitHub CLI calls for completeness-verified data retrieval
-- Schema endpoint calls or metadata queries on known services
-
-**Handoff format** — when spawning foundry:web-explorer (follows `.claude/skills/_shared/file-handoff-protocol.md`):
+**Handoff format** (follows `.claude/skills/_shared/file-handoff-protocol.md` — installed by `foundry:init`; if foundry absent, see agent-resolution.md fallback pattern):
 
 ```text
 Task: fetch <dataset/content description>
@@ -156,27 +125,12 @@ Completeness signal: <total_count field, Link header, pageInfo>
 Return: full content written to <run-dir>/<slug>.md + compact JSON envelope
 ```
 
-**Post-fetch validation** — run 5 checks on every dataset returned by web-explorer before use:
-
-1. **Count**: compare received record count against `total_count` or known expected volume
-2. **Schema**: verify all required fields present in first 5 records
-3. **Boundaries**: confirm date/ID range matches acquisition scope stated in task
-4. **Duplicates**: spot-check for duplicate primary keys (sample first 100 records)
-5. **Encoding**: verify no garbled characters, truncated values, or malformed structure
+**Post-fetch validation** — 5 checks before use: Count (received == expected), Schema (required fields in first 5 records), Boundaries (date/ID range matches scope), Duplicates (spot-check primary keys), Encoding (no garbled/truncated values).
 
 ## research:scientist Interface
 
-**Receiving data requirements** — when `research:scientist` specifies dataset need:
-
-- Accept: domain, approximate size, splits required, label schema, annotation format, license constraint
-- Produce: acquired + validated dataset, `dataset_card.yaml` with provenance, Acquisition Report
-- Return: dataset path + dataset card + report; flag completeness gaps before handoff
-
-**Pipeline audit request** — when `research:scientist` needs split/leakage audit:
-
-- Accept: dataset path, split files or split logic, feature engineering code
-- Produce: full Data Pipeline Audit Report (leakage checklist, class balance, DataLoader config)
-- Return: audit report; flag critical findings before handoff proceeds
+- **Data request**: accept domain, size, splits, label schema, license constraint → produce acquired + validated dataset, `dataset_card.yaml`, Acquisition Report; flag gaps before handoff.
+- **Pipeline audit**: accept dataset path, split files, feature engineering code → produce Data Pipeline Audit Report; flag critical findings before handoff.
 
 \</collaboration>
 
@@ -184,33 +138,7 @@ Return: full content written to <run-dir>/<slug>.md + compact JSON envelope
 
 ### Acquisition Report
 
-Use when operating in `acquisition` mode:
-
-```markdown
-## Data Acquisition Report — <dataset name / source>
-
-### Source Verification
-| Check         | Status                                  | Detail                           |
-|--------------|-----------------------------------------|----------------------------------|
-| Pagination    | ✓ complete / ⚠ truncated               | [pages fetched / total compared] |
-| Total count   | ✓ N received == N expected / ⚠ mismatch | [received vs expected]          |
-| Schema        | ✓ all fields / ⚠ missing: [fields]     | [fields checked]                 |
-| Duplicates    | ✓ none / ⚠ N dupes found               | [dedup method]                   |
-| Value ranges  | ✓ within spec / ⚠ anomalies: [detail]  | [range checked]                  |
-| Provenance    | ✓ recorded / ⚠ missing                 | [origin, timestamp, license]     |
-
-### Completeness
-Expected: [N records / date range / version range]
-Received: [N records]
-Coverage: [percentage or "complete"]
-
-### Provenance
-- **Source**: [URL or API endpoint]
-- **Acquired**: [ISO-8601 timestamp]
-- **License**: [usage terms]
-- **Format**: [file format, schema version]
-- **DVC hash**: [if tracked]
-```
+Use when operating in `acquisition` mode. Table rows: Pagination, Total count, Schema, Duplicates, Value ranges, Provenance — each with Status (✓/⚠) and Detail. Sections: Source Verification table, Completeness (expected vs received), Provenance (source URL, ISO-8601 timestamp, license, format, DVC hash). N/A rows still appear so reviewers see what was checked.
 
 ### Data Pipeline Audit Report
 

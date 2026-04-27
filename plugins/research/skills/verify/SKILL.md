@@ -27,7 +27,7 @@ Triggered by `verify <paper>` where `<paper>` is a PDF path, arXiv URL, or multi
 
 **Task tracking**: create tasks for V1, V2, V3, V4, V5, V6 at start — before any tool calls.
 
-## Step V1: Parse paper input
+### Step V1: Parse paper input
 
 **Input resolution** (priority order):
 
@@ -51,7 +51,7 @@ RUN_DIR=".experiments/verify-$(date -u +%Y-%m-%dT%H-%M-%SZ)"
 mkdir -p "$RUN_DIR"  # timeout: 3000
 ```
 
-## Step V2: Resolve codebase scope
+### Step V2: Resolve codebase scope
 
 **Scope resolution** (priority order):
 
@@ -61,7 +61,7 @@ mkdir -p "$RUN_DIR"  # timeout: 3000
 
 Apply `--dim` filter: if `--dim F,H` specified, only audit those dimensions. Default: all five (`F,H,E,N,C`).
 
-## Step V3: Five-dimension audit via scientist
+### Step V3: Five-dimension audit via scientist
 
 Spawn `research:scientist` via `Agent(subagent_type="research:scientist", prompt="...")`. Single agent handles all five dimensions — cross-dimension context requires holistic paper understanding.
 
@@ -126,7 +126,7 @@ Use `timeout: 900000` for the Agent call (15-min budget).
 
 On timeout: read `tail -100 $RUN_DIR/audit-raw.md`; if empty set `fidelity = null`, continue to V4 with `timed_out` status.
 
-## Step V4: Severity assessment and fidelity rating
+### Step V4: Severity assessment and fidelity rating
 
 Post-process envelope from scientist:
 
@@ -145,7 +145,7 @@ Post-process envelope from scientist:
 
 Then stop — do not proceed to V5/V6. Report the specific mismatches to terminal and exit.
 
-## Step V5: Write verification report
+### Step V5: Write verification report
 
 **Pre-compute** (if not already done in V1):
 
@@ -202,7 +202,7 @@ Full audit: <RUN_DIR>/audit-raw.md
 - [specific limitation]
 ```
 
-## Step V6: Terminal summary
+### Step V6: Terminal summary
 
 ```text
 ---
@@ -219,7 +219,15 @@ Next: fix mismatches, then /research:verify <paper> --scope <glob>
 
 Omit "Next" line if no mismatches found.
 
-## Notes
+Call `AskUserQuestion` tool after V6 output — do NOT write options as plain text:
+- question: "What next?"
+- (a) label: `fix mismatches then re-run verify` — description: fix the listed mismatches and re-run `/research:verify <paper>`
+- (b) label: `/develop:fix` — description: implement fixes via development agent
+- (c) label: `skip` — description: no further action
+
+</workflow>
+
+<notes>
 
 - Verify is read-only — never modifies code, commits, or writes to `.experiments/state/`
 - `.experiments/verify-<timestamp>/` stores scientist agent's full audit output for reference
@@ -228,4 +236,4 @@ Omit "Next" line if no mismatches found.
 - For papers with appendices beyond 20 pages, iterate Read with `pages: "21-40"` etc. to capture full hyperparameter tables
 - Fidelity score is a ratio, not a probability — 0.9 means 90% of verified claims match, not 90% confidence
 
-</workflow>
+</notes>

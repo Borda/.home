@@ -31,7 +31,7 @@ Triggered by `retro`, `retro <run-id>`, or `retro <run-id> --compare <run-id-2>`
 
 **Task tracking**: create tasks for T1, T2, T3, T4, T5, T6, T7 at start — before any tool calls.
 
-## Step T1: Locate and load run data
+### Step T1: Locate and load run data
 
 **Input resolution** (priority order):
 
@@ -61,7 +61,7 @@ RUN_DIR=".experiments/retro-$(date -u +%Y-%m-%dT%H-%M-%SZ)"  # timeout: 3000
 mkdir -p "$RUN_DIR/scripts"
 ```
 
-## Step T2: Statistical significance analysis
+### Step T2: Statistical significance analysis
 
 Write analysis script to `$RUN_DIR/scripts/analyze.py` via Write tool, then execute in two separate Bash calls (cd first if needed). Never inline Python.
 
@@ -92,7 +92,7 @@ r = 1 - (2 * stat) / (n * (n + 1))
 
 Write results JSON to `$RUN_DIR/stats-results.json`. Execute script with `python3 $RUN_DIR/scripts/analyze.py` via Bash (`timeout: 30000`).
 
-## Step T3: Dead iteration detection
+### Step T3: Dead iteration detection
 
 **Definition**: dead iteration window = 3+ consecutive iterations (any status) where `abs(metric_delta) < threshold` (default `--threshold 0.001`).
 
@@ -115,7 +115,7 @@ Write summary to `$RUN_DIR/dead-iters.json` via Write tool. Format:
 
 This analysis can be computed inline or via a script in `$RUN_DIR/scripts/` — use script if logic exceeds 3 lines.
 
-## Step T4: Suspicious jump detection
+### Step T4: Suspicious jump detection
 
 Compute per-iteration absolute metric deltas for kept iterations only. Build a sliding window of 5 kept iterations to compute running mean and standard deviation of deltas.
 
@@ -136,7 +136,7 @@ For each flagged jump, record:
 
 Write to `$RUN_DIR/suspicious-jumps.json` via Write tool.
 
-## Step T5: Scientist learning summary
+### Step T5: Scientist learning summary
 
 Pre-compute all file paths before spawning. Verify `$RUN_DIR/stats-results.json`, `$RUN_DIR/dead-iters.json`, and `$RUN_DIR/suspicious-jumps.json` exist (T2–T4 must complete first).
 
@@ -182,7 +182,7 @@ Poll every 5 min: `find $RUN_DIR -newer /tmp/retro-check-$LAUNCH_AT -type f | wc
 
 Parse returned JSON envelope. Record `hypotheses` count and `confidence` for T6.
 
-## Step T6: Write retro report
+### Step T6: Write retro report
 
 Pre-compute branch (already done in T1). Write full report to `.temp/output-retro-$BRANCH-$(date +%Y-%m-%d).md` via Write tool (never overwrite — append counter suffix if file exists):
 
@@ -254,7 +254,7 @@ Next hypotheses queue: <RUN_DIR>/hypotheses.jsonl
 - [specific limitation]
 ```
 
-## Step T7: Terminal summary
+### Step T7: Terminal summary and follow-up gate
 
 Print compact summary to terminal only — do NOT repeat full report:
 
@@ -273,6 +273,11 @@ Next: /research:run <program.md> --hypothesis <RUN_DIR>/hypotheses.jsonl
      /research:fortify <commit>    ← stress-test top hypothesis before full re-run
 ```
 
+Call `AskUserQuestion` tool after summary — do NOT write options as plain text:
+- question: "What next?"
+- (a) label: `/research:run … --hypothesis` — description: run next hypotheses from generated queue
+- (b) label: `/research:fortify` — description: stress-test top components via ablation study
+- (c) label: `skip` — description: no further action
 
 </workflow>
 

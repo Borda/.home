@@ -16,6 +16,7 @@ Skill domains:
 - `/codemap:query` → synthetic codemap index with known centrality/coupling values; measure whether `central`, `coupled`, `deps`, `rdeps`, `path` queries return correct modules matching ground-truth graph structure
 - `/codemap:scan` → synthetic Python project with known module structure; measure whether scan correctly identifies modules, dependencies, and produces valid index
 - `/codemap:integration` → synthetic project with known skill integration opportunities; measure whether integration correctly scores and ranks candidate skills
+- `/research:verify` → paper-vs-code fidelity check; inject N known deviations (hyperparams, architecture, loss function, preprocessing); score recall per dimension (F, H, E, N, C)
 
 ### Step 2: Spawn skill pipeline subagents
 
@@ -80,4 +81,6 @@ Modes evaluated for calibration but deferred — significant barriers. `/audit` 
 - `/research:run` — sustained iteration loop with live metric commands and git state
 - `/research:run --resume` — continuation of run; same barriers as run
 - `/research:sweep` — same barriers as `/research:run` — sustained iteration loop requiring live metrics and git state; not calibratable synthetically
+- `/research:fortify` — requires completed `/research:run` ablation output; ground truth not constructable synthetically
+- `/research:retro` — requires live `experiments.jsonl`; same barrier as `/research:run`
 - `/foundry:init` — system-state-dependent — installs symlinks and merges settings; ground truth not constructable

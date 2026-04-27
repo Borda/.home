@@ -108,6 +108,7 @@ Poll every 5 min: `find $RUN_DIR -newer "$CHECKPOINT" -type f | wc -l` — new f
 
 3. Sort combined queue:
 
+   - Validate `change_scope` values before sorting: `change_scope` must be one of `{small, medium, large}`; for any other value, warn (`⚠ Unknown change_scope '<value>' on hypothesis '<hypothesis>' — defaulting to medium`) and set to `medium` before sorting.
    - Primary: `change_scope` ascending — `small` first, then `medium`, then `large`
    - Secondary: `expected_delta` descending within scope tier (parse delta string to extract numeric midpoint, e.g., "+1–3%" → 2.0; unparsable → treat as 0, sort to end of scope tier)
    - Tertiary (tiebreaker): `confidence` descending
@@ -117,13 +118,10 @@ Poll every 5 min: `find $RUN_DIR -newer "$CHECKPOINT" -type f | wc -l` — new f
 5. Print queue as formatted table:
 
    ```text
-   ┌────┬──────────────────────────────────┬────────────────────┬────────┬───────────────┬──────────┬────────────┐
-   │ #  │ Hypothesis                       │ Axis               │ Scope  │ Expected Δ    │ Conf.    │ Agent      │
-   ├────┼──────────────────────────────────┼────────────────────┼────────┼───────────────┼──────────┼────────────┤
-   │ 1  │ Cache embeddings in forward pass │ data pipeline      │ small  │ +2–4% speed   │ 0.90     │ perf-opt   │
-   │ 2  │ Fuse batch-norm + conv layers    │ model architecture │ small  │ +1–2% speed   │ 0.85     │ research:scientist     │
-   │ …  │ …                                │ …                  │ …      │ …             │ …        │ …          │
-   └────┴──────────────────────────────────┴────────────────────┴────────┴───────────────┴──────────┴────────────┘
+   # · Hypothesis · Axis · Scope · Expected Delta · Conf. · Agent
+   1 · Cache embeddings in forward pass · data pipeline · small · +2-4% speed · 0.90 · perf-opt
+   2 · Fuse batch-norm + conv layers · model architecture · small · +1-2% speed · 0.85 · research:scientist
+   ... · ... · ... · ... · ... · ... · ...
 
    Total: N hypotheses (N small, N medium, N large) across N axes
    ```

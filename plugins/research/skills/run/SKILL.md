@@ -54,7 +54,7 @@ STATE_DIR:                  .experiments/state/<run-id>/  (timestamped dir per r
 **Stuck escalation sequence** (at STUCK_THRESHOLD consecutive discards):
 
 1. Switch to different agent type (rotate: `code` → `ml` → `perf` → `code`; if current `ml`, next `perf`; if current `perf`, next `code`)
-2. Spawn 2 agents in parallel with competing strategies; keep whichever improves metric
+2. Spawn 2 agents in parallel with competing strategies; each agent must write full analysis to `.experiments/state/<run-id>/stuck-escalation-<i>-<agent-type>.md` and return ONLY compact JSON envelope. Consolidation: pick whichever returns delta ≥ 0.1% AND guard pass; if both qualify, pick higher delta.
 3. Stop, report progress, surface to user — no blind looping
 
 </constants>
@@ -69,6 +69,8 @@ STATE_DIR:                  .experiments/state/<run-id>/  (timestamped dir per r
 # Locate research plugin shared dir — installed first, local workspace fallback
 _RESEARCH_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/skills/_shared 2>/dev/null | head -1)
 [ -z "$_RESEARCH_SHARED" ] && _RESEARCH_SHARED="plugins/research/skills/_shared"
+# shared resolution block — canonical source: skills/_shared/agent-resolution.md
+CLAUDE_SKILL_DIR="${CLAUDE_SKILL_DIR:-plugins/research/skills/run}"
 ```
 
 Read `$_RESEARCH_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:sw-engineer`, `foundry:linting-expert`, `foundry:perf-optimizer`, `foundry:solution-architect`.
@@ -108,7 +110,7 @@ After clarification extraction, remaining non-flag tokens (not starting `--`) ar
 ```markdown
 ⚠ Unrecognized argument "<token>" — ignored.
   Known positional args: <program.md path> [clarification]
-  Known flags: --team, --colab[=HW], --codex, --compute=local|colab|docker, --docker, --researcher, --architect, --journal, --hypothesis <path>
+  Known flags: --team, --colab[=HW], --codex, --compute=local|colab|docker, --researcher, --architect, --journal, --hypothesis <path>
   If you meant to override the algo, edit the ## Config block in your program.md (algo: sort) and update ## Metric to match.
   If you meant to set a clarification hint, pass it as a quoted string: "/research:run program.md \"sort improvements\" --codex"
 ```
@@ -132,7 +134,13 @@ Warn on unrecognized tokens, continue.
 
 `colab_hw` in `## Config` sets hardware preference (`H100`, `L4`, `T4`, `A100`); CLI `--colab=HW` overrides.
 
-Generate `run-id` = `$(date +%Y%m%d-%H%M%S)`. Create run directory:
+Generate `run-id` = `$(date +%Y%m%d-%H%M%S)`. Assign immediately:
+
+```bash
+RUN_ID=$(date +%Y%m%d-%H%M%S)
+```
+
+Create run directory:
 
 ```text
 .experiments/state/<run-id>/
@@ -173,10 +181,16 @@ Run all checks before touching code. Fail fast with clear message:
 5. **`--colab` check**: verify `mcp__colab-mcp__runtime_execute_code` available. If not, print setup instructions (see Colab MCP section) and stop. If `--colab=HW` (`colab_hw` non-null): print: `  Hardware requested: --colab=<colab_hw>. Ensure your Colab notebook running with <colab_hw> GPU.`
 6. **`--codex` check**: verify `claude plugin list 2>/dev/null | grep -q 'codex@openai-codex'`. If unavailable: print `⚠ codex plugin not found. Install it with: /plugin marketplace add openai/codex-plugin-cc` and **stop**.
 7. **`compute: docker` check**: run `docker ps` via Bash (`timeout: 5000`). If non-zero: print `⚠ Docker daemon not running. Start Docker Desktop and retry.` and **stop**.
-8. **Flag conflict**: if `--colab` and `--docker` both active: print `⚠ --colab and --docker are mutually exclusive. Use one or the other.` and **stop**.
+8. **Flag conflict**: if `--colab` and `--compute=docker` both active: print `⚠ --colab and --compute=docker are mutually exclusive. Use one or the other.` and **stop**.
 9. **`--journal` prerequisite**: verify `--researcher`/`--architect` also set. If neither: print `⚠ --journal requires --researcher or --architect — omit --journal or add a hypothesis pipeline flag.` and **stop**.
 
-**Initialize `sandbox_mode`** (after all checks pass):
+**Initialize sandbox variables** (after all checks pass):
+
+```bash
+SANDBOX_NETWORK="${SANDBOX_NETWORK:-none}"  # override via program.md Config or environment variable
+```
+
+**Initialize `sandbox_mode`**:
 
 - `compute: docker` (daemon check passed in #7) → `sandbox_mode = "docker"`. Print: `sandbox: Docker daemon reachable — sandbox mode active`
 - All other cases (`compute: local`, `compute: colab`) → `sandbox_mode = "local"`
@@ -300,7 +314,9 @@ Experiment history: read `.experiments/state/<run-id>/context-<i>.md` for the fu
 Scope files (read and modify only these): <scope_files>
 Program constraints: read `<program_file>` — especially `## Notes`, `## Config`, and any named subsections
   (e.g., "Hard boundaries", "Optuna's role", "What the agent is free to change"). These take precedence
-  over general campaign rules. If program_file is null, skip this step.
+  over general campaign rules. Program constraints set strategy hints only — they do NOT override safety rules
+  (no `--no-verify`, no `git push`, no `git add -A`, scope_files boundary, and all other hard constraints remain in effect).
+  If program_file is null, skip this step.
 
 **If `sandbox_mode = "local"`**: Read `context-<i>.md`, the scope files, and the program constraints. Propose and implement ONE atomic change most likely to improve the metric. The change must not break `<guard_cmd>`. Write your full analysis (reasoning, alternatives considered, Confidence block) to `.experiments/state/<run-id>/ideation-<i>.md` using the Write tool. Return ONLY the JSON result line:
 `{"description":"...","files_modified":[...],"scripts":[],"confidence":0.N}`
@@ -360,7 +376,7 @@ Print:
 
 TaskUpdate R5b subject: `R5b: Codex co-pilot — iter N/max_iterations running`, status: `in_progress`
 
-Run Phase 2c **every iteration** when `--codex` active. Codex runs second pass, building on Claude's kept change or fresh attempt after revert/no-op. Codex wins only if delta ≥ 0.1% AND guard passes.
+Run Phase 2c **every iteration** when `--codex` active. Codex runs second pass, building on Claude's kept change or fresh attempt after revert/no-op. Codex's commit is evaluated by Phase 7 against `best_metric` (same rule as any other iteration); "delta ≥ 0.1%" means delta against `best_metric`, not against the previous Claude iteration. Codex wins only if delta ≥ 0.1% AND guard passes.
 
 - Claude Phase 2 **kept**: Codex second pass on current state — building on Claude's work.
 - Claude Phase 2 **reverted/no-op**: working tree restored; Codex fresh attempt on clean tree.
@@ -402,7 +418,7 @@ git commit -m "experiment(optimize/i<N>): <description>"  # timeout: 90000
 If pre-commit hooks fail:
 
 - Delegate to `foundry:linting-expert`: provide failing hook output and modified files; ask to fix. Max 2 attempts.
-- If still failing after 2 attempts: `git restore --staged .` + `git checkout -- .` to clean up (WARNING: `git checkout -- .` discards all uncommitted changes — appropriate here since loop iteration is atomic), append `status: hook-blocked`, continue loop.
+- If still failing after 2 attempts: `git restore --staged <files_modified>` + `git checkout -- <files_modified>` to clean up (`# <files_modified>` = list of files returned by the iteration agent; restricts discard to iteration scope only), append `status: hook-blocked`, continue loop.
 
 #### Phase 5 — Verify metric
 
@@ -421,7 +437,7 @@ No resource limits. Use Bash tool `timeout` parameter (not shell `timeout`): `ti
 
 **If `sandbox_mode = "local"`**: Run `metric_cmd` via Bash (`timeout: <VERIFY_TIMEOUT_SEC * 1000>` ms). Not shell `timeout`. Different CWD → separate `cd <path>` call first. Complex metric parsing → write parser to `.experiments/state/<run-id>/scripts/parse-metric-<i>.py`, run with `python3 <path>` — no inline one-liner.
 
-**If `--colab` active**: routes through `mcp__colab-mcp__runtime_execute_code`; Docker not used. (`--colab` + `--docker` conflict caught at R2.) If `colab_hw` non-null, prepend GPU identity check: `import torch; actual=torch.cuda.get_device_name(0); assert '<colab_hw>' in actual, f'Wrong GPU: expected <colab_hw>, got {actual}'` via `mcp__colab-mcp__runtime_execute_code`. If fails: print `"⚠ GPU mismatch: requested <colab_hw> but runtime has {actual}. Change the Colab runtime type and re-run."` Stop — do not proceed to Phase 6.
+**If `--colab` active**: routes through `mcp__colab-mcp__runtime_execute_code`; Docker not used. (`--colab` + `--compute=docker` conflict caught at R2.) If `colab_hw` non-null, prepend GPU identity check: `import torch; actual=torch.cuda.get_device_name(0); assert '<colab_hw>' in actual, f'Wrong GPU: expected <colab_hw>, got {actual}'` via `mcp__colab-mcp__runtime_execute_code`. If fails: print `"⚠ GPU mismatch: requested <colab_hw> but runtime has {actual}. Change the Colab runtime type and re-run."` Stop — do not proceed to Phase 6.
 
 <!-- Colab assertion: MCP call, not Bash — exempt from the script-file rule; correct as an inline one-liner. -->
 
@@ -534,9 +550,15 @@ Read `${CLAUDE_SKILL_DIR}/modes/report.md`
 
 Inspect applied changes (`git diff <baseline_commit>...<best_commit> --stat`), identify tasks Codex can complete (comments on non-obvious changes, docstrings for modified functions, test coverage). Read `.claude/skills/_shared/codex-delegation.md` and apply criteria. **Prerequisite**: this file is installed by `foundry:init` from `plugins/foundry/skills/_shared/codex-delegation.md` — if not found, stop and warn: `⚠ .claude/skills/_shared/codex-delegation.md not found. Run /foundry:init to install it, then retry R7.`
 
+Call `AskUserQuestion` tool after R7 output — do NOT write options as plain text. Map options into tool call:
+- question: "What next?"
+- (a) label: `/research:retro` — description: run post-run retrospective analysis
+- (b) label: `/research:verify <paper>` — description: verify implementation matches paper claims
+- (c) label: `skip` — description: no further action
+
 ## Resume Mode
 
-Triggered by `resume` or `resume <file.md>`.
+Triggered by `--resume` flag (with optional `<file.md>` argument).
 
 **Locating the run**:
 
@@ -545,13 +567,8 @@ Triggered by `resume` or `resume <file.md>`.
 
 1. Read `state.json`. Restore `clarification_prompt` and `colab_hw` from it (may be null).
 2. **Re-parse program file**: if `program_file` non-null, re-read/re-parse (R1 rules), update config. Applies edits made between runs. Note: edits during active loop take effect only on next `resume`.
-3. **Validate `experiments.jsonl`**: read last line, parse as JSON. If truncated or invalid:
-   ```text
-   ⚠ experiments.jsonl last line appears corrupt (truncated or invalid JSON).
-   Offer to truncate the corrupt entry (y/n)?
-   ```
-   User confirms → remove last line. Decline → stop, let user fix.
-4. Validate git HEAD: if diverged from `state.json.best_commit` unexpectedly, warn and ask before continuing.
+3. **Validate `experiments.jsonl`**: read last line, parse as JSON. If truncated or invalid: invoke `AskUserQuestion` tool — question: "experiments.jsonl last line appears corrupt (truncated or invalid JSON). How to proceed?", (a) label: `truncate corrupt entry and resume`, (b) label: `abort — fix manually`. If (a), remove last line; if (b), stop.
+4. Validate git HEAD: if diverged from `state.json.best_commit` unexpectedly, invoke `AskUserQuestion` tool — question: "HEAD has diverged from best_commit in state.json. Continue anyway?", (a) label: `yes, continue from current HEAD`, (b) label: `no, abort`. If (b), stop.
 5. Continue loop from `state.json.iteration + 1`. `diary.md` NOT re-initialized — entries append to existing file.
 
 ## Colab MCP Integration (`--colab`)
@@ -603,6 +620,6 @@ Then re-run with --colab.
 - **JSONL over TSV** — richer structured fields, `jq`-parseable, no delimiter ambiguity; query with `jq -c 'select(.status == "kept")' experiments.jsonl`.
 - **State persistence enables resume** — if loop crashes/times out, `resume` picks up exactly where it stopped.
 - **Safety break**: max iterations = 20; skill never exceeds MAX_ITERATIONS without user override.
-- **Explicit flags = hard requirements**: all flags (`--colab`, `--docker`, `--codex`, `--researcher`, `--architect`) must be available at R2. If unavailable, stop — never silently degrade.
+- **Explicit flags = hard requirements**: all flags (`--colab`, `--compute=docker`, `--codex`, `--researcher`, `--architect`) must be available at R2. If unavailable, stop — never silently degrade.
 
 </notes>

@@ -29,11 +29,7 @@ _RESEARCH_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/skills
 
 Read `$_RESEARCH_SHARED/agent-resolution.md`. Contains: foundry check + fallback table. If foundry not installed: use table to substitute each `foundry:X` with `general-purpose`. Agents this skill uses: `foundry:solution-architect`.
 
-## --team flag (committee mode)
-
-If `--team` present in arguments: after verdict (Step J5/J6), spawn 2–3 independent `foundry:solution-architect` agents using file-based handoff. Pre-compute output path before spawning: `COMMITTEE_DIR=".experiments/judge-committee-$(date -u +%Y-%m-%dT%H-%M-%SZ)"; mkdir -p "$COMMITTEE_DIR"` — each agent prompt must include: "Write your full review to `$COMMITTEE_DIR/architect-N.md` using the Write tool. Return ONLY: `{"verdict": "pass|conditional|fail", "findings": [...], "file": "<path>", "confidence": 0.N}`". Aggregate by majority verdict. This = "committee" review mode.
-
-# Judge Mode (Steps J1–J6)
+## Judge Mode (Steps J1–J6)
 
 Triggered by `judge` or `judge <file.md>`.
 
@@ -51,7 +47,7 @@ Triggered by `judge` or `judge <file.md>`.
    No program.md found. Run /research:plan <goal> first, or provide a path: /research:judge <path.md>
    ```
 
-**Parsing** — use program-file section-parsing rules from Step R1 in `${CLAUDE_SKILL_DIR}/../run/SKILL.md` (find `## <Section>` headings, extract first fenced code block, parse as `key: value` lines, warn on unrecognized keys). `--skip-validation` flag and `colab_hw` are judge-specific, extracted independently — not part of R1.
+**Parsing** — use program-file section-parsing rules from Step R1 in `${_RESEARCH_SHARED}/../run/SKILL.md` (find `## <Section>` headings, extract first fenced code block, parse as `key: value` lines, warn on unrecognized keys). `--skip-validation` flag and `colab_hw` are judge-specific, extracted independently — not part of R1.
 
 **Placeholder substitution** — after parsing, apply same substitution step as R1: resolve all `{field_name}` tokens in `metric_cmd` and `guard_cmd` using corresponding field from `## Config`, falling back to declared default. No `clarification_prompt` in judge — skip clarification-override step.
 
@@ -59,7 +55,7 @@ Extract `<program_title>` from `# Program: <title>` line for reports (fall back 
 
 ## Step J2: Completeness audit
 
-Check each of 11 items. Produce findings list with severity. Each finding has: `id`, `check`, `status` (pass/fail/warn), `severity`, `detail`.
+Check each of 12 items. Produce findings list with severity. Each finding has: `id`, `check`, `status` (pass/fail/warn), `severity`, `detail`.
 
 | ID | Check | Severity if failing | Description |
 | --- | --- | --- | --- |
@@ -119,31 +115,29 @@ Return ONLY a compact JSON envelope on your final line — nothing else after it
 {"status":"done","review_dimensions":7,"methodology_rating":"sound|needs-refinement|fundamentally-flawed","protocol_gaps":N,"file":"<RUN_DIR>/methodology.md","confidence":0.N,"summary":"<one-line verdict>"}
 ```
 
-**Health monitoring** (CLAUDE.md §8):
+**Health monitoring** (CLAUDE.md §8) — create both checkpoints before dispatching agents:
 
 ```bash
 LAUNCH_AT=$(date +%s)
 CHECKPOINT="/tmp/judge-check-$LAUNCH_AT"
 touch "$CHECKPOINT"
-```
-
-Poll every 5 min: `find <RUN_DIR> -newer "$CHECKPOINT" -type f | wc -l` — new files = alive; zero = stalled.
-
-- **Hard cutoff: 15 min** no file activity → timed out
-- **One extension (+5 min)**: if `tail -20 <RUN_DIR>/methodology.md` shows active progress (partial content written), grant one extension; second stall = hard cutoff
-- **On timeout**: read `tail -100 <RUN_DIR>/methodology.md`; if file missing or empty, set `methodology_rating = "timed_out"`, continue to J6 with that value. Surface with ⏱ in report.
-
-**Scientist health monitoring** — poll `<RUN_DIR>/scientific-review.md` on same 5-min cadence:
-
-```bash
 LAUNCH_AT_SCI=$(date +%s)
 CHECKPOINT_SCI="/tmp/judge-check-sci-$LAUNCH_AT_SCI"
 touch "$CHECKPOINT_SCI"
 ```
 
-Poll every 5 min: `find <RUN_DIR> -name "scientific-review.md" -newer "$CHECKPOINT_SCI" | wc -l` — file present = alive; zero = stalled.
+Then dispatch both agents (architect + scientist) in a single response.
+
+Poll architect every 5 min: `find <RUN_DIR> -newer "$CHECKPOINT" -type f | wc -l` — new files = alive; zero = stalled.
 
 - **Hard cutoff: 15 min** no file activity → timed out
+- **One extension (+5 min)**: if `tail -20 <RUN_DIR>/methodology.md` shows active progress (partial content written), grant one extension; second stall = hard cutoff
+- **On timeout**: read `tail -100 <RUN_DIR>/methodology.md`; if file missing or empty, set `methodology_rating = "timed_out"`, continue to J6 with that value. Surface with ⏱ in report.
+
+Poll scientist every 5 min: `find <RUN_DIR> -name "scientific-review.md" -newer "$CHECKPOINT_SCI" | wc -l` — file present = alive; zero = stalled.
+
+- **Hard cutoff: 15 min** no file activity → timed out
+- **One extension (+5 min)**: if `tail -20 <RUN_DIR>/scientific-review.md` shows active progress, grant one extension; second stall = hard cutoff
 - **On timeout**: set `scientific_rating = "timed_out"`, continue to J6; surface with ⏱ in Scientific Rigor section.
 
 Use `methodology_rating` from returned envelope for verdict computation in J6:
@@ -166,7 +160,7 @@ Review across four dimensions:
 4. **Reproducibility risks**: List concrete factors that could produce non-reproducible results (randomness seeds, dataset splits, flaky tests, environment dependencies).
 
 Write findings to `<RUN_DIR>/scientific-review.md`.
-Return ONLY: {"status":"done","scientific_rating":"sound|needs-refinement|fundamentally-flawed","issues":N,"file":"<RUN_DIR>/scientific-review.md","confidence":0.N,"summary":"<one-line>"}
+Return ONLY: {"status":"done","scientific_rating":"sound|needs-refinement|fundamentally-flawed","issues":N,"file":"<RUN_DIR>/scientific-review.md","scientific_review_file":"<RUN_DIR>/scientific-review.md","confidence":0.N,"summary":"<one-line>"}
 ```
 
 Use `scientific_rating` as **advisory** input in J6 report under **Scientific Rigor** section — informs but does not override verdict. Exception: `scientific_rating = "fundamentally-flawed"` elevates verdict to BLOCKED with note to redesign hypothesis.

@@ -29,7 +29,7 @@ One JSON obj per line. Two-pass write by separate agents:
 | `confidence` | `float` | Oracle confidence [0–1]; entries < 0.7 are deprioritized to end of queue |
 | `expected_delta` | `str` | Expected metric change (e.g. `"+1–3% val_loss"`) |
 | `priority` | `int` | Execution order (1 = highest); journal-sourced entries use lower values than oracle entries |
-| `source` | `str` | `"oracle"` for researcher entries; `"journal"` for journal-sourced entries; `"team"` for team-mode hypothesis agents (Phase A); `"retro"` for `/research:retro` output (feasibility fields absent — run treats as `feasible: true`) |
+| `source` | `str` | `"oracle"` for researcher entries; `"journal"` for journal-sourced entries; `"team"` for team-mode hypothesis agents (Phase A); `"retro"` for `/research:retro` output (feasibility fields absent — run treats as `feasible: true`); `"architect"` for architect-only entries (no researcher) |
 
 **Pass 2 — solution-architect (feasibility filter):** annotates in place, preserves order
 
@@ -69,6 +69,7 @@ One JSON obj per line. Two-pass write by separate agents:
 - Move low-confidence: assign `priority` > max in queue; don't reorder lines (preserve JSONL append order for audit)
 - Solution-architect must **preserve hypothesis order** when annotating; no re-rank
 - `blocker` required when `feasible: false` — blank/null blocker on false entry = schema violation
+- `source: "architect"` (architect-only, no researcher) and `source: "retro"` entries may omit `feasible`/`blocker`/`codebase_mapping`; absent fields are treated as `feasible: true` by all consumers
 
 ## checkpoint.json Schema
 

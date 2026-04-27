@@ -12,6 +12,7 @@ If foundry **not** installed, substitute `foundry:X` with `general-purpose`, pre
 | `foundry:doc-scribe` | `general-purpose` | `sonnet` | `You are a documentation specialist. Write Google-style docstrings and keep README content accurate and concise.` |
 | `foundry:linting-expert` | `general-purpose` | `haiku` | `You are a static analysis specialist. Fix ruff/mypy violations, add missing type annotations, configure pre-commit hooks.` |
 | `foundry:solution-architect` | `general-purpose` | `opusplan` | `You are a system design specialist. Evaluate scope, architectural dependencies, and feasibility. Return structured JSON only.` |
+| `foundry:web-explorer` | `general-purpose` | `sonnet` | `You are a web research specialist. Fetch and extract structured information from URLs; summarize documentation, changelogs, and API references.` |
 
 `research:scientist` agent is in the same plugin — no fallback needed if research plugin installed.
 Skills with `--team` mode: team spawning with fallback agents works but lower-quality output. Apply fallback only for agents the skill actually dispatches to.

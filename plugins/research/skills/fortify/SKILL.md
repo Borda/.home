@@ -38,12 +38,13 @@ STATE_DIR_BASE:           .experiments/state
 > **Foundry plugin check**: run `Glob(pattern="foundry*", path="$HOME/.claude/plugins/cache/")` returning results = installed. If check fails, proceed as if foundry available — common case; only fall back if agent dispatch explicitly fails.
 
 `research:scientist` in same plugin as this skill — no fallback needed if research plugin installed.
+<!-- fortify dispatches same-plugin research:scientist only; no cross-plugin foundry fallback needed — agent-resolution.md not required -->
 
 ## CRITICAL: Worktree-based isolation
 
 **Do NOT use `git checkout -b <branch>` for ablations** — this dirties the main working tree and corrupts concurrent tool calls. Each ablation gets its own git worktree under `$FORTIFY_DIR/worktrees/<variant>`, created from `best_commit`. Main working tree is NEVER modified. Cleanup: `git worktree remove --force` per variant; `git worktree prune` on interrupt.
 
-# Fortify Mode (Steps F1–F8)
+## Fortify Mode (Steps F1–F8)
 
 Triggered by `fortify` or `fortify <run-id|program.md>`.
 
@@ -61,7 +62,7 @@ Triggered by `fortify` or `fortify <run-id|program.md>`.
    fortify: No completed run found. Run /research:run first.
    ```
 
-**Guard: judge approval required.** Scan `.experiments/judge-*/` directories. For each, check if `methodology.md` references the same `program_file`. If no directory with an APPROVED verdict found:
+**Guard: judge approval required.** Scan `.experiments/judge-*/` directories. For each, check if `methodology.md` references the same `program_file`. Read `.temp/output-judge-*.md` (or `<judge-run-dir>/verdict.json` if present) for the final APPROVED verdict — do NOT infer from `methodology.md` alone, since `methodology_rating: sound` alone does not equal APPROVED. If no directory with an APPROVED verdict found:
 
 ```text
 fortify: BLOCKED — no APPROVED judge verdict found for this program.
@@ -227,7 +228,7 @@ git worktree prune  # timeout: 15000
 **Post-loop delta computation**: read `results.jsonl`, find `full` variant metric. For each completed `no-<component>` variant:
 
 - `delta_from_full = ablated_metric - full_metric`
-- `delta_pct = (delta_from_full / abs(full_metric)) * 100` (signed — negative means removing the component hurt)
+- `delta_pct = (delta_from_full / abs(full_metric)) * 100` (signed — negative means removing the component hurt). If `full_metric == 0`: set `delta_pct = 0` (avoid division by zero; metric is already at zero baseline).
 
 Update `results.jsonl` with computed deltas via Write tool (rewrite full file).
 
@@ -375,6 +376,5 @@ Next: run /research:fortify without --skip-run to execute ablations
 - **Fortify run directories** don't write `result.jsonl` — exempt from automated 30-day TTL cleanup (exempt per `.claude/rules/artifact-lifecycle.md` TTL policy — no `result.jsonl` = cleanup skipped); remove manually when no longer needed (`rm -rf .experiments/fortify-*/`)
 - **Compute passthrough** — `--compute` and `--colab` flags pass through to metric_cmd/guard_cmd execution. Docker and Colab routing follow the same conventions as `/research:run` Phases 5–6.
 - **Revert conflicts expected** — when commits are interleaved (component A's commit touches same lines as component B's), revert may conflict. This is recorded as `revert-conflict` and reported, not treated as an error.
-
 
 </notes>

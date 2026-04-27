@@ -58,7 +58,7 @@ Run plan mode steps P-P2 and P-P3 from `plugins/research/skills/plan/SKILL.md` (
 - **P-P2 (config presentation)**: Accept all auto-detected defaults without prompting. Print proposed config as informational block prefixed `sweep: auto-config →` — do NOT wait for confirmation.
 - If `--colab[=HW]` or `--compute=colab` passed, write `compute: colab` (and `colab_hw: <HW>` if provided) into Config block.
 - **P-P3 (write program.md)**: Write to `<--out path>` if provided; else `program.md` at project root.
-  - If output path exists: rename to `<path>.bak` (overwrite existing `.bak`), proceed — no confirmation in sweep mode.
+  - If output path exists: rename to `<path>.<UTC-ISO>.bak` (e.g., `program.md.2026-04-26T14-00-00Z.bak`), proceed — no confirmation in sweep mode. Timestamped suffix prevents overwrite on successive runs.
 
 Print on completion:
 
@@ -131,3 +131,12 @@ sweep: complete — plan → judge → run pipeline finished
 ```
 
 </workflow>
+
+<notes>
+
+- **`.bak` backup behavior** (S2): when output path exists, sweep renames it to `<path>.<UTC-ISO>.bak` before overwriting. Timestamped suffix prevents collision on successive runs. The `.bak` file is the undo path for S3 judge+refinement edits.
+- **`--journal` and `--hypothesis` not available in sweep**: these flags require interactive setup and per-run state that sweep's non-interactive pipeline cannot provide. Use `/research:run` directly when you need them.
+- **`--team` and interactivity**: sweep is non-interactive except when `--team` is active. Team mode Phase B presents a user confirmation gate (hypothesis selection) before Phase C — sweep pauses and waits. This is expected behavior; sweep cannot bypass the Phase B gate.
+- **`--skip-validation`**: passes through to judge step (S3). Useful for cross-machine workflows where metric/guard commands can only run on the target machine.
+
+</notes>
