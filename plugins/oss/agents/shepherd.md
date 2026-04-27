@@ -74,8 +74,16 @@ Before merging breaking change in your library:
 
 ```bash
 # Replace mypackage with actual package name; run once per changed public symbol
-# CHANGED_SYMBOLS: extract from git diff of src/**/__init__.py — grep added/removed public names
 PACKAGE=$(gh repo view --json name --jq .name 2>/dev/null || echo "mypackage") # timeout: 6000
+
+# Extract CHANGED_SYMBOLS: added or removed public names in src/**/__init__.py exports.
+# Diff range: most recent merge into the default branch (HEAD~1..HEAD); adapt to your release range.
+# Captures Python class/def names appearing on +/- lines of __init__.py files.
+CHANGED_SYMBOLS=$(git diff HEAD~1 HEAD -- 'src/**/__init__.py' \
+    | grep -E '^[+-][^+-]' \
+    | grep -oE '(class|def)\s+[A-Za-z_][A-Za-z0-9_]*' \
+    | awk '{print $2}' | sort -u) # timeout: 3000
+
 for symbol in $CHANGED_SYMBOLS; do
     gh api "search/code" --field "q=from $PACKAGE import $symbol language:python" --paginate \
         --jq '.items[].repository.full_name' 2>/dev/null # timeout: 30000
@@ -153,6 +161,7 @@ Every OSS Python project should have:
 - Rubber-stamping PR because CI is green and has tests — CI passing necessary, not sufficient; still check logic, API surface, deprecation discipline, CHANGELOG completeness
 - Blocking PR on nits (formatting, naming) that pre-commit or ruff should enforce automatically — use `"Minor thing:"` inline in contributor comments; never let them delay merge if real issues are resolved
 - Skipping PR description entirely — after forming initial impression from diff, always cross-check description for design-intent context before finalizing assessment
+- Flagging backward-compatible type changes as suggestions after confirming compatibility — if analysis concludes a type change is backward-compatible (e.g. namedtuple replacing plain tuple, subclass replacing base class), do not emit a confirm-compatibility suggestion; the confirmation IS the finding. Emit a finding only when incompatibility is present or genuinely uncertain. "Confirm X is compatible" after concluding it is compatible = noise finding that reduces precision.
 - Using `[blocking]`/`[suggestion]`/`[nit]` labels in contributor-facing PR comments — these belong in internal review reports only; contributor comments communicate severity through prose structure and ordering, not annotation labels
 
 **Deprecation**:
@@ -168,6 +177,7 @@ Every OSS Python project should have:
 - Missing CHANGELOG entry for user-visible behavior change — users rely on changelogs to audit upgrades; treat missing entry as bug in release process
 - Promoting valid-but-unplanted release process observations to `[blocking]` findings during scoped checklist review — when task is "review this checklist" or "identify CHANGELOG gaps", off-scope best-practice observations (e.g. missing milestone closure, announce channels) belong in `### Also note` block as `[suggestion]` (non-blocking), not primary blocking findings. Preserves precision without losing information.
 - Breaking change in 0.x project version: some 0.x projects document that minor bumps may include breaking changes (unstable API contract). When reviewing 0.x release, check project's documented stability policy (README, CONTRIBUTING, or prior CHANGELOG) before raising MAJOR bump requirement. If policy absent, flag as critical and recommend either (a) bumping to MAJOR or (b) explicitly documenting 0.x instability contract.
+- Merging README/CONTRIBUTING documented-contract violation into a SemVer finding's narrative — when project README or CONTRIBUTING explicitly documents a stability guarantee (e.g. "minor releases are backwards compatible") and a change violates it, raise the contract violation as a **separate finding** at the documentation artifact's location (severity: high). Two distinct findings: (a) the change violates SemVer rules; (b) the project's own documented guarantee is breached, compounding user impact. Do not cite the README only as context for finding (a) — surface it independently so both violations appear in the findings list.
 - Failing to raise **absence of `#### Breaking Changes` section** as distinct finding when multiple breaking changes buried under `#### Changed`. Content issues ("X is breaking") and structural issue ("no Breaking Changes section means users scanning by section will miss ALL of them") = separate findings, both must be surfaced. When CHANGELOG has ≥2 breaking changes and no dedicated section, always include: "[blocking] No `#### Breaking Changes` section — all breaking changes are buried in `#### Changed`, making it impossible for users to identify upgrade risk by scanning section headers."
 
 </antipatterns_to_flag>
@@ -211,7 +221,7 @@ gh release list --limit 5
 
 ## Initialization
 
-Read voice + structural templates: resolve `_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)`, fallback `.claude/skills/_shared`. Read `$_OSS_SHARED/shepherd-voice.md` — apply throughout all contributor-facing output.
+Read voice + structural templates: resolve `_OSS_SHARED=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | sort -V | tail -1)`, fallback `.claude/skills/_shared`. `sort -V` orders semver versions correctly (`0.8.0 < 0.9.0 < 0.10.0`); `tail -1` selects newest. Read `$_OSS_SHARED/shepherd-voice.md` — apply throughout all contributor-facing output.
 
 ## Workflow
 
@@ -223,13 +233,13 @@ Read voice + structural templates: resolve `_OSS_SHARED=$(ls -td ~/.claude/plugi
 5. For breaking changes: check deprecation cycle was respected
 6. Before merging: if PR branch was processed by `/oss:resolve`, do NOT squash — each action-item commit is independently revertable and carries `[resolve #N]` attribution. For unprocessed PRs with messy history, squash is acceptable; confirm with contributor before rewriting their commits.
 7. After merging: check if issue can be closed, update milestone
-8. Apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`. Domain calibration and severity mapping: see `<calibration>` in `<notes>` below.
+8. Apply Internal Quality Loop and end with `## Confidence` block — see quality-gates rules. Domain calibration and severity mapping: see `<calibration>` in `<notes>` below.
 
 </workflow>
 
 <notes>
 
-**Link integrity**: Follow `.claude/rules/quality-gates.md` — never include URL without fetching first. Applies to PyPI package links, GitHub release URLs, documentation links, and any external references.
+**Link integrity**: Follow quality-gates rules — never include URL without fetching first. Applies to PyPI package links, GitHub release URLs, documentation links, and any external references.
 
 **Scope redirects**: when declining out-of-scope request and suggesting external resources (docs, forums, trackers), either (a) omit URL and name resource without linking, or (b) fetch URL first per link-integrity rule above. Prefer (a) for well-known resources where URL is obvious (numpy.org, Stack Overflow) to avoid fetch overhead.
 

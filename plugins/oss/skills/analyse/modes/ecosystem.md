@@ -21,6 +21,14 @@ gh api "search/code" --field "q=mypackage repo:conda-forge/*-feedstock filename:
 Produce:
 
 ```markdown
+---
+Ecosystem Impact — [change description]
+Consumers:   [N known downstream users of changed API]
+Risk:        [High / Medium / Low]
+Top action:  [single most urgent recommendation]
+→ saved to [skill-specific path]
+---
+
 ## Ecosystem Impact: [change description]
 
 ### Downstream Consumers Found
@@ -39,7 +47,7 @@ Produce:
 
 Run `mkdir -p .reports/analyse/ecosystem` then write full report to `.reports/analyse/ecosystem/output-analyse-ecosystem-$(date +%Y-%m-%d).md` using Write tool — **do not print full analysis to terminal**.
 
-Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Ecosystem Impact Summary** template. Replace `[skill-specific path]` with `.reports/analyse/ecosystem/output-analyse-ecosystem-$(date +%Y-%m-%d).md`. Output opens with `---` on own line, entity line on next line, `→ saved to <path>` at end, closes with `---` on own line. After terminal print, prepend same compact block to top of report file via Edit tool — insert at line 1 so file begins with compact summary, blank line, then existing `## Ecosystem Impact:` content.
+Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Ecosystem Impact Summary** template. Replace `[skill-specific path]` with `.reports/analyse/ecosystem/output-analyse-ecosystem-$(date +%Y-%m-%d).md`. Output opens with `---` on own line, entity line on next line, `→ saved to <path>` at end, closes with `---` on own line. Print terminal block: read '---' header from top of report file (lines 1–6 up to and including closing '---'), append '→ saved to <path>', print to terminal. Report file already contains the block — no separate prepend step needed.
 
 </workflow>
 

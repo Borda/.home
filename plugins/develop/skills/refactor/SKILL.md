@@ -99,11 +99,16 @@ Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if in
 **Multi-file / API-change scope — extended codemap scan**: if target is a directory, spans multiple files, or the goal mentions renaming/restructuring public API (i.e., refactoring is NOT limited to internals of a single function or class with unchanged public interface):
 
 ```bash
-if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
+# Derive project name and affected modules
+PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)")  # timeout: 3000
+# Affected modules from <target> path: strip src/ prefix, drop .py, slash→dot
+REFACTOR_FILES=$(find <target> -name '*.py' -type f 2>/dev/null)
+AFFECTED_MODULES=$(echo "$REFACTOR_FILES" | sed 's|^\./||;s|^src/||;s|\.py$||;s|/|.|g' | grep . || echo "")
+if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ] && [ -n "$AFFECTED_MODULES" ]; then
     # Reusability: who calls each affected module outside the refactoring scope
-    for mod in <affected_modules>; do
-        scan-query rdeps "$mod"
-    done
+    while IFS= read -r mod; do
+        scan-query rdeps "$mod" 2>/dev/null
+    done <<< "$AFFECTED_MODULES"
     # Tightest coupling pairs — determines refactor sequence and what must change together
     scan-query coupled --top 10
 fi

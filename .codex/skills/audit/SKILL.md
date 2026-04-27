@@ -13,7 +13,9 @@ Run a linear configuration and workflow audit loop.
 {
   "scope": "config|skills|agents|all",
   "target": "optional path",
-  "done_when": "drift and broken references are ranked with gate result"
+  "mode": "upgrade|adversarial",
+  "skip_gate": false,
+  "done_when": "drift and broken references are ranked with gate result; fix level chosen interactively unless skip_gate=true"
 }
 ```
 

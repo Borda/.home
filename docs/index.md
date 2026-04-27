@@ -125,16 +125,16 @@ ______________________________________________________________________
 
 ## 🧭 Where to start
 
-| If you want to…                                 | Start with                                                    |
-| ----------------------------------------------- | ------------------------------------------------------------- |
-| Set up the agent team and verify configuration  | `/foundry:audit setup` then `/foundry:calibrate routing fast` |
-| Review a PR with expert coverage                | `/oss:review`                                                 |
-| Build a new feature with a validation gate      | `/develop:feature`                                            |
-| Fix a bug and prove the fix                     | `/develop:fix`                                                |
-| Run a structured ML experiment                  | `/research:plan` then `/research:judge` then `/research:run`  |
-| Cut a release with correct SemVer and changelog | `/oss:release`                                                |
-| Understand blast radius before a refactor       | `/codemap:scan` then `scan-query rdeps <module>`              |
-| Measure whether agents are drifting in accuracy | `/foundry:calibrate`                                          |
+| If you want to…                                 | Start with                                                      |
+| ----------------------------------------------- | --------------------------------------------------------------- |
+| Set up the agent team and verify configuration  | `/foundry:audit setup` then `/foundry:calibrate routing --fast` |
+| Review a PR with expert coverage                | `/oss:review`                                                   |
+| Build a new feature with a validation gate      | `/develop:feature`                                              |
+| Fix a bug and prove the fix                     | `/develop:fix`                                                  |
+| Run a structured ML experiment                  | `/research:plan` then `/research:judge` then `/research:run`    |
+| Cut a release with correct SemVer and changelog | `/oss:release`                                                  |
+| Understand blast radius before a refactor       | `/codemap:scan` then `scan-query rdeps <module>`                |
+| Measure whether agents are drifting in accuracy | `/foundry:calibrate`                                            |
 
 ______________________________________________________________________
 

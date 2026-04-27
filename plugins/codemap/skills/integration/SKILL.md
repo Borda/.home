@@ -256,11 +256,19 @@ fi
 # Also add: "For targeted analysis run: scan-query rdeps <module> or scan-query fn-blast module::function"
 ```
 
-For skills where target module can be derived from `$ARGUMENTS` (refactor, fix with module path, review), also add after `central`:
+For skills where target module can be derived from `$ARGUMENTS` (refactor, fix with module path, review), also add after `central` — **derive `TARGET_MODULE` first**; without it the calls run as `scan-query rdeps ""` and return nothing:
 
 ```bash
-scan-query rdeps "$TARGET_MODULE" 2>/dev/null  # timeout: 5000
-scan-query deps  "$TARGET_MODULE" 2>/dev/null  # timeout: 5000
+# Derive TARGET_MODULE from the file/path argument (e.g. src/foo/bar.py → foo.bar)
+# Fall back to a basename-only module if the argument is not under src/.
+TARGET_MODULE=$(printf '%s\n' "$ARGUMENTS" | sed 's|^\./||;s|^src/||;s|\.py$||;s|/|.|g')
+[ -z "$TARGET_MODULE" ] && TARGET_MODULE=$(basename "${ARGUMENTS%.py}" 2>/dev/null || echo "")
+if [ -z "$TARGET_MODULE" ]; then
+    echo "⚠ TARGET_MODULE empty — skipping rdeps/deps soft-check"
+else
+    scan-query rdeps "$TARGET_MODULE" 2>/dev/null  # timeout: 5000
+    scan-query deps  "$TARGET_MODULE" 2>/dev/null  # timeout: 5000
+fi
 ```
 
 **For agent `.md` files** — append to last workflow instruction paragraph, before closing section or final notes:

@@ -81,8 +81,8 @@ Symbol names accept: bare name (`authenticate`), qualified name (`MyClass.authen
 | `find-symbol` | `matches` array | `module:qualified_name (type)`, one per line |
 | `list` | `modules` array | `module (path)`, one per line |
 | `fn-deps` / `fn-rdeps` | `calls` / `called_by` | `module::function (resolution)`, one per line |
-| `fn-central` | `fn_central` array | `count  module::function`, one per line |
-| `fn-blast` | `blast_radius` array | `depth  module::function`, sorted by depth then name |
+| `fn-central` | `fn_central` array | `count module::function`, one per line |
+| `fn-blast` | `blast_radius` array | `depth module::function`, sorted by depth then name |
 
 `{"error": "..."}`: surface error, suggest re-running `/codemap:scan`.
 

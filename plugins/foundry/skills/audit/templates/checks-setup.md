@@ -432,7 +432,7 @@ else
 fi
 ```
 
-All three sub-checks produce only **low** findings — auto-fixed under `/audit fix all`. Fix: remove duplicate section, drop version pin, delete absorbed feedback file.
+All three sub-checks produce only **low** findings — auto-fixed when user picks "Fix all" from the follow-up gate. Fix: remove duplicate section, drop version pin, delete absorbed feedback file.
 
 ## Check 30 — Config token overhead
 

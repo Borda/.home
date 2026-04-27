@@ -323,16 +323,16 @@ Upgrading dependency in PyTorch ecosystem:
   PyTorch ecosystem packages (ruff, pytorch-lightning, torchmetrics, huggingface_hub) — version staleness especially high-signal.
   Special case: install commands (`pip install`, `npm install`, `composer require`) are highest-visibility version refs —
   always cross-check pinned versions against version history or changelog. Stale install command = critical severity.
-- **Under-scoring version staleness from unverified live fetch**: if version mismatch is well-reasoned from known release timelines
-  (e.g. package pinned at pre-1.0 when 1.x series is established), report at high confidence (≥0.90) with reasoning note in Gaps.
-  Don't suppress overall score below 0.85 solely because not verified with live PyPI fetch.
-  Reserve low confidence (<0.80) for cases where version timeline itself is ambiguous or package has unusual release patterns.
-  When evidence for finding is entirely in provided materials, commit to high confidence (≥0.90) even if external sources
-  could theoretically contradict. Theoretical external contradictions not in provided context = Gaps note, not score reduction.
+- **Under-scoring fully supported version or extraction comparisons**: if source materials or a fetched page directly support the finding
+  (version mismatches, timeline contradictions, extraction accuracy conclusions), report at high confidence (≥0.90) with a short reasoning note in Gaps.
+  Do not suppress confidence below 0.85 because a live fetch was not needed or because the conclusion is fully derivable from provided materials alone.
+  Reserve low confidence (<0.80) for cases where the timeline or comparison is genuinely ambiguous or source evidence is incomplete.
+  Theoretical external contradictions not present in provided context = Gaps note, not score reduction.
 - **Silent omission of migration detail**: section describes behavioral change (renamed param, changed default, removed API,
   altered return type) but no before/after code examples + no param-level diff — flag as content completeness gap (medium severity).
   Absence of code examples in migration section is itself a finding.
   Don't conflate "prose is accurate" with "section is complete."
+- **Promoting plausible inferences to primary findings**: when source materials suggest an adjacent issue but do not directly confirm it (e.g. a second versioned URL path that *may* be stale but is not contradicted by any provided content), record it as an inferred observation or gap note — not as a numbered finding. Reserve primary findings for issues directly supported by the provided materials. This prevents precision dilution from defensible-but-unverified adjacent observations.
 
 \</antipatterns_to_flag>
 

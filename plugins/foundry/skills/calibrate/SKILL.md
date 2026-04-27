@@ -2,8 +2,8 @@
 name: calibrate
 description: Calibration testing for agents and skills. Generates synthetic problems with known outcomes (quasi-ground-truth), runs targets against them, and measures recall, precision, and confidence calibration — revealing whether self-reported confidence scores track actual quality.
 when_to_use: Run to measure agent/skill routing accuracy, validate confidence calibration, or A/B test agent changes after editing descriptions or workflows.
-argument-hint: '{all|agents|skills|routing|communication|plugins|<plugin-name>|<name>} [...multiple] [fast|full] [ab] [apply]'
-allowed-tools: Read, Write, Edit, Bash, Agent, Glob, TaskCreate, TaskUpdate
+argument-hint: '[<scope>...] [--fast | --full] [--ab-test | --apply] [--skip-gate]'
+allowed-tools: Read, Write, Edit, Bash, Agent, Glob, Grep, TaskCreate, TaskUpdate
 effort: high
 ---
 
@@ -17,9 +17,23 @@ Calibration data drives improvement loop: systematic gaps → instruction update
 
 <inputs>
 
-- **$ARGUMENTS**: `{all|agents|skills|routing|communication|<name>} [fast|full] [ab] [apply]`
+- **$ARGUMENTS**: parse `--flags` first, then resolve remaining tokens as scope targets
 
-  - **Target** (first token — defaults to `all`):
+  **Flags** (order independent):
+  - `--fast` — 3 problems per target (default when neither pace flag passed)
+  - `--full` — 10 problems per target; mutually exclusive with `--fast`
+  - `--ab-test` — also run `general-purpose` baseline and report delta metrics; requires benchmark (default `--fast` if no pace flag); mutually exclusive with `--apply`
+  - `--apply` — apply proposals: with `--fast`/`--full`: run benchmark then immediately apply; without pace flag: skip benchmark, apply proposals from most recent past run; mutually exclusive with `--ab-test`
+  - `--skip-gate` — suppress the follow-up gate; for programmatic callers
+
+  **Mutual exclusion validation** (check before any work):
+  - `--ab-test` + `--apply` together → hard error: "`--ab-test` and `--apply` are mutually exclusive. Pass one or neither."
+  - `--fast` + `--full` together → hard error: "Pass `--fast` or `--full`, not both."
+  - `--ab-test` without pace flag → default `--fast` silently (no error)
+
+  **Legacy positional tokens** (`ab`, `apply`, `fast`, `full`) — **hard error**: print migration hint and stop. Example: "`ab` removed — use `--ab-test` flag: `/calibrate curator --ab-test`."
+
+  **Scope tokens** (positional, space-separated — defaults to `all`):
     - `all` — all agents + relevant skills + routing + communication + all rules
     - `agents` — all agents only (full agent list in `modes/agents.md`)
     - `skills` — calibratable skills only (`/audit`, `/oss:review` *(requires oss plugin)*)
@@ -30,16 +44,9 @@ Calibration data drives improvement loop: systematic gaps → instruction update
     - `<plugin-name>` — **tier 2**: bare plugin directory name (e.g. `oss`, `foundry`, `research`, `develop`) auto-resolved when token matches a `plugins/<name>/` directory; calibrates all agents + calibratable skills in that plugin
     - `<agent-name>` — **tier 3**: single agent (e.g., `foundry:sw-engineer`); also accepts bare name (e.g. `sw-engineer`) and resolves via `plugins/*/agents/<name>.md`
     - `/audit` or `/oss:review` — single skill
-    - Multiple target tokens — space-separated; calibrates union of resolved targets: `oss research fast`, `agents skills`, `curator shepherd`; each token resolved through same tier hierarchy as `/audit` scope tokens (reserved keywords first, then plugin-dir lookup, then agent/skill file search)
-  - **Pace** (optional, default `fast`):
-    - `fast` — 3 problems per target
-    - `full` — 10 problems per target
-  - **`ab`** (optional): also run `general-purpose` baseline and report delta metrics
-  - **`apply`** (optional):
-    - With `fast` or `full`: run calibration benchmark then immediately apply new proposals
-    - Without `fast`/`full`: skip benchmark; apply proposals from most recent past run
+    - Multiple scope tokens — space-separated; calibrates union of resolved targets: `oss research`, `agents skills`, `curator shepherd`; each token resolved through same tier hierarchy as `/audit` scope tokens (reserved keywords first, then plugin-dir lookup, then agent/skill file search)
 
-  Every invocation surfaces report: benchmark runs print new results; bare `apply` prints saved report from last run before applying.
+  Every invocation surfaces report: benchmark runs print new results; `--apply` without pace flag prints saved report from last run before applying.
 
 </inputs>
 
@@ -89,7 +96,8 @@ Domain tables per mode: see `modes/agents.md`, `modes/skills.md`, `modes/routing
 
 From `$ARGUMENTS`, determine:
 
-- **Target list** — parse ALL scope tokens (stop at `fast`, `full`, `ab`, `apply`); union of resolved targets:
+- **Strip flags first**: extract `--fast`, `--full`, `--ab-test`, `--apply`, `--skip-gate` before scope resolution; validate mutual exclusion (error and stop on conflict)
+- **Target list** — remaining tokens after flag-strip; union of resolved targets:
   - `all` or omitted → all agents + `/audit` + `/oss:review` + routing + communication + all rules
   - `agents` → all agents (full agent list in `modes/agents.md`)
   - `skills` → `/audit` and `/oss:review` only
@@ -99,28 +107,38 @@ From `$ARGUMENTS`, determine:
   - `plugins` → all agents + calibratable skills from all `plugins/*/` directories
   - `<plugin-name>` matching `plugins/<name>/` directory → tier 2: all agents + calibratable skills in that plugin
   - Any other token → tier 3: single agent or skill name; search `plugins/*/agents/<name>.md`, `.claude/agents/<name>.md`, `plugins/*/skills/<name>/SKILL.md`, `.claude/skills/<name>/SKILL.md`; error if no match
-  - Multiple tokens → union: e.g. `oss research fast` = oss + research targets at fast pace; `curator shepherd` = two individual agents
-- **Mode**: look for `fast` or `full` in remaining tokens — default `fast`
-- **A/B flag**: `ab` present → also spawn `general-purpose` baseline per problem
-- **Apply flag**:
-  - `apply` without `fast`/`full` → pure apply mode: skip Steps 2–5; go to Step 6
-  - `apply` with `fast`/`full` → benchmark + auto-apply: run Steps 2–5 then continue to Step 6
+  - Multiple tokens → union: e.g. `oss research`, `curator shepherd`; each resolved independently
 
-If benchmark will run (i.e., `fast` or `full` present, with or without `apply`): generate timestamp `YYYY-MM-DDTHH-MM-SSZ` (UTC, e.g. `2026-03-03T13-44-48Z`) via `date -u +%Y-%m-%dT%H-%M-%SZ`. All run dirs use this timestamp.
+**Empty resolution guard**: after resolving all scope tokens to the target list, if the list is empty (e.g. plugin matched but contains no calibratable agents/skills, such as `/calibrate codemap`), stop with:
+
+```text
+! No calibratable agents/skills found for scope: <input-scope>
+Verify: (a) plugin name spelled correctly, (b) plugin has agents/*.md or calibratable skills (see modes/skills.md domain table)
+```
+
+Do not proceed to Step 2 — silent no-op produces no report and confuses callers.
+
+- **Pace**: `--full` → 10 problems; `--fast` → 3 problems; neither → default `--fast`
+- **A/B flag**: `--ab-test` → also spawn `general-purpose` baseline per problem
+- **Apply flag**:
+  - `--apply` without pace flag → pure apply mode: skip Steps 2–5; go to Step 6
+  - `--apply` with `--fast`/`--full` → benchmark + auto-apply: run Steps 2–5 then continue to Step 6
+
+If benchmark will run (i.e., `--fast` or `--full` present, with or without `--apply`): generate timestamp `YYYY-MM-DDTHH-MM-SSZ` (UTC, e.g. `2026-03-03T13-44-48Z`) via `date -u +%Y-%m-%dT%H-%M-%SZ`. All run dirs use this timestamp.
 
 Create tasks before proceeding:
 
-- Benchmark only (no `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target includes routing), TaskCreate "Calibrate communication" (if target includes communication), TaskCreate "Calibrate rules" (if target includes rules), TaskCreate "Analyse and report"
-- Benchmark + auto-apply (`fast`/`full` + `apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target includes routing), TaskCreate "Calibrate communication" (if target includes communication), TaskCreate "Calibrate rules" (if target includes rules), TaskCreate "Analyse and report", TaskCreate "Apply findings"
-- Pure apply mode (only `apply`, no `fast`/`full`): TaskCreate "Apply findings" only
+- Benchmark only (no `--apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target includes routing), TaskCreate "Calibrate communication" (if target includes communication), TaskCreate "Calibrate rules" (if target includes rules), TaskCreate "Analyse and report"
+- Benchmark + auto-apply (`--fast`/`--full` + `--apply`): TaskCreate "Calibrate agents" (if target includes agents), TaskCreate "Calibrate skills" (if target includes skills), TaskCreate "Calibrate routing" (if target includes routing), TaskCreate "Calibrate communication" (if target includes communication), TaskCreate "Calibrate rules" (if target includes rules), TaskCreate "Analyse and report", TaskCreate "Apply findings"
+- Pure apply mode (only `--apply`, no pace flag): TaskCreate "Apply findings" only
 
 ## Step 2: Spawn pipeline subagents
 
-> **Pre-flight**: mode files at `.claude/skills/calibrate/modes/` are symlinked by `/foundry:init`. If absent, resolve via plugin cache:
+> **Pre-flight**: mode files at `<plugin-cache>/foundry/<v>/skills/calibrate/modes/` — resolve via plugin cache scan below.
+> `/foundry:init` does NOT symlink these (only `rules/*.md` and `TEAM_PROTOCOL.md`); if not found, re-install the foundry plugin.
 > ```bash
-> CALIB_MODES_DIR=".claude/skills/calibrate/modes"
-> [ -d "$CALIB_MODES_DIR" ] || CALIB_MODES_DIR="$(find ${HOME}/.claude/plugins/cache -path "*/calibrate/modes" -type d 2>/dev/null | head -1)" # timeout: 5000
-> [ -d "$CALIB_MODES_DIR" ] || { printf "! BREAKING: calibrate/modes/ not found — run /foundry:init first\n"; exit 1; }
+> CALIB_MODES_DIR="$(find ${HOME}/.claude/plugins/cache -path "*/calibrate/modes" -type d 2>/dev/null | head -1)" # timeout: 5000
+> [ -d "$CALIB_MODES_DIR" ] || { printf "! BREAKING: calibrate/modes/ not found — re-install foundry plugin: claude plugin install foundry@borda-ai-rig\n"; exit 1; }
 > ```
 
 For each target mode in resolved target list, read corresponding mode file and execute spawn instructions. Issue ALL spawns in **single response** — modes are independent and run concurrently.
@@ -203,14 +221,16 @@ Flag targets where recall < 0.70 or |bias| > 0.15 with ⚠.
 
 After table, print full content of each `proposal.md` for targets where `proposed_changes > 0`.
 
-If `apply` **not** set, print:
+If `--apply` **not** set: after printing proposals, fire **Follow-up gate** (unless `--skip-gate` passed):
 
-```text
-→ Review proposals above, then run `/calibrate <targets> [fast|full] apply` to apply them.
-→ Proposals saved to: .reports/calibrate/<TIMESTAMP>/<TARGET>/proposal.md
-```
+Call `AskUserQuestion` — do NOT write options as plain text. Map options directly:
+- question: "Proposals ready. What next?" (include summary, e.g. "3 targets with proposals, 1 calibrated.")
+- (a) label: `Apply proposals` — description: run `/calibrate <targets> --apply`
+- (b) label: `Re-run full depth` — description: run `/calibrate <targets> --full` for 10 problems per target
+- (c) label: `Re-run full + A/B` — description: run `/calibrate <targets> --full --ab-test` with general-purpose baseline
+- (d) label: `skip` — description: review proposal files manually at `.reports/calibrate/<TIMESTAMP>/<TARGET>/proposal.md`
 
-If `apply` **was** set (benchmark + auto-apply mode), print `→ Auto-applying proposals now…` and proceed to Step 6.
+If `--apply` **was** set (benchmark + auto-apply mode), print `→ Auto-applying proposals now…` and proceed to Step 6.
 
 Targets with verdict `calibrated` and no proposed changes get single line: `✓ <target> — no instruction changes needed`.
 
@@ -231,11 +251,7 @@ For each flagged target (recall < 0.70 or |bias| > 0.15):
 - **Bias > 0.15**: `→ Raise effective re-run threshold for <target> in MEMORY.md (default 0.70 → ~<mean_confidence>)`
 - **Bias < −0.15**: `→ <target> is conservative; threshold can stay at default`
 
-Proposals shown in Step 3 already surface actionable signals. If `apply` **not** set, end with:
-
-`→ Run /calibrate <target> [fast|full] apply to run fresh benchmark and apply proposals.`
-
-Mark "Analyse and report" completed. If `apply` was set: proceed to Step 6.
+Proposals shown in Step 3 already surface actionable signals. Follow-up gate fires in Step 3 (unless `--skip-gate`). Mark "Analyse and report" completed. If `--apply` was set: proceed to Step 6.
 
 ## Step 6: Apply proposals (apply mode)
 
@@ -243,8 +259,8 @@ Mark "Apply findings" in_progress.
 
 **Determine run directory**:
 
-- Benchmark + auto-apply mode (`fast`/`full` + `apply`): use TIMESTAMP already generated in Step 1 — proposals just written by Steps 2–5.
-- Pure apply mode (only `apply`, no `fast`/`full`): find most recent run:
+- Benchmark + auto-apply mode (`--fast`/`--full` + `--apply`): use TIMESTAMP already generated in Step 1 — proposals just written by Steps 2–5.
+- Pure apply mode (only `--apply`, no pace flag): find most recent run:
 
 ```bash
 LATEST=$(ls -td .reports/calibrate/*/ 2>/dev/null | head -1)
@@ -253,7 +269,10 @@ TIMESTAMP=$(basename "$LATEST")
 
 For each target in target list, check whether `.reports/calibrate/<TIMESTAMP>/<target>/proposal.md` exists. Collect targets with proposal (`found`) and without (`missing`).
 
-For each **missing** target: do not stop — auto-trigger a `fast` benchmark inline. Print `→ No prior run for <target> — running fast benchmark now…`, then execute Steps 2–5 for that target with `fast` mode using a fresh timestamp, and add to `found` list once proposals are written. This ensures `apply` alone always produces results rather than a dead-end error.
+For each **missing** target: hard error — do not auto-trigger benchmark. Print:
+`! No prior run for <target> — re-run with --fast --apply to benchmark+apply, or --fast to benchmark only.`
+Stop. `--apply` without pace flag is documented as "skip benchmark, apply proposals from most recent past run"
+(see `<inputs>`); auto-triggering would contradict that contract.
 
 **Print run's report before applying**: for each found target, read and print `.reports/calibrate/<TIMESTAMP>/<target>/report.md` verbatim so user sees benchmark basis before any file changes.
 
@@ -295,8 +314,8 @@ End response with `## Confidence` block per CLAUDE.md output standards.
 
 <notes>
 
-- **Timeout handling**: phase and pipeline budgets (see constants block) prevent nested subagent hangs from cascading. Extension granted once if pipeline explains delay in output file — second unexplained stall still triggers cutoff. Timed-out pipelines appear with ⏱ prefix and `verdict:"timed_out"`; re-run individually with `/calibrate <target> fast` after session.
-- **Context safety**: each target runs in own pipeline subagent — only compact JSON (~200 bytes) returns to main context. `all full ab` with all targets returns ~5KB total, well within limits.
+- **Timeout handling**: phase and pipeline budgets (see constants block) prevent nested subagent hangs from cascading. Extension granted once if pipeline explains delay in output file — second unexplained stall still triggers cutoff. Timed-out pipelines appear with ⏱ prefix and `verdict:"timed_out"`; re-run individually with `/calibrate <target> --fast` after session.
+- **Context safety**: each target runs in own pipeline subagent — only compact JSON (~200 bytes) returns to main context. `all --full --ab-test` with all targets returns ~5KB total, well within limits.
 - **Scorer delegation**: Phase 3a delegates scoring to per-problem `general-purpose` subagents. Each scorer reads response files from disk, returns ~200 bytes. Phase 3b runs Codex scorers sequentially via Bash (writes per-problem files). Phase 3c merges both into `scores.json`. Pipeline holds only compact JSONs regardless of N or A/B mode — no context budget concern.
 - **Nesting depth**: main → pipeline subagent → target/scorer agents (2 levels). Pipeline spawns target agents (Phase 2), Claude scorer agents (Phase 3a), Codex scoring Bash calls (Phase 3b) at same depth — no additional nesting.
 - `general-purpose` is built-in Claude Code agent type (no `.claude/agents/general-purpose.md` needed) — no custom system prompt, all tools available.
@@ -308,13 +327,13 @@ End response with `## Confidence` block per CLAUDE.md output standards.
 - **Do NOT use real project files**: benchmark only against synthetic inputs — no sensitive data and real files have no ground truth.
 - **Skill benchmarks** run skill as subagent against synthetic config or code; scored identically to agent benchmarks.
 - **Improvement loop**: systematic gaps → `<antipatterns_to_flag>` | consistent low recall → consider model tier upgrade (sonnet → opus) | large calibration bias → document adjusted threshold in MEMORY.md | re-calibrate after instruction changes to quantify improvement.
-- **Report always**: every invocation surfaces report — benchmark runs print new results table; bare `apply` (no `fast`/`full`) prints saved report from last run before applying, so user always sees basis for changes before files touched.
-- **`apply` semantics**: `fast apply` / `full apply` = run fresh benchmark then auto-apply new proposals. `apply` alone = apply proposals from most recent past run without re-running benchmark.
-- **Stale proposals**: `apply` uses verbatim text matching (`old_string` = **Current** from proposal). If agent file edited between benchmark run and `apply`, any change whose **Current** text no longer matches is skipped with warning — no silent clobbering of intermediate edits.
+- **Report always**: every invocation surfaces report — benchmark runs print new results table; `--apply` without pace flag prints saved report from last run before applying, so user always sees basis for changes before files touched.
+- **`--apply` semantics**: `--fast --apply` / `--full --apply` = run fresh benchmark then auto-apply new proposals. `--apply` alone = apply proposals from most recent past run without re-running benchmark.
+- **Stale proposals**: `--apply` uses verbatim text matching (`old_string` = **Current** from proposal). If agent file edited between benchmark run and `--apply`, any change whose **Current** text no longer matches is skipped with warning — no silent clobbering of intermediate edits.
 - **`routing` target vs `/audit` Check 12**: `/audit` Check 12 performs static analysis of description overlap (finds potential confusion zones); `/calibrate routing` tests behavioral impact — generates real routing decisions and measures whether descriptions actually disambiguate. Run in sequence: `/audit` first (fast, structural), then `/calibrate routing` (behavioral, slower). Complementary, not redundant.
 - **`routing`, `communication`, `rules` in `all`**: see `all` entry in `<inputs>` for authoritative definition — use explicit targets only when running single mode in isolation.
 - Follow-up chains:
-  - Recall < 0.70 or borderline → `/calibrate <agent> fast apply` → `/calibrate <agent>` to verify improvement — stop and escalate to user if recall still < 0.70 after this cycle (max 1 apply cycle per run)
+  - Recall < 0.70 or borderline → pick "Apply proposals" from gate → `/calibrate <agent>` to verify improvement — stop and escalate to user if recall still < 0.70 after this cycle (max 1 apply cycle per run)
   - Calibration bias > 0.15 → add adjusted threshold to MEMORY.md → note in next audit
   - Routing accuracy < 0.90 or hard accuracy < 0.80 → update descriptions for confused pairs → `/calibrate routing` to verify improvement
   - Recommended cadence: run before and after any significant agent instruction change; run `/calibrate routing` after any agent description change; run `/calibrate communication` after any protocol or handoff change

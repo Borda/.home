@@ -3,7 +3,6 @@ name: review
 description: Multi-agent code review of GitHub Pull Requests covering architecture, tests, performance, docs, lint, security, and API design.
 argument-hint: '[PR number|path/to/report.md] [--reply] [--no-challenge]'
 allowed-tools: Read, Write, Edit, Bash, Grep, Agent, TaskCreate, TaskUpdate, AskUserQuestion
-context: fork
 model: opus
 effort: high
 ---
@@ -34,14 +33,22 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 
 <workflow>
 
+**Deferred tool load** — first action before any task management or agent spawning:
+
+```
+ToolSearch("select:Agent,AskUserQuestion,TaskCreate,TaskUpdate,TaskList")
+```
+
+Ensures `Agent` (sub-agent spawning), `AskUserQuestion` (follow-up gate), and `Task*` tools are loaded before first use. Without this, these tools remain deferred and spawning/gate steps fail silently.
+
 <!-- Agent Resolution: canonical table at plugins/oss/skills/_shared/agent-resolution.md -->
 
 ## Agent Resolution
 
 ```bash
 # Locate oss plugin shared dir — installed first, local workspace fallback
-# ls exit code lost through pipe; fallback guard below covers empty result
-_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
+# sort -V orders semver correctly (0.9.0 < 0.10.0); tail -1 picks newest
+_OSS_SHARED=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | sort -V | tail -1)
 [ -z "$_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
 ```
 
@@ -315,76 +322,18 @@ Spawn a **foundry:sw-engineer** consolidator agent with this prompt:
 
 Main context receives only the one-liner verdict. Proceed with that summary for terminal output.
 
-```markdown
-## Code Review: [target]
+**Consolidator unavailable fallback** — if `Agent` tool deferred/not loaded and consolidator cannot be spawned:
+1. Synthesize verdict one-liner inline from Step 3 JSON envelopes (or in-context findings if agents also didn't spawn): `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`
+2. Write consolidated report inline to `.temp/output-review-$BRANCH-$DATE.md` using Write tool directly — include all sections and Confidence block
+3. Print terminal block using `terminal-summaries.md` template — **never silently skip terminal output**
 
-### [blocking] Critical (must fix before merge)
-- [bugs, security issues, data corruption risks]
-- Severity: CRITICAL / HIGH
-
-### Issue Root Cause Alignment
-(omit if no linked issues)
-- Issue #N: [title] — [root cause hypothesis from analysis]
-- Root cause addressed: [yes / partially / no — explanation]
-- PR/issue scope alignment: [aligned / diverged — what differs]
-- Reproduction tested: [yes / no — what's missing]
-
-### Architecture & Quality
-- [sw-engineer findings]
-- [blocking] issues marked explicitly
-- [nit] suggestions marked explicitly
-
-### Test Coverage Gaps
-- [qa-specialist findings — top 5 missing tests]
-- For ML code: non-determinism or missing seed issues
-
-### Performance Concerns
-- [perf-optimizer findings — ranked by impact]
-- Include: current behavior vs expected improvement
-
-### Documentation Gaps
-- [doc-scribe findings]
-- Public API without docstrings listed explicitly
-
-### Static Analysis
-- [linting-expert findings — ruff violations, mypy errors, annotation gaps]
-
-### API Design (if applicable)
-- [solution-architect findings — coupling, API surface, backward compat]
-- Public API changes: [intentional / accidental leak]
-- Deprecation path: [provided / missing]
-
-### OSS Checks
-- New dependencies: [list, license status]
-- API stability: [any public API removed without deprecation?]
-- CHANGELOG: [updated / not updated]
-- Secrets scan: [clean / found: file:line]
-
-### Codex Co-Review
-(omit section if Codex was unavailable or found no unique issues)
-- [unique findings from codex.md not already captured by agents above]
-- Duplicate findings (same location as agent finding): omitted — see agent section
-
-### Recommended Next Steps
-1. [most important action]
-2. [second most important]
-3. [third]
-
-### Review Confidence
-| Agent | Score | Label | Gaps |
-|-------|-------|-------|------|
-
-**Aggregate**: min 0.65 / median 0.N
-[⚠ LOW CONFIDENCE: qa-specialist could not verify test execution — treat coverage findings as indicative, not conclusive]
-```
+Report format: read `templates/review-report.md` in this skill directory and use it as the output structure.
 
 After parsing confidence: agent < 0.7 → prepend **⚠ LOW CONFIDENCE** to findings section, state gap explicitly. Never drop uncertain findings.
 
 <!-- Extended Fields live in $FOUNDRY_SHARED/terminal-summaries.md (foundry plugin shared dir, resolved in Step 5) -->
 
-Read `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn the user: "foundry:init required: `terminal-summaries.md` not found — verify foundry plugin installed (`claude plugin list`) and run `foundry:init`; printing plain terminal output instead." Then print a plain summary without the template. When file is present — use **PR Summary** template with **Extended Fields (review only)**. Replace `[entity-line]` with `Review — [target]`, `[skill-specific path]` with `.temp/output-review-$BRANCH-$DATE.md`. Terminal block structure: opening `---` on own line, entity line next (never `---Review...`), `→ saved to .temp/output-review-$BRANCH-$DATE.md` after `Confidence:`, closing `---` after `→ saved to`. Print to terminal.
-
-After printing, also prepend compact block to report file top via Edit — line 1, followed by blank line, then `## Code Review: [target]`.
+Print terminal block: read `---` header from top of `.temp/output-review-$BRANCH-$DATE.md` (lines 1–12, up to and including closing `---`), append `→ saved to .temp/output-review-$BRANCH-$DATE.md`, print to terminal. Report file already contains the block — no separate prepend step needed.
 
 ## Step 7: Delegate implementation follow-up (optional)
 
@@ -417,7 +366,7 @@ Print `### Codex Delegation` only when tasks delegated — omit if nothing deleg
 
 ### 8a — Follow-up gate
 
-Call `AskUserQuestion` tool — do NOT write options as plain text first. Map options directly into the tool call arguments:
+! IMPORTANT — invoke `AskUserQuestion` tool directly. Never write options as plain text before or instead of the tool call. Map options directly into the tool call arguments:
 - question: "What next?"
 - (a) label: `/oss:resolve $CLEAN_ARGS` — description: fix this PR
 - (b) label: `/oss:resolve report` — description: resolve from full report

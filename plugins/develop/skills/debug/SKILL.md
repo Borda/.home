@@ -62,11 +62,37 @@ Read `$_DEV_SHARED/runner-detection.md` — sets `$TEST_CMD` (full suite) and `$
 
 ## Step 1: Understand the symptom
 
-Collect all signals before forming any hypothesis:
+Collect all signals before forming any hypothesis.
+
+**Issue-number mode first** — if `$ARGUMENTS` is an issue number, fetch the issue body and extract the test path BEFORE invoking pytest:
+
+```bash
+# Strip leading '#' so both '123' and '#123' work
+ARGUMENTS="${ARGUMENTS#\#}"
+```
+
+```bash
+# Fetch the full issue body first
+ISSUE_BODY=$(gh issue view "$ARGUMENTS" --comments 2>&1)  # timeout: 6000
+echo "$ISSUE_BODY"
+```
+
+```bash
+# Extract a test path (e.g., tests/foo.py or test_foo.py) from the issue body
+TEST_PATH=$(echo "$ISSUE_BODY" | grep -oE '(tests?/[^[:space:]]+\.py|test_[^[:space:]]+\.py)' | head -1)
+if [ -z "$TEST_PATH" ]; then
+  echo "→ No test file found in issue; running full test suite"
+elif [ ! -f "$TEST_PATH" ]; then
+  echo "⚠ test path from issue not found on disk: $TEST_PATH — running full suite"
+  TEST_PATH=""
+fi
+```
+
+Then run pytest with the extracted path (empty `$TEST_PATH` → full suite):
 
 ```bash
 # Read the full traceback — never just the last line
-$PYTEST_CMD --tb=long <test_path> -v 2>&1 | tail -60
+$PYTEST_CMD --tb=long ${TEST_PATH} -v 2>&1 | tail -60
 ```
 
 ```bash
@@ -77,15 +103,10 @@ LOOKBACK=$(( COMMIT_COUNT < 5 ? COMMIT_COUNT : 5 ))
 [ "$LOOKBACK" -gt 1 ] && git diff HEAD~${LOOKBACK}..HEAD -- <suspect_file>
 ```
 
-If GitHub issue number provided:
+**Symptom-text mode** — if `$ARGUMENTS` is free-text, skip the issue fetch + extraction; locate the failing test path from the symptom directly, then run:
 
 ```bash
-# Strip leading '#' so both '123' and '#123' work
-ARGUMENTS="${ARGUMENTS#\#}"
-```
-
-```bash
-gh issue view <number> --comments
+$PYTEST_CMD --tb=long <test_path> -v 2>&1 | tail -60
 ```
 
 Use Grep (pattern: failing symbol, class, or error keyword) to trace call path from entry point to failure site. Path hint: use `src/` if that directory exists, otherwise search from project root (`.`).

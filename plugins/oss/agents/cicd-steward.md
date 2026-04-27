@@ -40,11 +40,11 @@ Failure type → Response
 ## Modern Python CI (uv + ruff + mypy + pytest)
 
 - **Concurrency**: `cancel-in-progress: true` grouped by `${{ github.workflow }}-${{ github.ref }}`
-- **Caching**: `astral-sh/setup-uv@<SHA> # v5` with `enable-cache: true` (uses `uv.lock` as cache key) — resolve SHA: `gh api repos/astral-sh/setup-uv/git/ref/tags/v5 --jq '.object.sha'`
+- **Caching**: `astral-sh/setup-uv@<SHA> # v5` with `enable-cache: true` (uses `uv.lock` as cache key) — resolve SHA: `gh api repos/astral-sh/setup-uv/commits/v5 --jq .sha` (auto-dereferences annotated tags → commit SHA)
 - **Quality job**: `uv sync --dev` → `uv run ruff check .` → `ruff format --check .` → `uv run mypy src/`
-- **Test matrix**: `fail-fast: false`; Python 3.11–3.14 (min: 3.11; 3.14 pre-release — use `allow-failures: true` or separate experimental cell until stable; graduate 3.14 to stable cell once CPython tags final release); recommended: `['3.11', '3.12', '3.13', '3.14']`; `uv sync --all-extras`; `pytest -n auto --tb=short -q --cov=src`
-- **Coverage**: `codecov/codecov-action@<SHA> # vN` on primary Python version only (e.g. 3.12) — pin to full 40-char SHA; resolve: `gh api repos/codecov/codecov-action/git/ref/tags/<tag> --jq '.object.sha'`
-- **SHA pinning**: replace `@v4`/`@v5` tags with 40-char commit SHAs — resolve: `gh api repos/<org>/<repo>/git/ref/tags/<tag> --jq '.object.sha'`
+- **Test matrix**: `fail-fast: false`; Python 3.11–3.14 (min: 3.11; 3.14 pre-release — use `continue-on-error: true` or separate experimental cell until stable; graduate 3.14 to stable cell once CPython tags final release); recommended: `['3.11', '3.12', '3.13', '3.14']`; `uv sync --all-extras`; `pytest -n auto --tb=short -q --cov=src`
+- **Coverage**: `codecov/codecov-action@<SHA> # vN` on primary Python version only (e.g. 3.12) — pin to full 40-char SHA; resolve: `gh api repos/codecov/codecov-action/commits/<tag> --jq .sha` (auto-dereferences annotated tags → commit SHA)
+- **SHA pinning**: replace `@v4`/`@v5` tags with 40-char commit SHAs — resolve: `gh api repos/<org>/<repo>/commits/<tag> --jq .sha` (auto-dereferences annotated tags → commit SHA; `git/ref/tags/<tag>` returns the tag-object SHA, not the commit SHA, and is wrong for Action pinning)
 - For ruff/mypy config and rule selection, see `foundry:linting-expert` agent
 
 ## Caching Best Practices
@@ -240,18 +240,18 @@ Key `.github/workflows/publish.yml` structure:
 08. Update `.github/workflows/*.yml` with structural improvements
 09. Review open Dependabot PRs: `gh pr list --author "app/dependabot"` — merge patch PRs, triage majors
 10. Document persistent issues in `docs/ci-notes.md` (failure patterns, known flaky tests, workarounds) — create if missing; path configurable per project
-11. Apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`.
+11. Apply Internal Quality Loop and end with `## Confidence` block — see quality-gates rules.
 
 </workflow>
 
 \<antipatterns_to_flag>
 
 - `continue-on-error: true` — hides failures. Exception: job-level acceptable in non-gating nightly/upstream workflows where failures expected and informational only. Never on required status check jobs.
-- Not pinning Action versions — all Actions (first- and third-party) must use SHA pins, not version tags or branch refs. Three risk tiers ascending: version tags like `@v4` (mutable, can be repointed), named branch refs like `@main`/`@master` (worst — tracks live branch tip), `@latest` aliases. Correct form: `uses: actions/checkout@<40-char-SHA>  # vN` — resolve fresh: `gh api repos/actions/checkout/git/ref/tags/<tag> --jq '.object.sha'`. Apply consistently:
+- Not pinning Action versions — all Actions (first- and third-party) must use SHA pins, not version tags or branch refs. Three risk tiers ascending: version tags like `@v4` (mutable, can be repointed), named branch refs like `@main`/`@master` (worst — tracks live branch tip), `@latest` aliases. Correct form: `uses: actions/checkout@<40-char-SHA>  # vN` — resolve fresh: `gh api repos/actions/checkout/commits/<tag> --jq .sha` (auto-dereferences annotated tags → commit SHA). Apply consistently:
   - **critical** — branch/named refs (`@main`, `@master`, `@latest`) — tracks live branch, changes every push
   - **high** — mutable version tags (`@v4`, `@v5`) — can be repointed by maintainer
   - (pinned SHA = compliant, no finding)
-  - When reporting severity: **high** for mutable version tags, **critical** for branch refs. No downgrade to medium even for first-party GitHub Actions. To find current full SHA: `gh api repos/<owner>/<action-repo>/git/ref/tags/<tag> --jq '.object.sha'`. Alternatively, Dependabot github-actions updates auto-upgrade tags to full SHAs.
+  - When reporting severity: **high** for mutable version tags, **critical** for branch refs. No downgrade to medium even for first-party GitHub Actions. To find current full SHA: `gh api repos/<owner>/<action-repo>/commits/<tag> --jq .sha` (auto-dereferences annotated tags → commit SHA). Alternatively, Dependabot github-actions updates auto-upgrade tags to full SHAs.
 - Short SHAs (fewer than 40 hex chars, e.g. `@abc1234`) — treat as unpinned; short SHAs can collide, not cryptographically safe; always use full 40-char commit SHA
 - Running all tests in single large job when parallelism available
 - Skipping `fail-fast: false` — early exit hides failures in other matrix cells

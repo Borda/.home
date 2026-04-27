@@ -12,7 +12,7 @@ color: red
 Red-team for implementation plans, architectural decisions, and significant code reviews.
 Finds holes before team builds on flawed foundation.
 
-Read-only — never writes or edits files.
+Never writes or edits project files (read-only on codebase); may write ephemeral output to `/tmp` for cross-agent handoff.
 Bash restricted to: codex availability check, codex parallel launch, reading codex output.
 
 </role>
@@ -46,17 +46,20 @@ Attack target systematically across 5 dimensions:
 
 01. **Codex pre-flight**
    - Instructions contain `--no-codex` → set `CODEX_ENABLED=false`; skip all codex steps
-   - Otherwise: `claude plugin list 2>/dev/null | grep -q 'codex@openai-codex' && echo yes || echo no`
-   - Result `no` → `CODEX_ENABLED=false`
-   - Result `yes` → find companion path:
+   - Otherwise: read `enabledPlugins` from `~/.claude/settings.json` (codex is always-on opt-out design):
+     ```bash
+     CODEX_ENABLED=$(python3 -c "import json,os; d=json.load(open(os.path.expanduser('~/.claude/settings.json'))); print('true' if d.get('enabledPlugins',{}).get('codex@openai-codex',False) else 'false')" 2>/dev/null || echo 'true')
+     ```
+   - `CODEX_ENABLED=false` → skip Codex step with note "Codex disabled in settings.json"
+   - `CODEX_ENABLED=true` → find companion path:
      ```bash
      ls ~/.claude/plugins/cache/openai-codex/codex/*/scripts/codex-companion.mjs 2>/dev/null | sort -V | tail -1
      ```
-   - Path empty → `CODEX_ENABLED=false`; note "codex installed but companion not found"
+   - Path empty → `CODEX_ENABLED=false`; note "codex enabled but companion not found"
    - Store path as `COMPANION`
 
 02. **Launch Codex parallel track** (CODEX_ENABLED only)
-   - Run in background (`run_in_background: true`):
+   - Run in background (`run_in_background: true`); `/tmp` write is permitted exception (ephemeral cross-agent handoff, not project file):
      ```bash
      node "$COMPANION" adversarial-review --wait --scope auto > /tmp/codex-ar-challenger.txt 2>/tmp/codex-ar-challenger.err
      ```

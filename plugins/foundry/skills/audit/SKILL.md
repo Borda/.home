@@ -1,7 +1,7 @@
 ---
 name: audit
-description: "Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Two mutually exclusive action modes: 'fix [high|medium|all]' auto-fixes at the requested severity level; 'upgrade' applies docs-sourced improvements with correctness verification and calibrate A/B testing for capability changes."
-argument-hint: '[<scope>...] [fix [high|medium|all] | upgrade | adversarial]'
+description: "Full-sweep quality audit of .claude/ config — cross-references, permissions, inventory drift, model tiers, docs freshness. Scope tokens select what to audit; --upgrade applies docs-sourced improvements; --adversarial runs foundry:challenger + Codex adversarial review. Fix level chosen via always-fire follow-up gate after report."
+argument-hint: '[<scope>...] [--upgrade | --adversarial] [--skip-gate]'
 disable-model-invocation: true
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 effort: high
@@ -9,22 +9,26 @@ effort: high
 
 <objective>
 
-Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/*/` agent and skill files: every agent file, every skill file, every rule file, settings.json, and hooks. Spawns `foundry:curator` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — infinite loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings and auto-fixes at the requested level: `fix high` (critical+high only), `fix medium` (critical+high+medium, default fix level), or `fix all` (all findings including low).
+Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/*/` agent and skill files: every agent file, every skill file, every rule file, settings.json, and hooks. Spawns `foundry:curator` for per-file analysis, then aggregates findings system-wide to catch issues that only surface across files — infinite loops, inventory drift, missing permissions, and cross-file interoperability breaks. Reports all findings; fix level chosen from the always-fire follow-up gate after the report.
 
 </objective>
 
 <inputs>
 
-- **$ARGUMENTS**: optional — **`fix` and `upgrade` are mutually exclusive; never combine them**
-  - No argument: full sweep, report only — covers ALL files: `plugins/*/agents/`, `plugins/*/skills/`, `.claude/agents/`, `.claude/skills/`, `.claude/rules/`, hooks, settings; `plugins/` is primary source (canonical agents + skills live there); `.claude/` is secondary (project-local config, hooks, settings)
-  - `fix high` — fix `critical` and `high` findings; `medium` and `low` reported only
-  - `fix medium` — fix `critical`, `high`, and `medium` findings; `low` reported only
-  - `fix all` — fix all findings including `low`
-  - `fix` (no level) — alias for `fix medium` (backward compatible)
-  - `upgrade` — fetch latest Claude Code docs, filter new features by genuine value, then apply: **config** changes (apply + correctness check), **capability** changes (calibrate before → apply → calibrate after → accept if Δrecall ≥ 0 and ΔF1 ≥ 0). Skip to **Mode: upgrade**.
-  - `agents` — restrict sweep to agent files only, report only
-  - `skills` — restrict sweep to skill files only, report only
-  - `rules` — restrict sweep to rule files only, report only
+- **$ARGUMENTS**: optional — parse `--flags` first, then resolve remaining tokens as scope
+
+  **Flags** (order independent, any combination with scope):
+  - `--upgrade` — fetch latest Claude Code docs, filter new features by genuine value, then apply: **config** changes (apply + correctness check), **capability** changes (calibrate before → apply → calibrate after → accept if Δrecall ≥ 0 and ΔF1 ≥ 0). Skip to **Mode: upgrade**. Mutually exclusive with `--adversarial`.
+  - `--adversarial` (alias: `--challenge`) — adversarial review of all agents + skills in scope using `foundry:challenger` (Phase A) + Codex adversarial pass (Phase B); surfaces issues beyond standard per-file audit; see **Mode: adversarial**. Mutually exclusive with `--upgrade`.
+  - `--skip-gate` — suppress the follow-up gate; for programmatic callers (e.g. `/manage` step 9)
+
+  **Legacy positional tokens** (`fix`, `upgrade`, `adversarial`, `challenge`, `ab`, `apply`, `fast`, `full`) — **hard error**: print migration hint and stop. Example: "`fix medium` removed — run `/audit` and pick fix level from gate, or pass `--upgrade` / `--adversarial` as flags."
+
+  **Scope tokens** (positional, space-separated — resolve each token before Step 2):
+  - No scope: full sweep — covers ALL files: `plugins/*/agents/`, `plugins/*/skills/`, `.claude/agents/`, `.claude/skills/`, `.claude/rules/`, hooks, settings; `plugins/` is primary source; `.claude/` is secondary
+  - `agents` — restrict sweep to agent files only
+  - `skills` — restrict sweep to skill files only
+  - `rules` — restrict sweep to rule files only
   - `communication` — restrict sweep to communication governance files: `rules/communication.md`, `rules/quality-gates.md`, `TEAM_PROTOCOL.md`, `skills/_shared/file-handoff-protocol.md`
   - `setup` — restrict sweep to system-configuration files: `settings.json`, `permissions-guide.md`, hooks, `MEMORY.md`, `README.md`, plugin integration, and post-install user state (Checks 1–11, 30, I1, I2, I3); Step 3 runs for `init` SKILL.md only (one foundry:curator spawn); Checks I1–I3 read `~/.claude/` not `.claude/`
   - `plugin` — restrict sweep to plugin integration only: codex plugin (Check 7), foundry plugin + init validation (Check 8, including 8g); Step 3 runs for `init` SKILL.md only (one foundry:curator spawn)
@@ -34,10 +38,10 @@ Run a full-sweep quality audit of the `.claude/` configuration and all `plugins/
   - `<agent-name>` — **tier 3**: name matches `plugins/*/agents/<name>.md` or `.claude/agents/<name>.md`; runs agent checks only (Checks 14, 15, 19, 20, 17, 12, 13, 25, 22, 26, 29); one file in Step 3
   - `<skill-name>` — **tier 3**: name matches `plugins/*/skills/<name>/SKILL.md` or `.claude/skills/<name>/SKILL.md`; runs skill checks only (Checks 14, 15, 21, 17, 12, 23, 22, 13, 24, 25, 26, 27, 28, 29); one file in Step 3
   - Multiple scope tokens — any combination space-separated; scope = union of resolved file sets: `agents skills`, `oss research`, `shepherd curator`, `review resolve`; check list = union of per-scope check lists (de-duplicated)
-  - `adversarial` (alias: `challenge`) — adversarial review of all agents + skills in scope using `foundry:challenger` (Phase A) + Codex adversarial pass (Phase B); surfaces issues beyond standard per-file audit; see **Mode: adversarial**
-  - **Scope token resolution** (each token resolved before Step 2): (1) reserved keywords (`agents`, `skills`, `rules`, `communication`, `setup`, `plugin`, `plugins`, `adversarial`, `challenge`, `fix`, `upgrade`, `high`, `medium`, `all`) → use as-is; (2) token matches directory under `plugins/<token>/` → tier 2; (3) token matches agent file in `plugins/*/agents/<token>.md` or `.claude/agents/<token>.md` → tier 3 agent; (4) token matches skill dir `plugins/*/skills/<token>/` or `.claude/skills/<token>/` → tier 3 skill; (5) no match → report error and stop
-  - Scope and fix level can be combined: `agents fix medium`, `rules fix all`, `oss fix all` — scope always precedes `fix`; adversarial and fix can be combined: `agents adversarial fix high`
-  - **Invalid combinations**: `fix upgrade`, `upgrade fix`, `upgrade agents`, combining any scope/fix flag with `upgrade` — when detected, use `AskUserQuestion` to clarify which mode was intended: (a) `fix [high|medium|all]` — auto-fix findings at the given severity level, (b) `upgrade` — fetch latest Claude Code docs and apply improvements
+
+  **Scope token resolution** (each remaining token after flag-strip, resolved before Step 2): (1) reserved scope keywords (`agents`, `skills`, `rules`, `communication`, `setup`, `plugin`, `plugins`) → use as-is; (2) token matches directory under `plugins/<token>/` → tier 2; (3) token matches agent file in `plugins/*/agents/<token>.md` or `.claude/agents/<token>.md` → tier 3 agent; (4) token matches skill dir `plugins/*/skills/<token>/` or `.claude/skills/<token>/` → tier 3 skill; (5) no match → error and stop
+
+  **Valid combinations**: scope tokens and flags can be mixed freely: `foundry --adversarial`, `agents skills`, `oss research --adversarial`. `--upgrade` and `--adversarial` mutually exclusive — error if both passed.
 
 </inputs>
 
@@ -81,6 +85,8 @@ YEL='\033[1;33m'
 GRN='\033[0;32m'
 NC='\033[0m'
 
+# Canonical source: plugins/foundry/skills/_shared/preflight-helpers.md
+# Keep in sync with that file when updating
 # From _shared/preflight-helpers.md — TTL 4 hours, keyed per binary
 preflight_ok() {
     local f=".claude/state/preflight/$1.ok"
@@ -358,14 +364,14 @@ Emit report (omit Upgrade Proposals section if none passed genuine-value filter)
 
 ### Summary
 - Total: N (C critical, H high, M medium, L low)
-- Auto-fix eligible: `fix high`: C+H | `fix medium`: C+H+M | `fix all`: C+H+M+L
+- Fix via follow-up gate: (a) critical+high · (b) critical+high+medium · (c) all
 
-### Upgrade Proposals (N — run `/audit upgrade` to apply)
+### Upgrade Proposals (N — pick `/audit --upgrade` from gate to apply)
 | # | Feature | Type | Rationale |
 |---|---------|------|-----------|
 ```
 
-No fix level passed → stop here.
+After emitting report → fire **Follow-up gate** (Step 7 follow-up). If user picks a fix option (a–c), proceed inline to Step 8. Otherwise done.
 
 ## Step 8: Delegate fixes to subagents
 
@@ -396,7 +402,7 @@ Each subagent prompt template: Read the fix prompt template from .claude/skills/
 
 <!-- Canonical multi-file orchestration template — intentionally inline; NOT derived from fix-prompt.md (per-file only). Keep both in sync when changing shared audit-fix behavior. -->
 
-When the finding count exceeds 10 or `fix all` was passed, spawn a dedicated **audit-fix** sub-agent that handles all of Steps 8–10 in isolation:
+When the finding count exceeds 10 or the user picked "Fix all" from the gate, spawn a dedicated **audit-fix** sub-agent that handles all of Steps 8–10 in isolation:
 
 ```markdown
 Read `<RUN_DIR>/summary.jsonl` — this is the findings list (one JSON object per line).
@@ -414,7 +420,7 @@ Return ONLY: {"status":"done","file":"<RUN_DIR>/fix-summary.md","fixed":N,"faile
 
 The orchestrator (main context) then reads only the compact JSON envelope. It does NOT read fix-summary.md unless `re_audit_clean: false` or `failed > 0`.
 
-When finding count ≤ 10 and fix level is `fix high` or `fix medium` (not `fix all`), the inline batched pattern (one fix-agent per file, all spawned in parallel) is acceptable without the dedicated orchestrator sub-agent.
+When finding count ≤ 10 and the user picked "Fix critical+high" or "Fix critical+high+medium" (not "Fix all") from the gate, the inline batched pattern (one fix-agent per file, all spawned in parallel) is acceptable without the dedicated orchestrator sub-agent.
 
 **Exceptions — handle inline without subagents (note in report):**
 
@@ -456,7 +462,7 @@ grep -n "<broken-name>" <fixed-file>
 # Flag any < 0.7 for targeted re-run
 ```
 
-**Convergence loop**: if the re-audit surfaces new fixable findings at the active fix level, loop back to Step 8 with those findings. Repeat until:
+**Convergence loop**: if the re-audit surfaces new fixable findings within the gate-selected severity threshold, loop back to Step 8. Repeat until:
 
 - Zero fixable findings remain (convergence achieved) → mark fix pass complete, or
 - Hard limit: **5 total fix passes** (including the initial Step 8 pass) — if still not converged, surface all remaining fixable findings to the user with a `⚠ CONVERGENCE LIMIT` warning explaining which issues resisted fixing.
@@ -497,7 +503,7 @@ Output the complete audit summary: List each audited file by name in the `### Fi
 | critical | N | N | 0 |
 | high | N | N | 0 |
 | medium | N | N | 0 |
-| low | N | N (fix all only) | N |
+| low | N | N ("Fix all" only) | N |
 
 **Fix convergence**: Converged in N pass(es) — 0 fixable findings remain.
 ```
@@ -508,7 +514,7 @@ Or if limit hit:
 **Fix convergence**: ⚠ CONVERGENCE LIMIT reached (5 passes) — N fixable findings remain (see Remaining section).
 ```
 
-(Omit the fix convergence line for report-only runs — only shown when a fix level was passed.)
+(Omit the fix convergence line when user picked "skip" from gate — only shown when a fix option was chosen.)
 
 ```markdown
 ### Fixes Applied
@@ -539,13 +545,13 @@ Run `/foundry:init` to propagate clean config to ~/.claude/
 
 ## Mode: upgrade
 
-**Trigger**: `/audit upgrade`
+**Trigger**: `/audit --upgrade`
 
 Read and execute `plugins/foundry/skills/audit/modes/upgrade.md`.
 
-## Mode: adversarial (alias: challenge)
+## Mode: adversarial (alias: --challenge)
 
-**Trigger**: `/audit [<scope>...] adversarial [fix [high|medium|all]]`
+**Trigger**: `/audit [<scope>...] --adversarial`
 
 Adversarial review of all agents + skills in scope. Runs in parallel with or after standard per-file audit (Step 3). Surfaces issues the curator pass misses: subtle logic flaws, inconsistent claims, NOT-for gaps, scope leakage, and cross-file contradictions.
 
@@ -580,22 +586,28 @@ Write deduplicated findings to `<RUN_DIR>/adversarial-aggregate.md` and `<RUN_DI
 | agents/curator.md | 3 | 1 | 2 | NOT-for gap: accepts task X |
 ```
 
-Adversarial findings feed into the standard fix pipeline (Steps 7–10) if `fix` level also passed.
+Adversarial findings feed into the standard fix pipeline (Steps 7–10) when user picks a fix level from the follow-up gate.
 
 **Adversarial-only runs** (no standard audit): skip Steps 3–6; run only Phases A–C above; report adversarial findings only.
 
-**Mode name aliases**: `adversarial` and `challenge` are identical — either token triggers this mode.
+**Flag aliases**: `--adversarial` and `--challenge` are identical — either triggers this mode.
 
 ## Follow-up gate
 
-**Analysis mode only** — skip this gate when running in `fix` or `upgrade` mode (those are action modes, not analysis-only).
+**Always fires** unless `--skip-gate` was passed (programmatic callers). Call `AskUserQuestion` tool — do NOT write options as plain text first. Map options directly into the tool call arguments.
 
-Call `AskUserQuestion` tool — do NOT write options as plain text first. Map options directly into the tool call arguments:
-- question: "What next?"
-- (a) label: `/foundry:init` — description: sync clean config to `~/.claude/`
-- (b) label: `/audit fix all` — description: auto-fix all findings
-- (c) label: `/audit adversarial` — description: adversarial review with foundry:challenger + Codex
-- (d) label: `skip` — description: no action
+When user picks fix option (a–c): run Steps 8–10 inline within this invocation (state already on disk in `summary.jsonl`); no recursive `/audit` call needed.
+
+- question: "What next?" (include finding counts in question, e.g. "2 critical, 4 high, 3 medium, 1 low. What next?")
+- (a) label: `Fix critical + high` — description: auto-fix critical and high findings
+- (b) label: `Fix critical + high + medium` — description: auto-fix critical, high, and medium findings (recommended)
+- (c) label: `Fix all` — description: auto-fix all findings including low
+- (d) label: `/audit --upgrade` — description: fetch latest Claude Code docs and apply improvements
+- (e) label: `/audit --adversarial` — description: adversarial review with foundry:challenger + Codex
+- (f) label: `/foundry:init` — description: sync verified config to `~/.claude/`
+- (g) label: `skip` — description: no action
+
+After completing `--upgrade` or `--adversarial` mode: also fire this gate (omit options (d) or (e) respectively — no point repeating the mode just run).
 
 </workflow>
 
@@ -619,13 +631,13 @@ Call `AskUserQuestion` tool — do NOT write options as plain text first. Map op
 - **Token cost**: Step 3 (foundry:curator spawns) is the most expensive part of the audit. For a quick structural scan where you mainly need cross-reference and inventory validation, the system-wide checks in Step 4 are often sufficient on their own. Consider running `/audit agents` or `/audit skills` to scope the sweep, or skip Step 3 entirely for a fast pass when you already trust per-file quality.
 - **Skill-creator complement**: For testing whether skill trigger descriptions fire correctly (trigger accuracy, A/B description testing), see the official skill-creator utility from Anthropic. `/audit` checks structural quality; `skill-creator` validates that the right skill is selected by Claude Code's dispatcher when the user types a command.
 - Follow-up chains:
-  - Audit clean → `/foundry:init` to propagate verified config to `~/.claude/`
-  - Audit found structural issues → review flagged files manually before syncing
-  - Audit found many low items → run `/audit fix all` to auto-fix them, or run `/develop:refactor` for a targeted cleanup pass
-  - After fixing agent instructions (from audit findings) → `/calibrate <agent>` to verify the fix improved recall and confidence calibration
+  - Audit clean → pick `/foundry:init` from gate to propagate verified config to `~/.claude/`
+  - Audit found structural issues → review flagged files manually before syncing; pick fix level from gate
+  - Audit found many low items → pick "Fix all" from gate, or run `/develop:refactor` for targeted cleanup
+  - After fixing agent instructions (from audit gate) → `/calibrate <agent>` to verify fix improved recall and confidence calibration
   - Audit Check 20 found description overlap → `/calibrate routing` to verify behavioral routing impact; update descriptions for confused pairs based on the routing report
-  - Audit surfaced upgrade proposals → `/audit upgrade` to apply with correctness checks and calibrate A/B evidence for capability changes
-  - `/audit upgrade` reverted a capability change → run `/calibrate <agent> full` for deeper signal (N=10 vs N=3 used in upgrade mode)
+  - Audit surfaced upgrade proposals → pick `/audit --upgrade` from gate to apply with correctness checks and calibrate A/B evidence for capability changes
+  - `/audit --upgrade` reverted a capability change → run `/calibrate <agent> --full` for deeper signal (N=10 vs N=3 used in upgrade mode)
   - Audit Check 22 found unregistered calibratable mode → update `calibrate/modes/skills.md` domain table and run `/calibrate skills` to verify the new target works
   - Audit Check 22 found stale domain table entry → remove it from `calibrate/modes/skills.md`
 

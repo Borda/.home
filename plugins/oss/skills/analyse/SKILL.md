@@ -40,12 +40,11 @@ EXTENSION=300          # one +5 min extension if output file explains delay
 
 ```bash
 # Locate oss plugin shared dir — installed first, local workspace fallback
-_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
-# If glob expands to zero matches, ls exits non-zero but head exits 0 — pipe exit code is head's.
-# Correctness is preserved by the fallback guard below (not by $?).
+# sort -V orders semver correctly (0.9.0 < 0.10.0); tail -1 picks newest
+_OSS_SHARED=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | sort -V | tail -1)
 [ -z "$_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
 
-FOUNDRY_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared 2>/dev/null | head -1)
+FOUNDRY_SHARED=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared 2>/dev/null | sort -V | tail -1)
 [ -z "$FOUNDRY_SHARED" ] && FOUNDRY_SHARED=".claude/skills/_shared"
 ```
 

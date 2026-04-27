@@ -42,8 +42,8 @@ Bare comment text → skip to Codex dispatch (Step 12).
 
 ```bash
 # Locate oss plugin shared dir — installed first, local workspace fallback
-# pipe exit code from ls|head is head's (0); ls failure suppressed by 2>/dev/null; fallback guard below handles empty result
-_OSS_SHARED=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | head -1)
+# sort -V orders semver correctly (0.9.0 < 0.10.0); tail -1 picks newest
+_OSS_SHARED=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/oss/*/skills/_shared 2>/dev/null | sort -V | tail -1)
 [ -z "$_OSS_SHARED" ] && _OSS_SHARED="plugins/oss/skills/_shared"
 ```
 
@@ -58,6 +58,8 @@ Read `$_OSS_SHARED/agent-resolution.md`. Contains: foundry check + fallback tabl
 ## Step 1: Pre-flight
 
 ```bash
+# Canonical source: plugins/foundry/skills/_shared/preflight-helpers.md
+# Keep in sync with that file when updating
 # From plugins/foundry/skills/_shared/preflight-helpers.md — TTL 4 hours, keyed per binary
 preflight_ok() {
     local f=".claude/state/preflight/$1.ok"
@@ -142,14 +144,14 @@ No PR number extractable → print: "Review output does not reference a PR — p
 Parse $ARGUMENTS:
 
 ```bash
-# Strip leading '#' so both '42' and '#42' work
-ARGUMENTS="${ARGUMENTS#\#}"
+eval "$(bash "${CLAUDE_PLUGIN_ROOT}/bin/parse-resolve-args.sh" "$ARGUMENTS")"
+# sets: PR_NUMBER, PR_URL, MODE, ARGUMENTS (leading '#' stripped only for comment-dispatch)
 ```
 
-- Matches `<number> report` or `<URL> report` → **pr + report mode**: strip `report` suffix, set PR# from remaining token; find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → warn but continue in pr mode
-- Equals bare word `report` → **report mode**: find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → stop with: "No review report found in .temp/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
-- Number or GitHub PR URL → **pr mode** (continue Step 2)
-- Otherwise → **comment dispatch mode** (jump to Step 12)
+- `MODE="pr+report"` → strip `report` suffix conceptually (already captured separately); find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → warn but continue in pr mode
+- `MODE="report"` → find latest review report via `ls -t .temp/output-review-*.md 2>/dev/null | head -1`; no report found → stop with: "No review report found in .temp/ — run /review \<PR#> first, or provide a PR number"; extract PR# from header if present
+- `MODE="pr"` → continue Step 2
+- `MODE="comment-dispatch"` → jump to Step 12
 
 ## Step 2: Create initial task
 
@@ -257,9 +259,9 @@ Read every comment, review, inline code comment. Classify:
 
 | Code | Meaning |
 | --- | --- |
-| `[req]` | Change **required** before merge — requested by a reviewer with write access or the maintainer |
-| `[suggest]` | Improvement suggested — nice-to-have, non-blocking |
-| `[question]` | Open question that needs an answer before deciding what code to write |
+| `[gh][req]` | Change **required** before merge — requested by a reviewer with write access or the maintainer |
+| `[gh][suggest]` | Improvement suggested — nice-to-have, non-blocking |
+| `[gh][question]` | Open question that needs an answer before deciding what code to write |
 | `[done]` | A subsequent commit or reply already addressed this — skip |
 | `[info]` | Praise, acknowledgement, emoji-only — skip |
 | `[self-review]` | Finding from the `/oss:review` report — not a GitHub commenter; author = agent name |
@@ -281,19 +283,25 @@ Report : not used
 Building action items…
 ```
 
-Print action item table — **MUST render as markdown table; never use key-value list, prose, or separator-delimited format regardless of cell length**. Status codes: `pending` · `✓ resolved` · `⊘ skipped` · `⊘ no action`. Verbose reason → Notes column:
+Print action item table — **MUST render as markdown table; never use key-value list, prose, or separator-delimited format regardless of cell length**. Mandatory per-cell truncation (truncate with `…`, never wrap or split):
+
+- **Summary**: ≤60 chars — truncate at word boundary, append `…`
+- **File:Line**: ≤35 chars — first path only when multiple; truncate long paths from the left (e.g. `…/workflows/build-docs.yml:328`)
+- **Notes**: ≤45 chars — truncate; full text preserved in `full_comment_text`; use `—` when empty
+
+Status codes: `pending` · `✓ resolved` · `⊘ skipped` · `⊘ no action`. Verbose reason → Notes column:
 
 ```markdown
 ### Action Items — PR #<number>
 
 | # | Type | Author | Status | Summary | File:Line | Notes |
 |---|------|--------|--------|---------|-----------|-------|
-| 1 | [req] | @reviewer | pending | rename param `x` to `count` | src/foo.py:42 | — |
-| 2 | [suggest] | @maintainer | pending | add docstring | — | — |
-| 3 | [question] | @reviewer | pending | why not use X instead? | — | — |
+| 1 | [gh][req] | @reviewer | pending | rename param `x` to `count` | src/foo.py:42 | — |
+| 2 | [gh][suggest] | @maintainer | pending | add docstring | — | — |
+| 3 | [gh][question] | @reviewer | pending | why not use X instead? | — | — |
 ```
 
-> **Guard**: `[req]` items > 15 → print list, `AskUserQuestion` for subset (up to 4 grouped options, first = "(Recommended)") before continuing.
+Long content is never a reason to switch to key-value or separator-delimited format — truncate and stay in the table.
 
 Answer `[question]` items resolvable from code — clear answer → reclassify `[req]`/`[suggest]`; maintainer judgement needed → surface and pause. Contributor answer ≠ auto-close — answer revealing known limitation/deferred work → keep `[question]`, surface for maintainer to accept/reject.
 
@@ -311,7 +319,7 @@ Find + read latest review report (`ls -t .temp/output-review-*.md 2>/dev/null | 
 - Semantic match (same file, no exact line, similar description) → drop report item; same annotation
 - No match → append report finding as `[report]` item
 
-**Re-prefix GitHub items** once deduplication done: `[req]` → `[gh][req]`, `[suggest]` → `[gh][suggest]`, `[question]` → `[gh][question]`. Only in `pr + report` mode; single-source `pr` items stay plain.
+**Re-prefix GitHub items** in deduplication: `[gh][req]` stays `[gh][req]`; `[suggest]` → `[gh][suggest]`, `[question]` → `[gh][question]` if not already prefixed. GitHub items carry `[gh]` prefix in all modes — no change needed for items already classified with `[gh]` in Step 3b.
 
 ### Sources confirmation
 
@@ -334,7 +342,51 @@ Result: single merged `ACTION_ITEMS`. GitHub items first (`[gh][req]`/`[gh][sugg
 Report merged: <N> findings from /review · <M> deduplicated against GitHub comments · <K> added as [report] items
 ```
 
-## Step 3d: Create per-item tasks
+## Step 3d: Challenge action items
+
+Challenge each pending action item before creating tasks. Route by domain to best adversarial agent; default `foundry:challenger`.
+
+| Item domain | Challenger |
+| --- | --- |
+| Architecture, API design, coupling | `foundry:challenger` |
+| Code logic, correctness, edge cases | `foundry:sw-engineer` |
+| Test coverage, assertions, regressions | `foundry:qa-specialist` |
+| Default / unclassified | `foundry:challenger` |
+
+Group items by challenger. Spawn one agent per group in parallel:
+
+```text
+Agent(subagent_type="foundry:challenger", prompt="
+Challenge each review comment for PR #<N>.
+For each item: read referenced file at file:line if given; determine if comment is valid against actual code, or should be pushed back.
+
+Items:
+<id>: <summary> | file: <file:line or '—'> | @<author>: <full_comment_text>
+...
+
+Return ONLY compact JSON:
+{\"verdicts\": [{\"id\": <id>, \"verdict\": \"VALID\"|\"PUSH_BACK\", \"rationale\": \"<one sentence>\"}]}
+")
+```
+
+Aggregate verdicts. Per item:
+- **VALID** → keep unchanged
+- **PUSH_BACK** → set type to `[challenged:pushback]`; store rationale; exclude from SELECTED_ITEMS
+
+Print challenge summary:
+
+```markdown
+### Challenge Results — PR #<number>
+
+| # | Type | Author | Verdict | Rationale |
+|---|------|--------|---------|-----------|
+| 1 | [gh][req] | @reviewer | VALID | — |
+| 2 | [gh][suggest] | @maintainer | PUSH_BACK | already addressed in commit abc123 |
+```
+
+`[challenged:pushback]` items appear in final report (Step 11) with `⊘ push-back` status and rationale — for maintainer to communicate back to reviewer.
+
+## Step 3e: Create per-item tasks
 
 Mark Step 2 task `completed`:
 
@@ -352,13 +404,58 @@ TaskCreate(
 )
 ```
 
-- `<type>` — full type string as-is (include brackets): `[req]`, `[suggest]`, `[question]`, `[gh][req]`, `[gh][suggest]`, `[gh][question]`, `[report][req]`, `[report][suggest]`, etc.
+- `<type>` — full type string as-is (include brackets): `[gh][req]`, `[gh][suggest]`, `[gh][question]`, `[report][req]`, `[report][suggest]`, etc.
 - `<summary>` — item's `summary` field (truncate to 80 chars if needed)
 - Skip `[done]`/`[info]` items — no task needed.
 
 Store returned task ID in each `ACTION_ITEMS` entry as `task_id`.
 
+## Step 3f: User item selection
+
+! IMPORTANT — invoke `AskUserQuestion` tool directly. Never write options as plain text.
+
+Pending items = all ACTION_ITEMS where type ≠ `[done]` and type ≠ `[info]`. If zero pending items → set `SELECTED_ITEMS` = all pending item IDs (implement all) and skip to Step 4.
+
+Sort pending items: `[gh][req]` / `[report][req]` first, then `[gh][suggest]` / `[report][suggest]`.
+
+**`AskUserQuestion` constraint**: max 4 options per question, max 4 questions per call. Item checkboxes fill up to 3 questions (≤12 items); a fixed bulk-action question is always the last (4th).
+
+### Building the call
+
+Split pending items into groups of ≤4 items, one group per question, `multiSelect: true`:
+
+- `question`: "Which items to implement? (check all that apply)"
+- `header`: `"Required"` for `[req]` groups (suffix `" 2"`, `" 3"` when multiple), `"Suggested"` for `[suggest]` groups
+- `multiSelect`: **true**
+- Options (one per item, up to 4):
+  - `label`: `<type> #<id>: <summary>` (truncate summary at 55 chars if needed)
+  - `description`: `<file:line or "—"> · @<author>`
+
+Always append one final **bulk-action question** (single-select):
+
+- `question`: "Or choose a bulk action (overrides item selections above):"
+- `header`: `"Bulk action"`
+- `multiSelect`: false
+- Options:
+  - `label`: "Apply selected" · `description`: "Implement only the checked items above (select none = skip)"
+  - `label`: "Apply all [req]" · `description`: "All required items, ignore selections"
+  - `label`: "Apply all" · `description`: "All [req] + [suggest] items, ignore selections"
+  - `label`: "Skip all" · `description`: "No implementation — proceed to lint + QA only"
+
+If pending items > 12 (would need >3 item-group questions): use **two `AskUserQuestion` calls** — first call covers `[req]` items (up to 3 questions) + bulk-action; second call covers `[suggest]` items (up to 3 questions) + bulk-action. Merge selections from both calls before setting `SELECTED_ITEMS`.
+
+### Resolving selections
+
+Set `SELECTED_ITEMS` from response:
+
+- "Skip all" → `SELECTED_ITEMS` = [] → **skip Steps 4–8, jump to Step 9 on current branch**
+- "Apply all" → `SELECTED_ITEMS` = all pending item IDs
+- "Apply all [req]" → `SELECTED_ITEMS` = all pending `[req]` item IDs only
+- "Apply selected" (or no bulk-action answer) → `SELECTED_ITEMS` = items checked across all item-group questions; if none checked → `SELECTED_ITEMS` = [] → **skip Steps 4–8, jump to Step 9**
+
 ## Step 4: Checkout PR branch
+
+*Only runs when `SELECTED_ITEMS` is non-empty (set in Step 3f). If empty → skip directly to Step 9.*
 
 ```bash
 SAVED_BRANCH=$(git rev-parse --abbrev-ref HEAD)  # timeout: 3000
@@ -368,8 +465,23 @@ gh pr checkout <PR#>   # fetches HEAD_REF; for forks, adds the contributor's rem
 `gh pr checkout` auto-handles forks — adds contributor's remote, configures tracking. Verify:
 
 ```bash
-git remote -v | grep -v fetch | grep -v push | head -10 # timeout: 3000
-git status                                              # confirm we are on HEAD_REF  # timeout: 3000
+# Show one line per remote (fetch URL); each remote prints both (fetch) and (push) lines, so filter to (fetch) for de-dup
+git remote -v | grep '(fetch)' | head -10 # timeout: 3000
+git status                                # confirm we are on HEAD_REF  # timeout: 3000
+```
+
+Determine `FORK_REMOTE` explicitly — `gh pr checkout` adds the remote but the skill must know its name to push later (Step 10):
+
+```bash
+IS_CROSS_REPO=$(gh pr view "<PR#>" --json isCrossRepository --jq .isCrossRepository 2>/dev/null || echo false) # timeout: 6000
+if [ "$IS_CROSS_REPO" = "true" ]; then
+    FORK_REMOTE=$(gh pr view "<PR#>" --json headRepositoryOwner --jq .headRepositoryOwner.login) # timeout: 6000
+else
+    FORK_REMOTE="origin"
+fi
+# Soft-verify remote exists; gh pr checkout layouts vary across versions
+git remote get-url "$FORK_REMOTE" >/dev/null 2>&1 \
+    || echo "⚠ Remote $FORK_REMOTE not registered — Step 10 will add it before push" # timeout: 3000
 ```
 
 `FORK_REMOTE`: contributor login (e.g. `alice`) for forks, `origin` for same-repo. Push always `git push` — tracking configured by `gh pr checkout`.
@@ -540,6 +652,10 @@ Mark all conflict tasks completed:
 for each (filepath, conflict_task_id) pair from Step 5a: TaskUpdate(task_id=\<conflict_task_id>, status="completed")
 ```
 
+## Step 7c: User item selection
+
+*Moved to **Step 3f** — runs before checkout (Step 4). `SELECTED_ITEMS` already set when Step 8 is reached.*
+
 ## Step 8: Implement action items
 
 Authorize commits for this workflow:
@@ -552,9 +668,7 @@ If `CODEX_AVAILABLE=false`: mark all items `⚠ skipped — codex not installed`
 
 > **Conflict gate**: verify all Step 5a conflict tasks `completed` before any action item. Still `pending`/`in_progress` → stop, surface list, wait. Items on unresolved conflicts compound diff.
 
-Process `[req]` items first, then `[suggest]`. **Each item gets its own commit.**
-
-> **Guard**: process at most 10 items, then pause and `AskUserQuestion` to continue with remaining items, with options: "Continue (Recommended)" (next batch), "Stop here" (report with items processed so far).
+Process items in `SELECTED_ITEMS` (from Step 3f) in priority order (`[req]` first, then `[suggest]`). **Each item gets its own commit.**
 
 For each action item:
 
@@ -718,9 +832,9 @@ Then print:
 
 | # | Type | Author | Status | Summary | File:Line | Notes |
 |---|------|--------|--------|---------|-----------|-------|
-| 1 | [req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 | — |
-| 2 | [suggest] | @maintainer | ✓ resolved | add docstring | — | — |
-| 3 | [question] | @reviewer | ⊘ skipped | why not use X? | — | existing approach correct per linked issue #42 |
+| 1 | [gh][req] | @reviewer | ✓ resolved | rename param x → count | src/foo.py:42 | — |
+| 2 | [gh][suggest] | @maintainer | ✓ resolved | add docstring | — | — |
+| 3 | [gh][question] | @reviewer | ⊘ skipped | why not use X? | — | existing approach correct per linked issue #42 |
 
 ### Lint + QA
 <linting-expert summary: N fixes applied | or "no violations"> / <foundry:qa-specialist summary: N blocking fixed, N warnings | or "clean">
@@ -775,7 +889,7 @@ Read and execute `$_OSS_RESOLVE/modes/comment-dispatch.md`.
 - **Codex agent health**: subject to CLAUDE.md §8 — 15-min cutoff, ⏱ on timeout; partial results via `tail -100` on output file.
 - **Worktree cleanup safety net**: `SessionEnd` runs `git worktree prune` — catches orphaned worktrees.
 - **Mode routing**: see Steps 3a–3c and `<inputs>` for mode definitions, source routing, action-item derivation.
-- **`[gh]` items** (pr + report mode only): commit messages use: `[resolve #<id>] @<reviewer> (gh):` — same as plain `[req]`/`[suggest]` in pr mode, plus `(gh)` source annotation.
+- **`[gh]` items** (all pr-sourced items in all modes): commit messages use: `[resolve #<id>] @<reviewer> (gh):`
 - **`[report]` items**: attribute to agent, not GitHub commenter — distinguishes automated findings in git history. Format: `[resolve #<id>] /review finding by <agent-name> (report: <report-path>):`
 - **Sources block**: print after mode resolution, before GitHub API calls — "abort if wrong source" moment.
 - **Step 7 delegation** — resolve owns orchestration + context; sw-engineer owns code-level resolution (Read → Edit → stage); resolve retains conflict report + `git merge --continue`.

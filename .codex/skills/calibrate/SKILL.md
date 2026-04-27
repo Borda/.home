@@ -7,6 +7,18 @@ description: Minimal codex-native calibration loop. Use to detect leaks or major
 
 Run a linear calibration loop for codex workflow integrity.
 
+## Input Schema
+
+```json
+{
+  "scope": "skills|agents|routing|all",
+  "pace": "fast|full",
+  "mode": "ab-test|apply",
+  "skip_gate": false,
+  "done_when": "recall and bias scores emitted; proposals written if mode=apply; gate skipped if skip_gate=true"
+}
+```
+
 ## Workflow
 
 1. Load calibration task set from `.codex/calibration/tasks.json`.

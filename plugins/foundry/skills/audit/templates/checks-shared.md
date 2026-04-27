@@ -252,7 +252,7 @@ Flag: `[medium] Inconsistent symbol for "<concept>" in <file>: <symbol-A> (line 
 
 **26b — Slash command notation consistency**
 
-Directive references to other skills (e.g., "run → /audit fix") must use `/name` form. Prose mentions (e.g., "the audit skill") may omit slash. Flag files mixing `` `/name` `` and `` `name` `` in same directive context.
+Directive references to other skills (e.g., "run → /audit") must use `/name` form. Prose mentions (e.g., "the audit skill") may omit slash. Flag files mixing `` `/name` `` and `` `name` `` in same directive context.
 
 ```bash
 printf "=== Check 26b: Slash command notation ===\n"

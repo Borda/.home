@@ -162,7 +162,7 @@ Stop when one hypothesis confirmed with clear evidence, or top-3 all ruled out (
 **Recommended next action**: <one of:>
   - `/develop:fix` — code regression confirmed (application code only — NOT for `.claude/` changes)
   - `/manage update <name> "<change directive>"` — `.claude/` agent/skill/rule content needs updating (use this, NOT `/develop:feature or /develop:fix`, for any proposed change to `.claude/`)
-  - `/foundry:audit fix` — structural/quality issue in `.claude/` config confirmed
+  - `/foundry:audit` — structural/quality issue in `.claude/` config confirmed (pick fix level from gate)
   - `/foundry:init` — propagate project `.claude/` to `~/.claude/` (foundry plugin is the distribution path)
   - Manual step: <exact command to run>
   - Further investigation needed: <what additional info would resolve it>

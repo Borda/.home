@@ -590,10 +590,10 @@ For **create** and **update (rename)**: verify tool efficiency — cross-check a
 
 ## Step 9: Audit and calibrate
 
-Run `/audit` to validate created/modified files. **Skip if invoked with `--skip-audit` or if current `manage` operation runs inside an `audit fix` loop** — outer audit covers it.
+Run `/audit --skip-gate` to validate created/modified files without triggering the interactive follow-up gate. **Skip if invoked with `--skip-audit` or if current `manage` operation runs inside an audit-initiated fix session** — outer audit covers it.
 
 ```text
-/audit
+/audit --skip-gate
 ```
 
 For targeted check of only affected file, spawn **foundry:curator** directly:
@@ -610,10 +610,10 @@ Include audit findings in final report. Do not proceed to sync if any `critical`
 /calibrate <name>
 ```
 
-Then run `/calibrate routing fast` to confirm overall routing accuracy unaffected:
+Then run `/calibrate routing --fast` to confirm overall routing accuracy unaffected:
 
 ```text
-/calibrate routing fast
+/calibrate routing --fast
 ```
 
 Skip calibration for: trivial edits, renames, deletes, rule operations, perm operations.
@@ -640,8 +640,8 @@ End response with `## Confidence` block per CLAUDE.md output standards.
 - **No auto-edit for agent/skill/rule operations**: this skill does not mutate settings.json for non-perm operations
 - **Color pool**: AVAILABLE_COLORS lists unused colors; if exhausted, reuse with note
 - Follow-up chains:
-  - create or non-trivial update of agent/skill → `/audit` → `/calibrate <name>` (mandatory) → `/calibrate routing fast`
-  - trivial update or rename or delete → `/audit` → `/calibrate routing fast` (if description changed)
+  - create or non-trivial update of agent/skill → `/audit --skip-gate` → `/calibrate <name>` (mandatory) → `/calibrate routing --fast`
+  - trivial update or rename or delete → `/audit --skip-gate` → `/calibrate routing --fast` (if description changed)
   - add/remove perm → confirm both files updated; run `/foundry:init`
 
 </notes>

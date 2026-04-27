@@ -37,6 +37,15 @@ Triggered by `judge` or `judge <file.md>`.
 
 ## Step J1: Locate and parse program.md
 
+**Flag parsing** (first action):
+
+```bash
+SKIP_VALIDATION=false
+[[ "$ARGUMENTS" == *"--skip-validation"* ]] && SKIP_VALIDATION=true
+ARGUMENTS="${ARGUMENTS/--skip-validation/}"  # strip flag from args
+ARGUMENTS="${ARGUMENTS#"${ARGUMENTS%%[![:space:]]*}"}"  # trim leading whitespace
+```
+
 **Input resolution** (priority order):
 
 1. Explicit argument: `/research:judge path/to/plan.md`
@@ -76,7 +85,7 @@ Check each of 12 items. Produce findings list with severity. Each finding has: `
 
 **Placeholder token check (C2, C4 sub-rule)** — after confirming `command` field present in `## Metric` (C2) and `## Guard` (C4), scan each command for `{...}` tokens. For each token, verify corresponding field name exists in `## Config` (any value, including declared default). Token with no matching `## Config` field = unresolvable — add `high` finding. Do not flag `{field_name}` tokens as malformed; they're valid when resolvable.
 
-**Command feasibility**: J2 validates command fields statically (presence, format). Actual executability deferred to J4. If `--skip-validation` passed, J4 skipped, command feasibility unverified — report in judge output as "validation skipped — commands unverified."
+**Command feasibility**: J2 validates command fields statically (presence, format). Actual executability deferred to J4. If `$SKIP_VALIDATION` is `true`, J4 skipped, command feasibility unverified — report in judge output as "validation skipped — commands unverified."
 
 ## Step J3: Methodology review
 
@@ -167,7 +176,7 @@ Use `scientific_rating` as **advisory** input in J6 report under **Scientific Ri
 
 ## Step J4: Local validation
 
-> Skip if `--skip-validation` flag present in arguments.
+> Skip if `$SKIP_VALIDATION` is `true` (flag parsed in J1). Print: `→ Validation skipped (--skip-validation passed)` and continue to J5.
 
 Execute each command once to verify. **Non-blocking** — failures become `critical` findings, not hard stops.
 

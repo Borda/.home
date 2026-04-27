@@ -21,6 +21,7 @@ Campaign mode only:
 
 ```yaml
 MAX_ITERATIONS:             20 (ceiling: 50 — never exceed without explicit user override)
+MAX_CODEX_RUNS:             10 (cost ceiling for --codex Phase 2c — disable Codex once exceeded)
 STUCK_THRESHOLD:            5 consecutive discards → escalation
 GUARD_REWORK_MAX:           2 attempts before revert
 VERIFY_TIMEOUT_SEC:         120 (local), 300 (--colab)
@@ -138,7 +139,11 @@ Generate `run-id` = `$(date +%Y%m%d-%H%M%S)`. Assign immediately:
 
 ```bash
 RUN_ID=$(date +%Y%m%d-%H%M%S)
+RUN_DIR=".experiments/${RUN_ID}"  # hypothesis pipeline + journal outputs (per <constants> note)
+mkdir -p "$RUN_DIR"  # timeout: 5000
 ```
+
+Note: `STATE_DIR` (`.experiments/state/${RUN_ID}/`) is the per-iteration artifact dir — distinct from `RUN_DIR`. Both directories coexist; see `<constants>` block.
 
 Create run directory:
 
@@ -366,17 +371,25 @@ Return ONLY: {"files_modified":[...]}
 
 #### Phase 2c — Codex co-pilot (`--codex` only)
 
-> **MANDATORY — do not skip.** When `--codex` confirmed at R2, phase MUST run every iteration. Print narration, update R5b before calling Agent.
+> **Cost-bounded gate.** Run when `--codex` confirmed at R2 AND both gates pass:
+>
+> 1. **Cost ceiling** — `CODEX_ITER < MAX_CODEX_RUNS` (default `MAX_CODEX_RUNS=10`; even with `MAX_ITERATIONS=20` Codex runs at most 10 times).
+> 2. **Diminishing returns** — last 2 Codex passes did NOT both produce no code changes. After 2 consecutive no-op Codex passes, skip Codex for remaining iterations and append note to `diary.md`: `"Codex skipped from iter N — 2 consecutive no-ops"`.
+>
+> Initialize before R5 loop: `CODEX_ITER=0`, `CODEX_NOOP_STREAK=0`, `CODEX_DISABLED=false`.
+> After each Phase 2c: increment `CODEX_ITER`; on no-op outcome `((CODEX_NOOP_STREAK++))`, on changes `CODEX_NOOP_STREAK=0`. If `CODEX_NOOP_STREAK >= 2` set `CODEX_DISABLED=true`.
 
-Print:
+If gate fails (`CODEX_DISABLED=true` or `CODEX_ITER >= MAX_CODEX_RUNS`): skip Phase 2c, continue to Phase 3.
+
+Otherwise print narration, update R5b before calling Agent:
 
 ```text
-[→ Iter N/max · Phase 2c: Codex co-pilot — running]
+[→ Iter N/max · Phase 2c: Codex co-pilot — running (CODEX_ITER/MAX_CODEX_RUNS)]
 ```
 
 TaskUpdate R5b subject: `R5b: Codex co-pilot — iter N/max_iterations running`, status: `in_progress`
 
-Run Phase 2c **every iteration** when `--codex` active. Codex runs second pass, building on Claude's kept change or fresh attempt after revert/no-op. Codex's commit is evaluated by Phase 7 against `best_metric` (same rule as any other iteration); "delta ≥ 0.1%" means delta against `best_metric`, not against the previous Claude iteration. Codex wins only if delta ≥ 0.1% AND guard passes.
+Codex runs second pass when active, building on Claude's kept change or fresh attempt after revert/no-op. Codex's commit is evaluated by Phase 7 against `best_metric` (same rule as any other iteration); "delta ≥ 0.1%" means delta against `best_metric`, not against the previous Claude iteration. Codex wins only if delta ≥ 0.1% AND guard passes.
 
 - Claude Phase 2 **kept**: Codex second pass on current state — building on Claude's work.
 - Claude Phase 2 **reverted/no-op**: working tree restored; Codex fresh attempt on clean tree.

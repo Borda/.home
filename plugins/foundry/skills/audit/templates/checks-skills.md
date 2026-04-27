@@ -87,7 +87,7 @@ After the scan, apply model reasoning to each match — exclude cases where the 
 
 ## Check 24 — Skill sequence compatibility
 
-Skill `<notes>` and `<workflow>` sections frequently document multi-skill chains (e.g., `→ /audit fix`, `suggested next: /brainstorm breakdown <file>`). This check verifies that documented sequences are internally consistent:
+Skill `<notes>` and `<workflow>` sections frequently document multi-skill chains (e.g., `→ /audit`, `suggested next: /brainstorm breakdown <file>`). This check verifies that documented sequences are internally consistent:
 
 - **24a (target existence)**: every skill referenced in a documented chain exists on disk — root skills under `.claude/skills/<name>/`, plugin skills under `plugins/<plugin>/skills/<skill>/`
 - **24b (argument plausibility)**: when a suggestion includes an explicit argument (e.g., `→ /audit fix`), that argument must appear as a substring in the target skill's `argument-hint:` frontmatter (case-insensitive)
@@ -119,7 +119,7 @@ Missing target → **[high]**: `Sequence reference /<name> in <file> resolves to
 
 **Step 3 — Argument plausibility (Check 24b)**:
 
-For references with a trailing argument token (e.g., `fix` in `/audit fix`, `breakdown` in `/brainstorm breakdown`):
+For references with a trailing argument token (e.g., `--adversarial` in `/audit --adversarial`, `breakdown` in `/brainstorm breakdown`):
 
 1. Read the target skill's frontmatter `argument-hint:` (Glob-resolved path, first 5 lines)
 2. If the argument token does NOT appear as a case-insensitive substring of `argument-hint` → **[medium]**: `Sequence argument '<arg>' absent from /<name> argument-hint: '<hint>'`

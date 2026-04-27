@@ -28,12 +28,12 @@ NOT for: GitHub PR review (use `/oss:review <PR#>`); GitHub thread analysis or P
 
 <constants>
 CHALLENGE_ENABLED=true  # set to false via --no-challenge
-<!-- Background agent health monitoring (CLAUDE.md §8) — Agent calls are synchronous; no Bash polling between calls.
-     Constants below document intended timeout thresholds for framework-level enforcement, NOT active poll variables.
-     If an agent does not return: use Read tool on $RUN_DIR/<agent-name>.md for partial results; mark ⏱ in report. -->
-MONITOR_INTERVAL=300   # 5 min between polls (framework target)
-HARD_CUTOFF=900        # 15 min no-response → declare timed out
-EXTENSION=300          # one +5 min extension if output explains delay
+<!-- Note: timeout thresholds below are targets for framework-level enforcement only — the skill
+     cannot actively poll between synchronous Agent calls. If an agent appears stalled, read
+     $RUN_DIR/<agent-name>.md for partial output and mark ⏱ in the final report. -->
+MONITOR_INTERVAL=300   # 5 min — framework target only (advisory)
+HARD_CUTOFF=900        # 15 min — framework target only (advisory)
+EXTENSION=300          # +5 min extension — framework target only (advisory)
 </constants>
 
 <workflow>
@@ -101,14 +101,23 @@ Extended scan for changed modules (review-specific):
 
 ```bash
 PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
+CODEMAP_CONTEXT=""
 if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; then
     CHANGED_MODS=$(git diff HEAD --name-only | grep '\.py$' | sed 's|^src/||;s|\.py$||;s|/|.|g' | grep -v '__init__$')  # timeout: 3000
     # Note: this derivation assumes src-layout (files under src/). Files outside src/ (e.g.
     # scripts/, tools/) produce module names that may not be valid importable modules.
     # scan-query will return empty for these — not an error, just no structural context.
-    for mod in $CHANGED_MODS; do scan-query rdeps "$mod" 2>/dev/null; done  # timeout: 5000
+    for mod in $CHANGED_MODS; do
+        OUT=$(scan-query rdeps "$mod" 2>/dev/null)  # timeout: 5000
+        [ -n "$OUT" ] && CODEMAP_CONTEXT="${CODEMAP_CONTEXT}${OUT}"$'\n'
+    done
+fi
+if [ -z "$CODEMAP_CONTEXT" ]; then
+    echo "⚠ No codemap context: files outside src/ layout (scripts/, tools/, tests/) are not indexed — structural impact analysis unavailable for these files"
 fi
 ```
+
+When the warning fires, include it in the final review report header (under `### Coverage Notes` if a section exists, otherwise prepend to Step 5 consolidator prompt) so reviewers know the structural-context section is intentionally empty for non-src files.
 
 Codemap returns results → prepend `## Structural Context (codemap)` block to **Agent 1 (foundry:sw-engineer)** spawn prompt. Include:
 
@@ -144,6 +153,14 @@ Spawn `codex:codex-rescue` agent with prompt: "Adversarial review of $TARGET: lo
 
 After Codex writes `$RUN_DIR/codex.md`, extract compact seed list (≤10 items, `[{"loc":"file:line","note":"..."}]`) to inject into agent prompts in Step 3 as pre-flagged issues to verify or dismiss. Codex skipped or found nothing → proceed with empty seed.
 
+**Cap-disclosure**: count total Codex findings before truncating. If ≥10, surface in the consolidated report header so the user knows the seed list was capped:
+
+```text
+Codex: first 10 items seeded to review agents; full list in $RUN_DIR/codex.md (N total) — review codex.md directly for complete coverage.
+```
+
+Pass this notice through to the consolidator (Step 5) so it appears in the final report header, not just terminal scratch.
+
 ## Step 3: Spawn sub-agents in parallel
 
 **File-based handoff**: read `$_FOUNDRY_SHARED/file-handoff-protocol.md`. Run directory created in Step 2 (`$RUN_DIR`).
@@ -166,12 +183,12 @@ fi
 if command -v jq >/dev/null 2>&1; then
     OSS_ROOT=$(jq -r 'to_entries[] | select(.key | test("oss@")) | .value.installPath' ${HOME}/.claude/plugins/installed_plugins.json 2>/dev/null | head -1)  # timeout: 5000
     if [ -z "$OSS_ROOT" ]; then
-        echo "⚠ OSS_ROOT empty — oss plugin not installed; skipping checklist"
+        echo "⚠ oss plugin checklist unavailable — review will proceed without severity anchors; install oss plugin for full coverage"
         REVIEW_CHECKLIST=""
     else
         REVIEW_CHECKLIST="${OSS_ROOT}/skills/review/checklist.md"
         if [ ! -f "$REVIEW_CHECKLIST" ]; then
-            echo "⚠ oss plugin not available or checklist missing — continuing without it (optional enhancement)"
+            echo "⚠ oss plugin checklist unavailable — review will proceed without severity anchors; install oss plugin for full coverage"
             REVIEW_CHECKLIST=""
         else
             echo "Checklist: $REVIEW_CHECKLIST"
@@ -181,6 +198,8 @@ fi
 ```
 
 Replace `$REVIEW_CHECKLIST` in Agent 1 and consolidator spawn prompts below with resolved path. **If empty, omit the checklist instruction from those prompts entirely** — do not pass an empty path.
+
+**Visible-degradation rule** — `$REVIEW_CHECKLIST` is empty → the consolidator prompt (Step 5) **must** insert the following note into the final report under Findings: "Review checklist not applied (oss plugin not available) — severity anchors may be inconsistent." Silent degradation hides the gap from reviewers and makes severity drift invisible.
 
 <!-- Note: $REVIEW_CHECKLIST must be pre-expanded before inserting into spawn prompts — replace with the literal path string from the bash block above, same as $RUN_DIR. -->
 
@@ -243,69 +262,17 @@ Before constructing output path, extract branch and date: `BRANCH=$(git branch -
 
 Spawn **foundry:sw-engineer** consolidator with prompt:
 
-> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip missing). Read `$REVIEW_CHECKLIST` using Read tool and apply consolidation rules (signal-to-noise filter, annotation completeness, section caps). Apply precision gate: only include findings with concrete, actionable location (function, line range, or variable name). Apply finding density rule: modules under 100 lines → aim ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include unique findings under `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep agent version, mark 'also flagged by Codex'). Parse each agent's `confidence` from its envelope; assign `codex` fixed confidence of 0.75. Write consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using Write tool. Return ONLY one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
+> "Read all finding files in `$RUN_DIR/` (agent files: `sw-engineer.md`, `qa-specialist.md`, `perf-optimizer.md`, `doc-scribe.md`, `linting-expert.md`, `solution-architect.md`, and `codex.md` if present — skip missing). Read `$REVIEW_CHECKLIST` using Read tool and apply consolidation rules (signal-to-noise filter, annotation completeness, section caps). **If `$REVIEW_CHECKLIST` is empty or unset:** insert a top-level note into the consolidated report's Findings section: 'Review checklist not applied (oss plugin not available) — severity anchors may be inconsistent.' Apply precision gate: only include findings with concrete, actionable location (function, line range, or variable name). Apply finding density rule: modules under 100 lines → aim ≤10 total findings. Rank findings within each section by impact (blocking > critical > high > medium > low). For `codex.md`: include unique findings under `### Codex Co-Review` section; deduplicate against agent findings (same file:line raised by both → keep agent version, mark 'also flagged by Codex'). Parse each agent's `confidence` from its envelope; assign `codex` fixed confidence of 0.75. Write consolidated report to `.temp/output-review-$BRANCH-$DATE.md` using Write tool. Return ONLY one-line summary: `verdict=<APPROVE|REQUEST_CHANGES|NEEDS_WORK> | findings=N | critical=N | high=N | file=.temp/output-review-$BRANCH-$DATE.md`"
 
 Main context receives only one-liner verdict.
 
-```markdown
-## Code Review: [target]
-
-### [blocking] Critical (must fix before merge)
-- [bugs, security issues, data corruption risks]
-- Severity: CRITICAL / HIGH
-
-### Architecture & Quality
-- [sw-engineer findings]
-- [blocking] issues marked explicitly
-- [nit] suggestions marked explicitly
-
-### Test Coverage Gaps
-- [qa-specialist findings — top 5 missing tests]
-- For ML code: non-determinism or missing seed issues
-
-### Performance Concerns
-- [perf-optimizer findings — ranked by impact]
-- Include: current behavior vs expected improvement
-
-### Documentation Gaps
-- [doc-scribe findings]
-- Public API without docstrings listed explicitly
-
-### Static Analysis
-- [linting-expert findings — ruff violations, mypy errors, annotation gaps]
-
-### API Design (if applicable)
-- [solution-architect findings — coupling, API surface, backward compat]
-- Public API changes: [intentional / accidental leak]
-- Deprecation path: [provided / missing]
-
-### Codex Co-Review
-(omit section if Codex was unavailable or found no unique issues)
-- [unique findings from codex.md not already captured by agents above]
-- Duplicate findings (same location as agent finding): omitted — see agent section
-
-### Recommended Next Steps
-1. [most important action]
-2. [second most important]
-3. [third]
-
-### Review Confidence
-| Agent | Score | Label | Gaps |
-|-------|-------|-------|------|
-<!-- Replace with actual agent scores for this review -->
-
-**Aggregate**: min 0.N / median 0.N
-```
+Report format: read `templates/review-report.md` in this skill directory and use it as the output structure.
 
 After parsing confidence scores: any agent scored < 0.7 → prepend **⚠ LOW CONFIDENCE** to that agent's findings section, explicitly state gap. Never silently drop uncertain findings.
 
 <!-- Extended Fields live in $_FOUNDRY_SHARED/terminal-summaries.md — if that file is absent, omit the extended fields block -->
 
-Read compact terminal summary template from `$_FOUNDRY_SHARED/terminal-summaries.md` — use **PR Summary** template. Replace `[entity-line]` with `Review — [target]`, replace `[skill-specific path]` with `.temp/output-review-$BRANCH-$DATE.md`. Print block to terminal.
-
-Note: the PR Summary template includes a `CI:` field — for local file review (no CI pipeline), populate with local test suite pass/fail status, or omit the field entirely.
-
-After printing to terminal, prepend same compact block to top of report file using Edit tool.
+Print terminal block: read `---` header from top of `.temp/output-review-$BRANCH-$DATE.md` (lines 1–12, up to and including closing `---`), append `→ saved to .temp/output-review-$BRANCH-$DATE.md`, print to terminal. Report file already contains the block — no separate prepend step needed.
 
 ## Step 6: Delegate implementation follow-up (optional)
 

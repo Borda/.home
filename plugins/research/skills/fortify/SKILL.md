@@ -1,7 +1,7 @@
 ---
 name: fortify
 description: Systematic ablation study runner. After research:run finds improvements, fortify identifies component candidates from git diff + diary, creates isolated git worktrees per ablation (main repo never modified), runs metric+guard in each worktree, ranks component importance, and optionally generates reviewer Q&A calibrated to a target venue.
-argument-hint: '[<run-id>|<program.md>] [--venue <CVPR|NeurIPS|ICML|workshop>] [--max-ablations <N>] [--skip-run] [--compute=local|colab|docker] [--colab[=HW]]'
+argument-hint: '[<run-id>|<program.md>] [--venue <CVPR|NeurIPS|ICML|workshop>] [--max-ablations <N>] [--skip-run]'
 effort: high
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true
@@ -62,12 +62,26 @@ Triggered by `fortify` or `fortify <run-id|program.md>`.
    fortify: No completed run found. Run /research:run first.
    ```
 
-**Guard: judge approval required.** Scan `.experiments/judge-*/` directories. For each, check if `methodology.md` references the same `program_file`. Read `.temp/output-judge-*.md` (or `<judge-run-dir>/verdict.json` if present) for the final APPROVED verdict — do NOT infer from `methodology.md` alone, since `methodology_rating: sound` alone does not equal APPROVED. If no directory with an APPROVED verdict found:
+**Guard: judge approval required.** The judge skill writes its verdict to `.temp/output-judge-<branch>-<date>.md` — scan that location for an APPROVED verdict line:
+
+```bash
+JUDGE_VERDICT_FILE=$(ls -t .temp/output-judge-*.md 2>/dev/null | head -1)  # timeout: 5000
+if [ -z "$JUDGE_VERDICT_FILE" ]; then
+  echo "fortify: BLOCKED — no judge verdict found in .temp/."
+  echo "Ablation studies require an approved baseline. Run: /research:judge <program.md>"
+  exit 1
+fi
+JUDGE_VERDICT=$(grep -i '^[*]*[Vv]erdict[*]*:' "$JUDGE_VERDICT_FILE" | head -1 | sed -E 's/.*[Vv]erdict[*: ]+//;s/[* ].*//')
+```
+
+Verify `JUDGE_VERDICT == "APPROVED"` AND the verdict file references the same `program_file` (grep the file for the program path). If verdict is not APPROVED or file mismatches:
 
 ```text
 fortify: BLOCKED — no APPROVED judge verdict found for this program.
 Ablation studies require an approved baseline. Run: /research:judge <program.md>
 ```
+
+> Note: do NOT infer from `methodology.md` alone — `methodology_rating: sound` is one input to the verdict, not the verdict itself. Only the `## Verdict` line in the judge output file is authoritative.
 
 Read from `state.json`: `goal`, `best_metric`, `best_commit`, `config` (including `metric_cmd`, `guard_cmd`, `compute`), `program_file`.
 
@@ -177,10 +191,14 @@ cd "$WORKTREE_BASE/<variant_name>"  # timeout: 3000
 
 For `full` variant: no changes — proceed directly to 4d.
 
-For `no-<component>` variant: revert the component's commits:
+For `no-<component>` variant: revert the component's commits.
+
+**IMPORTANT — order matters**: revert in **reverse chronological order** (newest first) to avoid conflicts. If `revert_commits` from `variants.jsonl` is in chronological order (oldest first, e.g. as scientist returned them), reverse before reverting:
 
 ```bash
-git revert <commit1> <commit2> --no-edit  # timeout: 15000
+# Sort newest-first for conflict-free revert
+REVERT_COMMITS_SORTED=$(echo "<commit1> <commit2> ..." | tr ' ' '\n' | tac | tr '\n' ' ')
+git revert $REVERT_COMMITS_SORTED --no-edit  # timeout: 15000
 ```
 
 If revert produces merge conflicts: append `{"variant":"<name>","status":"revert-conflict",...}` to `results.jsonl`, jump to 4f (cleanup).
@@ -236,13 +254,19 @@ Update `results.jsonl` with computed deltas via Write tool (rewrite full file).
 
 For each `no-<component>` variant with `status: "completed"`:
 
-- `importance = abs(full_metric - ablated_metric) / abs(full_metric) * 100` (percentage of full metric lost by removing this component)
-- Importance class:
+- Read `metric_direction` from `## Metric` block in `program_file` (`higher` or `lower`). If absent, default to `higher`.
+- Compute **signed delta** (positive = removal hurt the metric → component is helpful):
+  ```python
+  signed_delta = (full_metric - ablated_metric) * (1 if direction == 'higher' else -1)
+  importance = signed_delta / abs(full_metric) * 100 if full_metric != 0 else 0
+  ```
+- Importance class (helpful components — `signed_delta >= 0`):
   - **CRITICAL**: importance > 50%
   - **SIGNIFICANT**: importance 10–50%
   - **MARGINAL**: importance < 10%
+- **Potentially Harmful** class: `signed_delta < -5%` — removing the component IMPROVED the metric. Surface in dedicated `Potentially Harmful Components` report section; not ranked in main table.
 
-Sort by importance descending. Write ranked results to `$FORTIFY_DIR/importance-ranking.json` via Write tool — JSON array of objects with fields: `rank`, `component`, `full_metric`, `ablated_metric`, `importance_pct`, `class`.
+Sort by importance descending (helpful components only). Write ranked results to `$FORTIFY_DIR/importance-ranking.json` via Write tool — JSON array of objects with fields: `rank`, `component`, `full_metric`, `ablated_metric`, `signed_delta_pct`, `importance_pct`, `class` (`CRITICAL`/`SIGNIFICANT`/`MARGINAL`/`HARMFUL`).
 
 **Sanity check**: compare `full` variant metric against `best_metric` from `state.json`. If divergence exceeds 2%:
 
@@ -303,9 +327,19 @@ Full metric: <value> (expected from run: <best_metric>) — PASS | Warning MISMA
 
 ### Component Importance Ranking
 
-| Rank | Component | Full Metric | Ablated Metric | Delta | Importance | Class |
-|------|-----------|-------------|----------------|-------|------------|-------|
-| 1    | ...       | ...         | ...            | ...   | X.X%       | CRITICAL |
+| Rank | Component | Full Metric | Ablated Metric | Signed Δ | Importance | Class |
+|------|-----------|-------------|----------------|----------|------------|-------|
+| 1    | ...       | ...         | ...            | +X.X%    | X.X%       | CRITICAL |
+
+### Potentially Harmful Components
+
+Components whose removal **improved** the metric (signed_delta < −5%) — likely added noise or hurt performance.
+
+| Component | Full Metric | Ablated Metric | Signed Δ |
+|-----------|-------------|----------------|----------|
+| ...       | ...         | ...            | −X.X%    |
+
+(Omit section entirely if no harmful components found.)
 
 ### Ablation Matrix
 
@@ -374,7 +408,7 @@ Next: run /research:fortify without --skip-run to execute ablations
 - **`--skip-run` for planning** — generates candidate list without running ablations. Useful for reviewing what would be ablated before committing compute.
 - **`--skip-run` scope**: this flag skips ablation *execution* only — the source run (`research:run`) must already be complete before invoking fortify with `--skip-run`. It does not affect the source run.
 - **Fortify run directories** don't write `result.jsonl` — exempt from automated 30-day TTL cleanup (exempt per `.claude/rules/artifact-lifecycle.md` TTL policy — no `result.jsonl` = cleanup skipped); remove manually when no longer needed (`rm -rf .experiments/fortify-*/`)
-- **Compute passthrough** — `--compute` and `--colab` flags pass through to metric_cmd/guard_cmd execution. Docker and Colab routing follow the same conventions as `/research:run` Phases 5–6.
+- **Compute mode**: local execution only. `--compute` and `--colab` passthrough not implemented — contributions welcome. Until then, fortify runs `metric_cmd`/`guard_cmd` directly in each worktree on the local machine.
 - **Revert conflicts expected** — when commits are interleaved (component A's commit touches same lines as component B's), revert may conflict. This is recorded as `revert-conflict` and reported, not treated as an error.
 
 </notes>

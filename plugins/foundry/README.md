@@ -115,7 +115,7 @@ Expected output: a structured report of system configuration checks (hooks, sett
 Follow up with:
 
 ```text
-/foundry:calibrate routing fast
+/foundry:calibrate routing --fast
 ```
 
 This runs a quick routing accuracy benchmark — measures whether Claude Code dispatches tasks to the right agent. You should see routing accuracy at or above 90%.
@@ -147,14 +147,12 @@ ______________________________________________________________________
 
 ### `/foundry:audit`
 
-Full-sweep quality audit of `.claude/` configuration and all `plugins/*/` agent and skill files. Catches broken cross-references, inventory drift, model-tier mismatches, description overlap, and documentation staleness. Reports findings by severity; auto-fixes at the requested level. Adversarial mode challenges every claim using `foundry:challenger` + Codex.
+Full-sweep quality audit of `.claude/` configuration and all `plugins/*/` agent and skill files. Catches broken cross-references, inventory drift, model-tier mismatches, description overlap, and documentation staleness. Reports findings by severity; fix level chosen from always-fire follow-up gate after report. Adversarial mode challenges every claim using `foundry:challenger` + Codex.
 
 ```text
-/foundry:audit                      # full sweep, report only
-/foundry:audit fix                  # auto-fix critical + high + medium
-/foundry:audit fix high             # auto-fix critical + high only
-/foundry:audit fix all              # auto-fix everything including low
-/foundry:audit upgrade              # fetch latest Claude Code docs, apply improvements with A/B testing
+/foundry:audit                      # full sweep, report only — gate offers fix options
+/foundry:audit --upgrade            # fetch latest Claude Code docs, apply improvements with A/B testing
+/foundry:audit --adversarial        # adversarial review with foundry:challenger + Codex
 
 # Tier 1 — group scopes
 /foundry:audit agents               # all agents
@@ -175,14 +173,9 @@ Full-sweep quality audit of `.claude/` configuration and all `plugins/*/` agent 
 /foundry:audit curator challenger   # two agents
 /foundry:audit review resolve       # two skills
 
-# Adversarial mode — challenger + Codex adversarial pass
-/foundry:audit adversarial          # all agents + skills, adversarial review
-/foundry:audit oss adversarial      # oss plugin, adversarial review
-/foundry:audit agents adversarial fix high  # adversarial + fix high findings
-
-# Combine scope and fix level
-/foundry:audit agents fix medium
-/foundry:audit rules fix all
+# Combine scope + flags
+/foundry:audit oss --adversarial           # oss plugin, adversarial review
+/foundry:audit agents --adversarial        # all agents, adversarial review
 ```
 
 `fix` and `upgrade` are mutually exclusive — never combine them.
@@ -210,24 +203,24 @@ ______________________________________________________________________
 Benchmarks agents and skills against synthetic problems with defined ground truth. Primary signal is calibration bias — the gap between self-reported confidence and actual recall. A well-calibrated agent reports 0.9 when it finds roughly 90% of issues.
 
 ```text
-/foundry:calibrate all fast              # quick benchmark across all modes (3 problems each)
-/foundry:calibrate all full              # thorough benchmark (10 problems each)
-/foundry:calibrate routing fast          # routing accuracy only — run after any agent description change
-/foundry:calibrate agents fast ab        # agents + general-purpose baseline comparison
-/foundry:calibrate all fast apply        # benchmark then immediately apply improvement proposals
-/foundry:calibrate apply                 # apply proposals from the most recent past run
-/foundry:calibrate foundry:sw-engineer fast    # single agent (tier 3 by full name)
+/foundry:calibrate all --fast              # quick benchmark across all modes (3 problems each)
+/foundry:calibrate all --full              # thorough benchmark (10 problems each)
+/foundry:calibrate routing --fast          # routing accuracy only — run after any agent description change
+/foundry:calibrate agents --full --ab-test # agents + general-purpose baseline comparison
+/foundry:calibrate all --fast --apply      # benchmark then immediately apply improvement proposals
+/foundry:calibrate --apply                 # apply proposals from the most recent past run
+/foundry:calibrate foundry:sw-engineer --fast  # single agent (tier 3 by full name)
 
 # Tier 2 — plugin name
-/foundry:calibrate oss fast              # all oss plugin agents + calibratable skills
-/foundry:calibrate oss research fast     # oss + research plugins
+/foundry:calibrate oss --fast              # all oss plugin agents + calibratable skills
+/foundry:calibrate oss research --fast     # oss + research plugins
 
 # Tier 3 — specific agent or skill (bare name or plugin-prefixed)
-/foundry:calibrate curator fast          # single agent by bare name
-/foundry:calibrate curator shepherd      # two agents
+/foundry:calibrate curator --fast          # single agent by bare name
+/foundry:calibrate curator shepherd        # two agents (default --fast)
 
 # Multiple targets
-/foundry:calibrate agents skills fast    # agents + skills in one run
+/foundry:calibrate agents skills --fast    # agents + skills in one run
 ```
 
 **Thresholds**:
@@ -247,7 +240,7 @@ Benchmarks agents and skills against synthetic problems with defined ground trut
 - `<agent-name>` / `<skill-name>` — single target by bare or plugin-prefixed name
 - `all` — all of the above
 
-Results saved to `.reports/calibrate/<timestamp>/<target>/`. Improvement proposals written to `proposal.md` in each target directory and applied with `apply`.
+Results saved to `.reports/calibrate/<timestamp>/<target>/`. Improvement proposals written to `proposal.md` in each target directory and applied with `--apply`.
 
 Agents and skills modes use dual-source evaluation: Claude and Codex generate problems and score responses independently, with Claude as 51% tiebreaker.
 
@@ -280,7 +273,7 @@ Create, update, or delete agents, skills, rules, and hooks with full cross-refer
 
 **Permissions**: `add perm` and `remove perm` update both `settings.json` and `permissions-guide.md` atomically — never one without the other.
 
-After any create or update, follow up with `/foundry:calibrate routing fast` to confirm routing accuracy is unaffected.
+After any create or update, follow up with `/foundry:calibrate routing --fast` to confirm routing accuracy is unaffected.
 
 ______________________________________________________________________
 
@@ -599,9 +592,9 @@ ______________________________________________________________________
 
 **`--approve`** on `/foundry:init`: skips all interactive prompts and auto-accepts recommended choices. Use for scripted or CI setups.
 
-**`--skip-audit`** on `/foundry:manage`: skips the trailing `/foundry:audit` validation step. Use inside `audit fix` loops to avoid recursion.
+**`--skip-audit`** on `/foundry:manage`: skips the trailing `/foundry:audit` validation step. Use inside audit-initiated fix sessions to avoid recursion.
 
-**Calibration pace**: `fast` (3 problems per target, default) vs `full` (10 problems per target). Use `fast` for routine checks after agent edits; use `full` for thorough benchmarks before releases or after major instruction changes.
+**Calibration pace**: `--fast` (3 problems per target, default) vs `--full` (10 problems per target). Use `--fast` for routine checks after agent edits; use `--full` for thorough benchmarks before releases or after major instruction changes.
 
 **Brainstorm ceremony**: `--tight` (5/5/1 caps for well-scoped ideas), default (10/10/2), `--deep` (15/15/3 for genuinely ambiguous problems).
 
@@ -630,7 +623,7 @@ Run `/foundry:investigate "hooks not firing on Save"`. Most common cause: a `hoo
 
 **`/foundry:calibrate` times out**
 
-Each pipeline subagent has a 10-minute hard cutoff (15 minutes when Codex is active). If a target consistently times out, run it in isolation: `/foundry:calibrate foundry:sw-engineer fast`. For persistent issues: `/foundry:investigate "/calibrate times out every run"`.
+Each pipeline subagent has a 10-minute hard cutoff (15 minutes when Codex is active). If a target consistently times out, run it in isolation: `/foundry:calibrate foundry:sw-engineer --fast`. For persistent issues: `/foundry:investigate "/calibrate times out every run"`.
 
 **`/foundry:manage create` picks wrong model tier**
 

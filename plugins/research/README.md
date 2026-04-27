@@ -238,11 +238,11 @@ Use `--skip-validation` when writing `program.md` on one machine but planning to
 
 **Verdicts**:
 
-| Verdict | Meaning |
+| Verdict          | Meaning                                             |
 | ---------------- | --------------------------------------------------- |
-| `APPROVED` | Protocol is sound — proceed to `/research:run` |
+| `APPROVED`       | Protocol is sound — proceed to `/research:run`      |
 | `NEEDS-REVISION` | Fixable issues found — see Required Changes section |
-| `BLOCKED` | Fundamental design flaw — redesign before running |
+| `BLOCKED`        | Fundamental design flaw — redesign before running   |
 
 The verdict is deterministic: computed from finding counts and methodology rating, not inferred from prose.
 
@@ -284,22 +284,22 @@ The core loop. Reads `program.md`, establishes a baseline, then iterates: spawn 
 
 **Agent strategy** (set via `agent_strategy` in `program.md` or auto-detected from goal/metric keywords):
 
-| Strategy | Agent | Use when goal contains |
+| Strategy | Agent                        | Use when goal contains         |
 | -------- | ---------------------------- | ------------------------------ |
-| `perf` | `foundry:perf-optimizer` | latency, throughput, memory |
-| `code` | `foundry:sw-engineer` | coverage, complexity, coupling |
-| `ml` | `research:scientist` | accuracy, loss, F1, AUC |
-| `arch` | `foundry:solution-architect` | modularity, cohesion |
-| `auto` | inferred from keywords | default |
+| `perf`   | `foundry:perf-optimizer`     | latency, throughput, memory    |
+| `code`   | `foundry:sw-engineer`        | coverage, complexity, coupling |
+| `ml`     | `research:scientist`         | accuracy, loss, F1, AUC        |
+| `arch`   | `foundry:solution-architect` | modularity, cohesion           |
+| `auto`   | inferred from keywords       | default                        |
 
 **Keep/revert logic per iteration**:
 
-| Condition | Action |
+| Condition                                | Action                                 |
 | ---------------------------------------- | -------------------------------------- |
-| Metric improved AND guard passes | Keep commit |
-| Metric improved AND guard fails | Rework (up to 2 attempts), then revert |
-| Improvement < 0.1% AND change > 50 lines | Discard (simplicity override) |
-| No improvement | Revert |
+| Metric improved AND guard passes         | Keep commit                            |
+| Metric improved AND guard fails          | Rework (up to 2 attempts), then revert |
+| Improvement < 0.1% AND change > 50 lines | Discard (simplicity override)          |
+| No improvement                           | Revert                                 |
 
 **Stuck detection**: after 5 consecutive discards, the skill rotates to a different agent type automatically. If still stuck after two rotations, it surfaces to you and stops — no blind looping.
 
@@ -381,21 +381,21 @@ After implementing a method from a paper, verify that the implementation actuall
 
 **Five audit dimensions**:
 
-| Code | Dimension | What it checks |
+| Code | Dimension             | What it checks                                                                                 |
 | ---- | --------------------- | ---------------------------------------------------------------------------------------------- |
-| F | Formula matching | Every equation — loss functions, forward passes, reductions (mean vs sum) |
-| H | Hyperparameter parity | LR, batch size, weight decay, scheduler, warmup steps — do code defaults match paper values? |
-| E | Eval protocol | Same metric (e.g. mAP@0.5 vs mAP@[0.5:0.95]), same test split, same preprocessing at inference |
-| N | Notation consistency | Variable names in code vs paper notation — confusing mappings flagged |
-| C | Citation chain | Does code implement the cited paper, or a derivative from a different paper? |
+| F    | Formula matching      | Every equation — loss functions, forward passes, reductions (mean vs sum)                      |
+| H    | Hyperparameter parity | LR, batch size, weight decay, scheduler, warmup steps — do code defaults match paper values?   |
+| E    | Eval protocol         | Same metric (e.g. mAP@0.5 vs mAP@[0.5:0.95]), same test split, same preprocessing at inference |
+| N    | Notation consistency  | Variable names in code vs paper notation — confusing mappings flagged                          |
+| C    | Citation chain        | Does code implement the cited paper, or a derivative from a different paper?                   |
 
 **Fidelity score**: `(MATCH + 0.5 * PARTIAL) / total_verified_claims`
 
-| Score | Rating |
+| Score     | Rating            |
 | --------- | ----------------- |
-| >= 0.9 | HIGH fidelity |
+| >= 0.9    | HIGH fidelity     |
 | 0.7 – 0.9 | MODERATE fidelity |
-| < 0.7 | LOW fidelity |
+| < 0.7     | LOW fidelity      |
 
 **Strict mode** (`--strict`): if any HIGH severity mismatch exists in dimensions F or E, stops immediately with a BREAKING notice. Use before running expensive experiments.
 
@@ -433,11 +433,11 @@ After `/research:run` finds improvements, fortify identifies which components ac
 
 **Importance classification**:
 
-| Class | Condition |
+| Class       | Condition                                          |
 | ----------- | -------------------------------------------------- |
-| CRITICAL | Removing this component costs > 50% of full metric |
-| SIGNIFICANT | 10–50% of full metric |
-| MARGINAL | < 10% of full metric |
+| CRITICAL    | Removing this component costs > 50% of full metric |
+| SIGNIFICANT | 10–50% of full metric                              |
+| MARGINAL    | < 10% of full metric                               |
 
 Each ablation runs in its own git worktree created from `best_commit`. The main working tree is never modified. If `git revert` conflicts arise (two components touched the same lines), the variant is recorded as `revert-conflict` and reported — not treated as an error.
 
@@ -557,14 +557,14 @@ use data-steward to verify train/val split integrity and check for data leakage
 
 The data-steward runs six parallel grep patterns against your codebase to surface the top ML data bugs that general code review misses:
 
-| Pattern searched | Bug class |
+| Pattern searched                   | Bug class                                                 |
 | ---------------------------------- | --------------------------------------------------------- |
-| `fit_transform(` | Pre-split normalization leakage |
-| `Random*` transforms | Stochastic augmentation on val/test |
-| `train_test_split(` | Ungrouped split candidate (checked for missing `groups=`) |
-| `patient_id`, `subject_id` columns | Grouped data not split on group ID |
-| `random_split(` | Shared-transform risk (torch Subsets) |
-| `augment_images(`, `.augment(` | Pre-split augmentation |
+| `fit_transform(`                   | Pre-split normalization leakage                           |
+| `Random*` transforms               | Stochastic augmentation on val/test                       |
+| `train_test_split(`                | Ungrouped split candidate (checked for missing `groups=`) |
+| `patient_id`, `subject_id` columns | Grouped data not split on group ID                        |
+| `random_split(`                    | Shared-transform risk (torch Subsets)                     |
+| `augment_images(`, `.augment(`     | Pre-split augmentation                                    |
 
 ______________________________________________________________________
 
@@ -662,14 +662,14 @@ Config fields reference
 
 Config fields:
 
-| Field | Values | Default | Notes |
+| Field             | Values                               | Default  | Notes                                                        |
 | ----------------- | ------------------------------------ | -------- | ------------------------------------------------------------ |
-| `max_iterations` | 1–50 | 20 | Hard ceiling at 50; never exceeded without explicit override |
-| `agent_strategy` | `auto`, `perf`, `code`, `ml`, `arch` | `auto` | Auto infers from goal/metric keywords |
-| `scope_files` | list of paths/globs | required | Ideation agent reads and modifies only these |
-| `compute` | `local`, `colab`, `docker` | `local` | Routing for metric/guard execution |
-| `colab_hw` | `H100`, `L4`, `T4`, `A100` | none | Hardware preference for Colab runs |
-| `sandbox_network` | `none`, `bridge` | `none` | Network isolation in Docker sandbox |
+| `max_iterations`  | 1–50                                 | 20       | Hard ceiling at 50; never exceeded without explicit override |
+| `agent_strategy`  | `auto`, `perf`, `code`, `ml`, `arch` | `auto`   | Auto infers from goal/metric keywords                        |
+| `scope_files`     | list of paths/globs                  | required | Ideation agent reads and modifies only these                 |
+| `compute`         | `local`, `colab`, `docker`           | `local`  | Routing for metric/guard execution                           |
+| `colab_hw`        | `H100`, `L4`, `T4`, `A100`           | none     | Hardware preference for Colab runs                           |
+| `sandbox_network` | `none`, `bridge`                     | `none`   | Network isolation in Docker sandbox                          |
 
 </details>
 

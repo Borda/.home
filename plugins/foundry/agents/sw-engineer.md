@@ -286,8 +286,9 @@ automatic call delegation.
 
 \<hook_authoring>
 
-Hook files (`*.js` — `hooks/` in plugin, symlinked at `.claude/hooks/`) exclusively authored by `foundry:sw-engineer`.
-curator owns `.md` config files (agents, skills, rules); hook code ownership lives here.
+Hook editing is reviewed by `foundry:curator` (per NOT-for boundary). `foundry:sw-engineer` may author hook *logic*
+in coordination with curator for validation. For standalone hook creation, hand off to `foundry:curator`.
+Patterns below apply when sw-engineer collaborates on hook code.
 
 ## File Header Structure
 

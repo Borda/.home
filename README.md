@@ -186,7 +186,7 @@ After running `/foundry:init link`, foundry skills are available without a prefi
 | 🟠 `/manage`           | Create, update, delete agents/skills/rules; manage `settings.json` permissions; auto type-detection and cross-ref propagation                                                                                           |
 | 🟠 `/investigate`      | Systematic diagnosis for unknown failures — env, tools, hooks, CI divergence; ranks hypotheses and hands off to the right skill                                                                                         |
 | 🟠 `/session`          | Parking lot for diverging ideas — auto-parks unanswered questions and deferred threads; `resume` shows pending, `archive` closes, `summary` digests the session                                                         |
-| 🟠 `/audit`            | Config audit: broken refs, inventory drift, docs freshness; `fix [high\|medium\|all]` auto-fixes by severity; `upgrade` applies docs-sourced improvements                                                               |
+| 🟠 `/audit`            | Config audit: broken refs, inventory drift, docs freshness; fix level chosen from always-fire follow-up gate; `--upgrade` applies docs-sourced improvements; `--adversarial` runs challenger + Codex review             |
 | 🟠 `/calibrate`        | Synthetic benchmarks measuring recall vs confidence bias                                                                                                                                                                |
 | 🟠 `/distill`          | Suggest new agents/skills, prune memory, consolidate lessons into rules; `external <source>` analyses an external plugin/skill/agent resource and produces a scored adoption proposal with install-as-is recommendation |
 | 🟠 `/create`           | Interactive outline co-creation for developer advocacy content — format, audience, arc, voice → `.plans/content/<slug>-outline.md`; hand-off to `foundry:creator` for one-shot generation                               |
@@ -355,9 +355,9 @@ Both `--reply` flags produce the same two-part shepherd output: an overall PR co
 <summary><strong>Agent self-improvement loop</strong></summary>
 
 ```text
-/distill                        # analyze work patterns, surface what agents are missing or miscalibrated
-/calibrate all fast ab apply    # benchmark all agents vs general-purpose baseline, apply improvement proposals
-/audit fix                      # structural sweep after calibrate changed instruction files
+/distill                              # analyze work patterns, surface what agents are missing or miscalibrated
+/calibrate all --fast --ab-test --apply  # benchmark all agents vs general-purpose baseline, apply improvement proposals
+/audit                                # structural sweep after calibrate changed instruction files — pick fix from gate
 ```
 
 </details>
@@ -365,14 +365,14 @@ Both `--reply` flags produce the same two-part shepherd output: an overall PR co
 <details>
 <summary><strong>Agent description drift → routing alignment check</strong></summary>
 
-After editing agent descriptions (manually or via `/audit fix`), verify that routing accuracy hasn't degraded:
+After editing agent descriptions (manually or via the audit gate), verify that routing accuracy hasn't degraded:
 
 ```text
-/audit                      # Check 20 flags description overlap pairs (static, fast)
-/calibrate routing fast     # behavioral test: generates task prompts, measures routing accuracy
+/audit                       # Check 20 flags description overlap pairs (static, fast)
+/calibrate routing --fast    # behavioral test: generates task prompts, measures routing accuracy
 ```
 
-Run `/calibrate routing fast` after any agent description change. Thresholds: routing accuracy ≥90%, hard-problem accuracy ≥80%.
+Run `/calibrate routing --fast` after any agent description change. Thresholds: routing accuracy ≥90%, hard-problem accuracy ≥80%.
 
 </details>
 
@@ -380,9 +380,8 @@ Run `/calibrate routing fast` after any agent description change. Thresholds: ro
 <summary><strong>Config maintenance — periodic health check</strong></summary>
 
 ```text
-/audit                 # inspect findings + docs-sourced upgrade proposals — report only, no changes
-/audit upgrade         # apply upgrade proposals: config changes verified, capability changes A/B tested
-/audit fix             # full sweep + auto-fix critical and high findings
+/audit            # inspect findings + docs-sourced upgrade proposals — report only, pick fix from gate
+/audit --upgrade  # apply upgrade proposals: config changes verified, capability changes A/B tested
 ```
 
 </details>
@@ -405,9 +404,9 @@ Run after any session with significant corrections, or monthly as routine hygien
 <summary><strong>Keep config current after Claude Code releases</strong></summary>
 
 ```text
-/audit                 # fetches latest Claude Code docs, surfaces applicable improvements as upgrade proposals
-/audit upgrade         # applies config proposals (correctness check) and capability proposals (calibrate A/B)
-/calibrate all fast    # re-benchmark all agents to confirm no regression from applied changes
+/audit            # fetches latest Claude Code docs, surfaces applicable improvements as upgrade proposals
+/audit --upgrade  # applies config proposals (correctness check) and capability proposals (calibrate A/B)
+/calibrate all --fast    # re-benchmark all agents to confirm no regression from applied changes
 ```
 
 </details>

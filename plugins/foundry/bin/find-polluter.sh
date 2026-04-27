@@ -4,8 +4,8 @@
 # Finds which test in a suite contaminates another test when run before it.
 # Uses binary search: O(log N) runs instead of O(N).
 #
-# Usage:
-#   bash .claude/skills/_shared/find-polluter.sh <failing-test-id> [test-dir]
+# Usage (Claude Code plugin — CLAUDE_PLUGIN_ROOT is set automatically):
+#   bash "${CLAUDE_PLUGIN_ROOT}/bin/find-polluter.sh" <failing-test-id> [test-dir]
 #
 # Arguments:
 #   failing-test-id   pytest node ID of the test that fails due to contamination
@@ -13,7 +13,7 @@
 #   test-dir          directory to search for candidate tests (default: tests)
 #
 # Example:
-#   bash .claude/skills/_shared/find-polluter.sh tests/test_model.py::test_predict tests/
+#   bash "${CLAUDE_PLUGIN_ROOT}/bin/find-polluter.sh" tests/test_model.py::test_predict tests/
 #
 # Requirements: pytest available on PATH (or via `python -m pytest`)
 

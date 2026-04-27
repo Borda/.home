@@ -33,6 +33,14 @@ gh api graphql -f query='  # timeout: 15000
 Produce:
 
 ```markdown
+---
+Repo Health — [repo]
+Issues:      [N open] ([N stale], [N needs triage])
+PRs:         [N open] ([N awaiting review], [N CI failing])
+Top action:  [single most urgent recommendation]
+→ saved to [skill-specific path]
+---
+
 ## Repo Health: [repo]
 
 ### Issue Summary
@@ -72,7 +80,7 @@ _(Repeat for each group. If no duplicate groups found: "No obvious duplicates de
 
 Run `mkdir -p .reports/analyse/health` then write full report to `.reports/analyse/health/output-analyse-health-$(date +%Y-%m-%d).md` via Write tool — **do not print full analysis to terminal**.
 
-Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Repo Health Summary** template. Replace `[skill-specific path]` with `.reports/analyse/health/output-analyse-health-$(date +%Y-%m-%d).md`. Output must begin with `---` on own line, entity line next, `→ saved to <path>` at end, close with `---` on own line. After printing, prepend same compact block to top of report via Edit tool — insert at line 1 so file begins with compact summary, blank line, then existing `## Repo Health:` content.
+Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Repo Health Summary** template. Replace `[skill-specific path]` with `.reports/analyse/health/output-analyse-health-$(date +%Y-%m-%d).md`. Output must begin with `---` on own line, entity line next, `→ saved to <path>` at end, close with `---` on own line. Print terminal block: read '---' header from top of report file (lines 1–7 up to and including closing '---'), append '→ saved to <path>', print to terminal. Report file already contains the block — no separate prepend step needed.
 
 </workflow>
 

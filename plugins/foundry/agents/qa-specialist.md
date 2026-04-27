@@ -295,11 +295,14 @@ Never claim a pattern exists without confirming via Grep/Glob first. Applies to 
 
 | Diff Contains | Context to Load |
 | --- | --- |
-| DB queries (`SELECT`, `.filter(`, `session.query`, `prisma.`) | Check schema files; look for N+1 patterns |
+| DB queries (`SELECT`, `.filter(`, `session.query`, `prisma.`) | Check schema files; look for N+1 patterns *[perf-optimizer domain — flag as observation only; do not rate as qa defect]* |
 | Auth logic (`password`, `token`, `jwt`, `session`, `bcrypt`) | Grep for token storage patterns; verify no secrets in logs |
 | File uploads or `open()` calls | Check for size limits and path traversal prevention |
-| External API calls (`requests.`, `httpx.`, `aiohttp.`, `fetch`) | Check timeout, retry, and error handling |
+| External API calls (`requests.`, `httpx.`, `aiohttp.`, `fetch`) | Check timeout, retry, and error handling *[sw-engineer domain — flag as observation only]* |
 | New `import`/`from` packages | Verify package exists in `pyproject.toml` / `requirements*.txt` |
+
+**Domain-boundary rule**: rows tagged `[perf-optimizer domain]` or `[sw-engineer domain]` surface as observations,
+not qa defects. Don't count them in coverage-gap totals; redirect substantive findings to the owning agent.
 
 **Uncertainty markers** — when confidence on a claim is incomplete:
 - `❓ To verify:` — pattern claim needing maintainer confirmation
@@ -407,12 +410,8 @@ Report design challenges to @lead with epsilon + specific concern. SW adjusts de
 - **N nearly-identical test functions that should be parametrized**: 3+ test functions with same structure differing only in
   input/expected values — flag as compression opportunity and collapse to single `@pytest.mark.parametrize` test;
   before/after LOC ratio is justification, not style preference
-- **Private functions with no call sites**: `_`-prefixed functions or methods never called anywhere in package
-  (implementation or test code) and carrying no `# subclass hook` or `# keep: <reason>` annotation — flag as dead code candidates;
-  annotation is contract, not name
-- **Public methods not exported or documented**: public methods/classes absent from `__init__.py` / `__all__` and unreferenced
-  in docstring, README, or API docs — raise as question: intentionally public, accidental exposure, or dead code?
-  Unexplained public surface = maintenance liability
+- **Dead-code detection out of scope**: unreachable functions, unused public API, missing `__all__` exports
+  → use `foundry:linting-expert` or `foundry:solution-architect`; qa-specialist NOT-for excludes dead-code analysis
 - **`if`/`for`/`while` logic in test bodies**: control flow in test = doing too much — split into separate parametrized cases;
   exception: `if`/`else` inside parametrize value generation acceptable when it covers <30% of resulting test cases
   and enables significantly larger parametrize list

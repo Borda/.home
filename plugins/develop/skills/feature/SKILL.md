@@ -56,10 +56,19 @@ Read `$_DEV_SHARED/runner-detection.md` — sets `$TEST_CMD` (full suite) and `$
 **Optional `--plan <path>`**: if `$ARGUMENTS` ends with `--plan <path>`, read the plan file first. Extract `Affected files`, `Risks`, `Suggested approach` — use these to populate Step 1 analysis instead of cold codebase exploration. Skip agent feasibility re-check (already done in `/develop:plan`). Store plan path as `PLAN_FILE`.
 
 ```bash
-# Extract --plan path from arguments
-PLAN_FILE="${ARGUMENTS##*--plan }"
-PLAN_FILE="${PLAN_FILE%% *}"
-[ "$PLAN_FILE" = "$ARGUMENTS" ] && PLAN_FILE=""
+# Extract --plan path from arguments — support both `--plan path` and `--plan=path`
+PLAN_FILE=""
+if [[ "$ARGUMENTS" =~ --plan[[:space:]]+([^[:space:]]+) ]]; then
+  PLAN_FILE="${BASH_REMATCH[1]}"
+elif [[ "$ARGUMENTS" =~ --plan=([^[:space:]]+) ]]; then
+  PLAN_FILE="${BASH_REMATCH[1]}"
+fi
+# Existence guard — fail fast if path supplied but missing
+if [ -n "$PLAN_FILE" ] && [ ! -f "$PLAN_FILE" ]; then
+  echo "! BREAKING — plan file not found: $PLAN_FILE"
+  echo "Fix: pass an existing plan path via --plan <path> or --plan=<path>"
+  exit 1
+fi
 ```
 
 **Checkpoint init**: create `.developments/<TS>/checkpoint.md` (where `TS=$(date -u +%Y-%m-%dT%H-%M-%SZ)`). After each major step (1, 2, 3, 4, 5), append `step: N — completed` to this file. On skill start, check for an existing `.developments/*/checkpoint.md` — if found, offer to resume from the last completed step.

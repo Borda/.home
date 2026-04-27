@@ -140,28 +140,32 @@ Collect JSON envelope. `REPRO_STATUS` = `status` field.
 
 ### Step R4: Build the Reproduction block
 
-Populate `## Reproduction` block defined at top of `Produce:` template below, include at start of report file.
+Populate `Repro` and `Sensitive` fields in the `---` terminal summary block and `Repro validation`/`Repro missing` lines in `## Thread` metadata.
 
-Status mapping: `reproduced` → ✅ · `not_reproduced` → ❌ · `partial` → ⚠ · `missing_context` → ⚠ (add missing detail) · `HAS_REPRO=false` → 🔍 No Example Provided · PR → ⏭ Skipped
+Status mapping: `reproduced` → ✅ · `not_reproduced` → ❌ · `partial` → ⚠ · `missing_context` → ⚠ (add missing detail) · `HAS_REPRO=false` → 🔍 No Example · PR → ⏭ Skipped
 
 Produce:
 
 ````markdown
-## Reproduction
-
-**Status**: [✅ Reproduced | ❌ Could Not Reproduce | ⚠ Partial | 🔍 No Example Provided | ⏭ Skipped (PR)]
-**Validation**: [agent result `notes`, or "No reproduction attempted"]
-**Missing**: [agent `missing` field — omit line if null]
-**Sensitive patterns**: [🔴 Found: <comma-separated flag names, no values> | ✅ None detected]
+---
+Thread #[number] — [title]
+Type:        [Issue / Pull Request / Discussion]
+Repro:       [✅ Reproduced | ❌ Could Not Reproduce | ⚠ Partial | 🔍 No Example | ⏭ Skipped (PR)]
+Sensitive:   [🔴 Found: <comma-separated flag names, no values> | ✅ None]
+Priority:    [Critical / High / Medium / Low]
+Action:      [most important next step]
+→ saved to [skill-specific path]
+---
 
 ## Thread #[number]: [title]
 
-**Type**: [Issue | Pull Request | Discussion]
 **State**: [open/closed] | **Author**: @[author] | **Age**: [X days]
 **Labels**: [labels, or "none"]
 **Category**: [category]        ← discussion only; omit for issue/PR
 **CI**: [passing/failing/pending]  ← PR only; omit for issue/discussion
 **Size**: +[N]/-[N] lines, [N] files  ← PR only; omit for issue/discussion
+**Repro validation**: [agent `notes`, or "No reproduction attempted"] ← omit if Repro is ⏭
+**Repro missing**: [agent `missing` field] ← omit if null
 
 ### Summary
 [2-3 sentence plain-language summary of the thread topic and current state]
@@ -245,7 +249,7 @@ _Legend: ✅ present · ⚠️ partial · ❌ missing · 🔵 N/A_
 
 Run `mkdir -p .reports/analyse/thread` then write full report to `.reports/analyse/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md` using Write tool — **do not print full analysis to terminal**.
 
-Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Issue Summary** template. Replace `[skill-specific path]` with `.reports/analyse/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`, ensure block opens with `---` on own line, entity line follows next line, `→ saved to <path>` line present at end, block closes with `---` on own line after it. After printing to terminal, also prepend same compact block to top of report file using Edit tool — insert at line 1 so file begins with compact summary followed by blank line, then existing `## Thread #[number]:` content.
+Read compact terminal summary template from `$FOUNDRY_SHARED/terminal-summaries.md`. File absent → warn: "foundry:init required — printing plain terminal output instead." Use **Issue Summary** template. Replace `[skill-specific path]` with `.reports/analyse/thread/output-analyse-thread-$NUMBER-$(date +%Y-%m-%d).md`, ensure block opens with `---` on own line, entity line follows next line, `→ saved to <path>` line present at end, block closes with `---` on own line after it. Print terminal block: read '---' header from top of report file (lines 1–7 up to and including closing '---'), append '→ saved to <path>', print to terminal. Report file already contains the block — no separate prepend step needed.
 
 **⛔ DO NOT STOP — `REPLY_MODE=true`**: Skip Confidence block here — emitted in SKILL.md Step 6 after reply, or as last step of SKILL.md if not in reply mode. Proceed **immediately** to "Draft contributor reply" section in SKILL.md (Step 7). Response not complete until shepherd spawned and reply file written.
 

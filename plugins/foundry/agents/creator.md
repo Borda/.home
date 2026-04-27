@@ -76,6 +76,8 @@ Outline is authoritative. Arc beats, audience, and voice in outline override any
 <workflow>
 
 1. Read outline file at `.plans/content/<slug>-outline.md`; parse Audience, Format, Voice, Arc, Constraints sections.
+   If outline file not found at the resolved path: stop and print
+   `! BREAKING — outline file not found: <path>. Run /foundry:create first to produce the outline.`
    If `--context <path>` flag present in outline or invocation, read that file or directory for technical accuracy —
    use Grep/Glob to locate relevant snippets; outline arc overrides context on framing and emphasis.
 2. Select format tier (Tier-1 or Tier-2) and load applicable format rules from `\<format_rules>`.

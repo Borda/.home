@@ -1,11 +1,34 @@
 #!/usr/bin/env bash
-# Sync local plugin changes to ~/.claude/
-# Run from the project root: bash sync.sh [--clean]
+# Sync local plugin changes to ~/.claude/ and/or ~/.codex/
+# Run from the project root: bash sync.sh [claude] [codex] [--clean]
+#
+# Arguments (order-independent):
+#   claude   — sync Claude plugins + foundry:init (default: both)
+#   codex    — sync .codex/ configs to ~/.codex/   (default: both)
+#   --clean  — uninstall Claude plugins before reinstalling (requires claude scope)
 #
 # After this script completes, run /foundry:init inside Claude Code
 # to merge settings.json and refresh symlinks.
 
 set -e
+
+SYNC_CLAUDE=false
+SYNC_CODEX=false
+CLEAN=false
+
+for arg in "$@"; do
+    case "$arg" in
+        claude)  SYNC_CLAUDE=true ;;
+        codex)   SYNC_CODEX=true ;;
+        --clean) CLEAN=true ;;
+    esac
+done
+
+# Default: sync both
+if ! $SYNC_CLAUDE && ! $SYNC_CODEX; then
+    SYNC_CLAUDE=true
+    SYNC_CODEX=true
+fi
 
 PLUGINS=(foundry oss develop research codemap)
 EXTERNAL_PLUGINS=(codex@openai-codex caveman@caveman)
@@ -15,6 +38,8 @@ KNOWN_MARKETPLACES="$HOME/.claude/plugins/known_marketplaces.json"
 INSTALLED_PLUGINS="$HOME/.claude/plugins/installed_plugins.json"
 CACHE_DIR="$HOME/.claude/plugins/cache"
 PROJECT_DIR="$(pwd)"
+
+if $SYNC_CLAUDE; then
 
 # Migrate all stale marketplace names registered for this path
 # Checks known_marketplaces.json (authoritative CLI registry) for stale names
@@ -66,7 +91,7 @@ done < <(jq -r --arg path "$PROJECT_DIR" --arg new "$MARKETPLACE" '
   | .[].key
 ' "$KNOWN_MARKETPLACES")
 
-if [[ "${1:-}" == "--clean" ]]; then
+if $CLEAN; then
     echo "Uninstalling existing plugins..."
     for p in "${PLUGINS[@]}"; do
         claude plugin uninstall "${p}@${MARKETPLACE}" 2>/dev/null && echo "  ✓ uninstalled ${p}" || echo "  – ${p} not installed, skipping"
@@ -89,5 +114,21 @@ done
 
 echo "Initializing Foundry (sync settings + symlinks)..."
 claude "/foundry:init --approve"
+
+fi  # SYNC_CLAUDE
+
+if $SYNC_CODEX; then
+
+echo "Syncing .codex configs to ~/.codex/..."
+CODEX_SRC="$PROJECT_DIR/.codex"
+CODEX_DST="$HOME/.codex"
+for f in config.toml hooks.json AGENTS.md README.md; do
+    [[ -f "$CODEX_SRC/$f" ]] && cp "$CODEX_SRC/$f" "$CODEX_DST/$f" && echo "  ✓ $f"
+done
+for d in agents skills hooks; do
+    [[ -d "$CODEX_SRC/$d" ]] && rsync -a --no-perms "$CODEX_SRC/$d/" "$CODEX_DST/$d/" && echo "  ✓ $d/"
+done
+
+fi  # SYNC_CODEX
 
 echo "✓ Done"

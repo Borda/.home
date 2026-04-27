@@ -32,7 +32,7 @@ Before returning, self-review:
 1. Draft → self-evaluate (missed issues, unsupported claims, coverage gaps) → score
 2. Score < 0.9: name highest-impact gap concretely, address what you can — even info-access limits: document + add inferences/caveats; re-score; cap 2 passes
 3. Score rises only when **named, specific gap** addressed — generic phrases ("re-checked, looks fine", "reviewed for completeness") don't count; pass must name gap (e.g. "Added versioning section missing from initial draft")
-4. After 2 passes, report real score — never inflate; `foundry:calibrate` catches bias
+4. After 2 passes, report real score — never inflate
 
 ## Pre-Handover Check
 
@@ -66,8 +66,9 @@ Confidence < 0.9 and `codex` plugin available → spawn `Agent(subagent_type="co
 - **Short inline status** (single result, pass/fail, one-sentence finding) → terminal only; do **not** create file
 - Prose paragraphs: no hard line breaks at column width
 - **Follow-up gate options**: skill-defined; minimum: (a) primary action · (b) skip. Canonical examples by skill:
-  - `foundry:audit` → (a) `/foundry:init` (sync clean config) · (b) fix all findings · (c) skip
-  - `foundry:distill` → (a) `/foundry:manage create` (scaffold suggestion) · (b) edit existing · (c) skip
+  - `develop:review` → (a) `/develop:fix` · (b) `/develop:refactor` · (c) walk through findings · (d) skip
+  - `develop:debug` → (a) `/develop:fix --diagnosis <file>` · (b) skip
+  - `develop:plan` → (a) `/develop:feature --plan <file>` · (b) `/develop:fix --plan <file>` · (c) skip
 
 ## Reporting Findings
 

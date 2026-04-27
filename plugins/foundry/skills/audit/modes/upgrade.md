@@ -2,11 +2,11 @@
 
 # Upgrade Mode — foundry:audit
 
-Triggered by `/audit upgrade`. Read+executed by `/audit` when `upgrade` arg present.
+Triggered by `/audit --upgrade`. Read+executed by `/audit` when `--upgrade` flag present.
 
 ## Mode: upgrade
 
-**Trigger**: `/audit upgrade`
+**Trigger**: `/audit --upgrade`
 
 **Purpose**: Apply documented Claude Code improvements that passed genuine-value filter. Config changes applied + correctness-checked immediately. Capability changes A/B tested via mini calibrate pipeline — accepted only if Δrecall ≥ 0 and ΔF1 ≥ 0.
 
@@ -25,7 +25,7 @@ for f in .claude/agents/*.md .claude/skills/*/SKILL.md; do # timeout: 5000
 done
 ```
 
-If critical/high issues known from recent `/audit` run, or gate check finds BREAKING issue: stop, print "⚠ Resolve critical/high findings first (`/audit fix high`), then re-run `/audit upgrade`."
+If critical/high issues known from recent `/audit` run, or gate check finds BREAKING issue: stop, print "⚠ Resolve critical/high findings first (run `/audit` and pick fix level from gate), then re-run `/audit --upgrade`."
 
 ### Phase 2: Fetch and classify proposals
 

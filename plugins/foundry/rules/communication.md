@@ -45,7 +45,7 @@ Rules:
 
 ## Interactive Questions
 
-**Hard constraint — never write question as plain text.** Every question — clarifying, scoping, or continuation — must be posed by invoking `AskUserQuestion` tool. Prose sentence ending with "?" is violation even if it names the tool.
+**Hard constraint — stop before writing any question.** If you need information from the user, do NOT generate the question as prose — invoke `AskUserQuestion` tool immediately instead. A prose question followed by a "note: should use tool" caveat is still a violation. Only two options: answer without asking, or call the tool. No plain-text question under any circumstances.
 
 Labelled or annotated question (e.g. `[AskUserQuestion simulated] — What format?`) still plain text, still violates rule. Only actual tool invocation satisfies constraint.
 

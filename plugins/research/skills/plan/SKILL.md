@@ -117,24 +117,31 @@ Dry-run both commands before presenting (add `# timeout: 60000` to any timed bas
 
 ### Step P-P2b: Agent validation (pre-write)
 
-After user confirms, run expert agent review before writing `program.md`. Dispatches conditional on goal type — run whichever apply in parallel:
+After user confirms, run expert agent review before writing `program.md`. Dispatches conditional on goal type — run whichever apply in parallel.
+
+**Pre-spawn — create plan run dir** (review files share single timestamped dir):
+
+```bash
+PLAN_RUN_DIR=".experiments/plan-$(date -u +%Y-%m-%dT%H-%M-%SZ)"  # timeout: 5000
+mkdir -p "$PLAN_RUN_DIR"  # timeout: 5000
+```
 
 **Always** — spawn architect to validate scope coverage:
 
 ```text
-Agent(subagent_type="foundry:solution-architect", prompt="Review a proposed research experiment scope.\n\nGoal: <goal>\nScope files: <scope_files>\nMetric command: <metric_cmd>\n\nCheck: (1) Do scope_files cover the components relevant to the goal? List architectural dependencies outside scope that the ideation agent would need to touch. (2) Are there shared abstractions (base classes, imports, shared state) outside scope required for changes within it?\n\nWrite your full review to `.experiments/run/<run-id>/plan-review-architect.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"gaps\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\".experiments/run/<run-id>/plan-review-architect.md\",\"confidence\":0.N}")
+Agent(subagent_type="foundry:solution-architect", prompt="Review a proposed research experiment scope.\n\nGoal: <goal>\nScope files: <scope_files>\nMetric command: <metric_cmd>\n\nCheck: (1) Do scope_files cover the components relevant to the goal? List architectural dependencies outside scope that the ideation agent would need to touch. (2) Are there shared abstractions (base classes, imports, shared state) outside scope required for changes within it?\n\nWrite your full review to `$PLAN_RUN_DIR/plan-review-architect.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"gaps\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\"$PLAN_RUN_DIR/plan-review-architect.md\",\"confidence\":0.N}")
 ```
 
 **If `agent_strategy = ml` or goal contains ML keywords (accuracy, loss, model, training, inference, classification, regression)** — also spawn research:scientist:
 
 ```text
-Agent(subagent_type="research:scientist", prompt="Review a proposed ML experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nAgent strategy: <agent_strategy>\n\nCheck: (1) Is the goal a well-formed ML hypothesis — falsifiable, with a concrete success criterion? (2) Could metric_cmd improve while the real goal is not achieved (Goodhart's Law)? (3) Is agent_strategy appropriate for this goal type?\n\nWrite your full review to `.experiments/run/<run-id>/plan-review-scientist.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\".experiments/run/<run-id>/plan-review-scientist.md\",\"confidence\":0.N}")
+Agent(subagent_type="research:scientist", prompt="Review a proposed ML experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nAgent strategy: <agent_strategy>\n\nCheck: (1) Is the goal a well-formed ML hypothesis — falsifiable, with a concrete success criterion? (2) Could metric_cmd improve while the real goal is not achieved (Goodhart's Law)? (3) Is agent_strategy appropriate for this goal type?\n\nWrite your full review to `$PLAN_RUN_DIR/plan-review-scientist.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\"$PLAN_RUN_DIR/plan-review-scientist.md\",\"confidence\":0.N}")
 ```
 
 **If `agent_strategy = perf` or goal contains performance keywords (latency, throughput, wall-clock, speed, memory, FPS)** — also spawn perf:
 
 ```text
-Agent(subagent_type="foundry:perf-optimizer", prompt="Review a proposed performance experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nGuard command: <guard_cmd>\n\nCheck: (1) Does metric_cmd measure the right performance characteristic for this goal? (2) Is guard_cmd comprehensive enough to catch regressions an ideation agent might introduce?\n\nWrite your full review to `.experiments/run/<run-id>/plan-review-perf.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\".experiments/run/<run-id>/plan-review-perf.md\",\"confidence\":0.N}")
+Agent(subagent_type="foundry:perf-optimizer", prompt="Review a proposed performance experiment configuration.\n\nGoal: <goal>\nMetric command: <metric_cmd>\nGuard command: <guard_cmd>\n\nCheck: (1) Does metric_cmd measure the right performance characteristic for this goal? (2) Is guard_cmd comprehensive enough to catch regressions an ideation agent might introduce?\n\nWrite your full review to `$PLAN_RUN_DIR/plan-review-perf.md` using the Write tool.\nReturn ONLY: {\"ok\":true|false,\"issues\":[\"...\"],\"suggestions\":[\"...\"],\"file\":\"$PLAN_RUN_DIR/plan-review-perf.md\",\"confidence\":0.N}")
 ```
 
 Print advisory block below config:
@@ -207,6 +214,14 @@ Next steps:
    - Number of distinct method families found (used to determine team size at run step)
    - Whether SOTA consensus exists — if clear winner, note team mode may not add value
 3. Tell user: "`--team` applies at run step, not plan step. Run: `/research:run <program.md> --team` to execute with parallel researchers."
-4. Read `${_RESEARCH_SHARED}/../run/modes/team.md` for team spawn protocol — include a one-line summary of the team protocol in the Team Mode Notes section.
+4. Resolve run-modes dir, read team protocol — include a one-line summary in Team Mode Notes:
+
+   ```bash
+   _RESEARCH_RUN_MODES=$(ls -d ~/.claude/plugins/cache/borda-ai-rig/research/*/skills/run/modes 2>/dev/null | sort -V | tail -1)
+   [ -d "$_RESEARCH_RUN_MODES" ] || _RESEARCH_RUN_MODES="$(git rev-parse --show-toplevel 2>/dev/null)/plugins/research/skills/run/modes"
+   [ -f "$_RESEARCH_RUN_MODES/team.md" ] || { echo "⚠ team.md not found at $_RESEARCH_RUN_MODES"; }
+   ```
+
+   Read `$_RESEARCH_RUN_MODES/team.md`.
 
 </workflow>

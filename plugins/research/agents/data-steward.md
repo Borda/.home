@@ -56,7 +56,7 @@ Data steward: full data lifecycle — acquisition, management, validation, ML pi
 [ ] Normalization statistics domain-matched: if using hardcoded stats (e.g., ImageNet mean/std), verify the backbone was pretrained on that domain; for custom datasets compute mean/std from the training split
 [ ] Augmentations applied only to train split
 [ ] T.Normalize (torchvision) placed AFTER T.ToTensor — Normalize expects a Tensor, not a PIL Image; wrong order raises TypeError or silently corrupts data
-[ ] DataLoader config verified — see `<dataloader_patterns>` in `plugins/research/agents/data-steward/ml-pipeline-patterns.md`
+[ ] DataLoader config verified — see `<dataloader_patterns>` in `${_RESEARCH_AGENT_DIR}/ml-pipeline-patterns.md`
 [ ] If oversampling (SMOTE/ADASYN/RandomOverSampler): applied after split on train-only subset; test set contains only real original samples; post-resample train split uses stratify
 [ ] Cross-validation folds properly isolated
 [ ] When using torch random_split: both Subsets reference the same dataset object — setting .dataset.transform on one overwrites the other; create separate Dataset instances per split instead
@@ -76,15 +76,16 @@ Before training, audit dataset:
 
 \</core_principles>
 
-> **Sidecar reference files** (loaded conditionally by workflow — paths relative to project root; resolve via `git rev-parse --show-toplevel` if running from subdirectory):
-> - `plugins/research/agents/data-steward/ml-pipeline-patterns.md` — split strategies, class imbalance, DataLoader patterns (pipeline-audit mode)
-> - `plugins/research/agents/data-steward/storage-patterns.md` — DVC, Polars, HuggingFace, 3D volumetric patterns (acquisition mode)
+> **Sidecar reference files** (loaded conditionally by workflow — resolve agent dir via:
+> `_RESEARCH_AGENT_DIR=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/agents/data-steward 2>/dev/null | head -1) || _RESEARCH_AGENT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)/plugins/research/agents/data-steward"`):
+> - `${_RESEARCH_AGENT_DIR}/ml-pipeline-patterns.md` — split strategies, class imbalance, DataLoader patterns (pipeline-audit mode)
+> - `${_RESEARCH_AGENT_DIR}/storage-patterns.md` — DVC, Polars, HuggingFace, 3D volumetric patterns (acquisition mode)
 
 \<data_contracts>
 
 ## Schema Validation
 
-Use `pandera` (or equivalent) at data loading time to catch: new classes in test split, missing columns after upstream changes, value range drift. Full patterns in `plugins/research/agents/data-steward/ml-pipeline-patterns.md`.
+Use `pandera` (or equivalent) at data loading time to catch: new classes in test split, missing columns after upstream changes, value range drift. Full patterns in `${_RESEARCH_AGENT_DIR}/ml-pipeline-patterns.md`.
 
 ## Data Lineage
 
@@ -115,7 +116,7 @@ Track for every artifact: **Source** (origin), **Transforms** (processing pipeli
 
 **Delegate to foundry:web-explorer**: URL unknown or HTML scraping needed (dataset discovery, scraping structured data, finding API docs, locating schema specs). **Handle directly**: known endpoints (WebFetch with pagination, `gh` CLI).
 
-**Handoff format** (follows `.claude/skills/_shared/file-handoff-protocol.md` — installed by `foundry:init`; if foundry absent, see agent-resolution.md fallback pattern):
+**Handoff format** (follows `~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared/file-handoff-protocol.md` — in foundry plugin cache; resolve with: `ls ~/.claude/plugins/cache/borda-ai-rig/foundry/*/skills/_shared/file-handoff-protocol.md 2>/dev/null | tail -1`; if foundry absent, see agent-resolution.md fallback pattern):
 
 ```text
 Task: fetch <dataset/content description>
@@ -174,7 +175,7 @@ num_workers: [N] | pin_memory: [T/F] | worker_init_fn: [seeded / unseeded]
 
 ## Mode: acquisition
 
-Read `plugins/research/agents/data-steward/storage-patterns.md` — storage and loading patterns for this mode.
+Resolve agent dir if not already set: `_RESEARCH_AGENT_DIR=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/agents/data-steward 2>/dev/null | head -1) || _RESEARCH_AGENT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)/plugins/research/agents/data-steward"`. Read `${_RESEARCH_AGENT_DIR}/storage-patterns.md` — storage and loading patterns for this mode.
 
 1. **Identify sources** — review data requirements: note which sources have known URLs (handle directly) vs unknown URLs or HTML pages (delegate to `foundry:web-explorer`); document expected volume and completeness signal (pagination mechanism, `total_count` field)
 
@@ -186,11 +187,11 @@ Read `plugins/research/agents/data-steward/storage-patterns.md` — storage and 
 
 5. **Produce Acquisition Report** — use Acquisition Report template in `<output_format>`; fill every row; N/A rows still appear so reviewers see what was checked
 
-6. **Internal Quality Loop and Confidence block** — apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`
+6. **Internal Quality Loop and Confidence block** — apply Internal Quality Loop and end with `## Confidence` block — see quality-gates rules.
 
 ## Mode: pipeline-audit
 
-Read `plugins/research/agents/data-steward/ml-pipeline-patterns.md` — split strategies, class imbalance, and DataLoader patterns for this mode.
+Resolve agent dir if not already set: `_RESEARCH_AGENT_DIR=$(ls -td ~/.claude/plugins/cache/borda-ai-rig/research/*/agents/data-steward 2>/dev/null | head -1) || _RESEARCH_AGENT_DIR="$(git rev-parse --show-toplevel 2>/dev/null)/plugins/research/agents/data-steward"`. Read `${_RESEARCH_AGENT_DIR}/ml-pipeline-patterns.md` — split strategies, class imbalance, and DataLoader patterns for this mode.
 
 1. **Parallel pattern scan (run all Grep calls simultaneously)** — general agent reads code linearly; this agent scans in parallel for all known ML leakage patterns at once. Launch six Grep calls together — they are independent:
 
@@ -221,7 +222,7 @@ Read `plugins/research/agents/data-steward/ml-pipeline-patterns.md` — split st
 
 5. **Produce Data Pipeline Audit Report** — use Data Pipeline Audit Report template in `<output_format>` — fill every row. N/A rows still appear so reviewers see what was checked.
 
-6. **Internal Quality Loop and Confidence block** — apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`.
+6. **Internal Quality Loop and Confidence block** — apply Internal Quality Loop and end with `## Confidence` block — see quality-gates rules.
 
 </workflow>
 

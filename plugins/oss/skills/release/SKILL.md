@@ -25,7 +25,7 @@ Mode comes **first**; range or flags follow:
 | `/release notes [range] --migration` | optional range + flag | `PUBLIC-NOTES.md` + `.temp/output-release-migration-<branch>-<date>.md` |
 | `/release notes [range] --changelog --summary --migration` | all flags | All four outputs |
 | `/release prepare <version>` | version to stamp, e.g. `v1.3.0` | All artifacts: audit → `PUBLIC-NOTES.md` + `CHANGELOG.md` + summary + migration if breaking |
-| `/release audit [version]` | optional target version | Terminal readiness report |
+| `/release audit [version]` | optional target version | Terminal readiness report; emits `verdict: READY\ | NEEDS_ATTENTION\ | BLOCKED` as final line for orchestrator consumption |
 
 Range notation: `v1->v2` (e.g. `v1.2->v2.0`) — converted internally to git range. No mode given → defaults to `notes`. Flags add outputs alongside notes. `prepare` = full pipeline — runs audit first, then all artifacts; use when cutting release, not drafting.
 
@@ -47,6 +47,17 @@ Parse `$ARGUMENTS` by first token:
 
 ```bash
 read FIRST REST <<<"$ARGUMENTS"
+
+# Range-first detection: if FIRST looks like a range (contains -> or ..),
+# force notes mode and reframe args so the shared flag-parse loop runs over the
+# whole tail (REST). Without this, "/release v1->v2 --changelog" falls to the
+# default route which assigns RANGE="$ARGUMENTS" verbatim — leaving --changelog
+# embedded inside the range string and the flag silently ignored.
+if [[ "$FIRST" == *"->"* ]] || [[ "$FIRST" == *".."* ]]; then
+    MODE="notes"
+    REST="$FIRST $REST"   # re-include FIRST so the flag loop discovers the range as a non-flag token
+    FIRST="notes"
+fi
 ```
 
 | First token | Mode | Routing |
@@ -54,7 +65,8 @@ read FIRST REST <<<"$ARGUMENTS"
 | `prepare` | prepare | Skip to **Mode: prepare** |
 | `audit` | audit | Skip to **Mode: audit** |
 | `notes` | notes | Parse flags and range from `$REST`; continue Steps 1–5 |
-| *(none or bare range)* | notes | `RANGE="$ARGUMENTS"`, no flags; continue Steps 1–5 |
+| *(bare range — handled above by range-first detection)* | notes | Falls through to `notes` route after `FIRST` is rewritten |
+| *(none)* | notes | `RANGE=""`, no flags; continue Steps 1–5 |
 
 After matching `notes`, parse flags from `$REST`:
 
@@ -260,11 +272,21 @@ Note whether **Breaking Changes** classified — gates Phase 3d.
 ```bash
 RELEASE_DIR="releases/$VERSION"
 mkdir -p "$RELEASE_DIR"
+
+# Overwrite guard — back up any existing release artifacts before re-running prepare.
+# Re-running /release prepare for the same version is legitimate (post-audit-fix retry),
+# but silently overwriting hand-edited notes is destructive.
+for f in PUBLIC-NOTES.md SUMMARY.md MIGRATION.md; do
+    if [ -f "$RELEASE_DIR/$f" ]; then
+        cp "$RELEASE_DIR/$f" "$RELEASE_DIR/$f.bak"
+        echo "⚠ $RELEASE_DIR/$f exists — backed up to $f.bak before overwrite"
+    fi
+done
 ```
 
 Write each artifact in sequence:
 
-**a. `releases/$VERSION/PUBLIC-NOTES.md`** — user-facing notes (Step 3 `notes` format). Shepherd voice review applies per Step 5.
+**a. `releases/$VERSION/PUBLIC-NOTES.md`** — user-facing notes (Step 3 `notes` format). Shepherd voice review applies per Step 5. Existing file already backed up to `PUBLIC-NOTES.md.bak` by the overwrite guard above.
 
 **b. `CHANGELOG.md`** — prepend entry stamped `$VERSION — $DATE` (Step 3 `changelog` format) to root `CHANGELOG.md`. Cumulative file — not versioned per release. Create with `# Changelog` header if missing. No shepherd review — write directly.
 
@@ -330,7 +352,15 @@ After readiness table, if issues found, append **Findings summary** table with o
 
 Ensures every finding has explicit location, severity, and action — matching structured output format of `notes` and `changelog` modes.
 
-End response with `## Confidence` block per CLAUDE.md output standards.
+### Verdict line (mandatory final output)
+
+After the findings table, print exactly one verdict line as the **last line of audit output** so callers (e.g. `prepare` Phase 1) can pattern-match without parsing prose:
+
+- `verdict: READY` — no CRITICAL or HIGH findings
+- `verdict: NEEDS_ATTENTION` — one or more HIGH findings, no CRITICAL
+- `verdict: BLOCKED` — one or more CRITICAL findings (also written when readiness checks themselves cannot complete)
+
+Then end response with `## Confidence` block per CLAUDE.md output standards.
 
 </workflow>
 

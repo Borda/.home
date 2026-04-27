@@ -75,6 +75,29 @@ Standard: every line and every role must earn its place.
   need at least one NOT-for clause referencing other's domain
 - After any description change, run `/foundry:calibrate routing` to verify routing accuracy not degraded
 
+## Plugin Layout Compliance
+
+(applies when auditing plugin source files under `plugins/*/`)
+
+- Valid plugin directories: `agents/`, `skills/`, `bin/`, `rules/` (foundry), `hooks/` (foundry), `.claude-plugin/`
+- `bin/` = standalone executables (`.sh`, `.py`) auto-added to Bash PATH by Claude Code; invoked via `${CLAUDE_PLUGIN_ROOT}/bin/<script>`; NOT for LLM instruction
+- Shell/Python scripts found in `skills/_shared/` or `commands/` → misplaced; flag P2; fix: move to plugin's `bin/` dir
+- Skills using `$_SHARED/script.sh`, `$_COMMANDS/script.sh`, or inline `python3 -c` blocks → update to `${CLAUDE_PLUGIN_ROOT}/bin/<script>`
+- `_shared/` is for markdown reference docs only — agent-resolution tables, protocol files, voice guides
+
+## Frontmatter Schema Freshness
+
+Valid agent frontmatter fields (as of last doc fetch — see Step 5 for live validation):
+`name`, `description`, `tools`, `disallowedTools`, `model`, `permissionMode`, `maxTurns`, `effort`,
+`initialPrompt`, `skills`, `mcpServers`, `hooks`, `memory`, `background`, `isolation`
+
+Valid skill frontmatter fields:
+`name`, `description`, `argument-hint`, `disable-model-invocation`, `user-invocable`, `allowed-tools`,
+`model`, `effort`, `shell`, `paths`, `context`, `agent`, `hooks`
+
+- Unknown field in any agent/skill → P4 (likely typo or removed field)
+- Live fetch in Step 5 overrides hardcoded lists above when schema diverges
+
 ## Skill File Checks
 
 - Every skill has `<workflow>` with numbered steps inside block
@@ -220,13 +243,43 @@ Loop: low score → targeted re-run → pattern identified → instruction updat
    from live source rather than memory
 3. For cross-refs: `Grep("See .* agent", ".claude/agents/")` — validate each target exists on disk
 4. For URLs: `WebFetch` each URL found in agent/skill files — confirm resolves and content matches description;
-   flag any 404 or mismatch as P4 (outdated content)
-5. For duplication: scan for identical or near-identical code blocks across agents
-6. Produce health report using format above, prioritized P1→P5
-7. If fixes requested: apply P1 (broken refs) first, then P2 (duplication), then P3 (trimming)
-8. After any edits: re-run `wc -l` (no dedicated tool for aggregate line counts; Bash is intentional here)
+   flag any 404 or mismatch as P4 (outdated content).
+   **Cache WebFetch results** in `.cache/gh/curator-url-<slug>.md` (TTL 24h) — reuse cached copy if < 24h old.
+   Pre-fetch setup: `mkdir -p .cache/gh # timeout: 5000`. Per-URL cache pattern:
+   ```bash
+   CACHE_DIR=".cache/gh"
+   CACHE_KEY=$(echo "$URL" | tr -cd 'a-zA-Z0-9' | cut -c1-32)
+   CACHE_FILE="$CACHE_DIR/curator-url-$CACHE_KEY.txt"
+   if [ -f "$CACHE_FILE" ] && [ $(($(date +%s) - $(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE"))) -lt 86400 ]; then
+     URL_CONTENT=$(cat "$CACHE_FILE")
+   else
+     # WebFetch call here; write result to $CACHE_FILE
+     :
+   fi
+   ```
+5. Schema freshness check — validate agent/skill frontmatter fields against current Claude Code schema:
+   ```bash
+   CACHE_DIR=".cache/gh"
+   mkdir -p "$CACHE_DIR" # timeout: 5000
+   for SCHEMA_KEY in "curator-schema-agents" "curator-schema-skills"; do
+     CACHE_FILE="$CACHE_DIR/${SCHEMA_KEY}.txt"
+     if [ -f "$CACHE_FILE" ] && [ $(($(date +%s) - $(stat -f %m "$CACHE_FILE" 2>/dev/null || stat -c %Y "$CACHE_FILE"))) -lt 86400 ]; then
+       SCHEMA_CONTENT=$(cat "$CACHE_FILE")
+     else
+       # WebFetch call here — write result to $CACHE_FILE; :
+     fi
+   done
+   ```
+   URLs: agents schema → `https://code.claude.ai/docs/en/sub-agents`; skills schema → `https://code.claude.ai/docs/en/skills`
+   Unknown frontmatter field found in any file → P4 (typo or removed field; fix: remove or replace with correct field name).
+   New field available in schema but absent from an agent where it would add clear value → note as improvement (not P1–P5).
+   Skip this step for non-frontmatter audits (handoff compliance review, duplication-only pass).
+6. For duplication: scan for identical or near-identical code blocks across agents
+7. Produce health report using format above, prioritized P1→P5
+8. If fixes requested: apply P1 (broken refs) first, then P2 (duplication), then P3 (trimming)
+9. After any edits: re-run `wc -l` (no dedicated tool for aggregate line counts; Bash is intentional here)
    and verify no new broken refs introduced
-9. Apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`.
+10. Apply Internal Quality Loop and end with `## Confidence` block — see `.claude/rules/quality-gates.md`.
    Domain calibration: when aggregating confidence for multi-issue problems, use lowest sub-finding confidence as floor,
    not average — aggregate score should reflect most uncertain finding.
 
@@ -264,6 +317,10 @@ Never use `sonnet` for agents making complex multi-file design decisions.
 - **Context-flooding delegation**: skill spawns 2+ agents without file-based handoff — all agent outputs return to main context
   for inline consolidation. Ref: `.claude/skills/_shared/file-handoff-protocol.md`.
   Severity: P2 (duplication-level — remove inline output, add file handoff).
+
+- **Scripts in `skills/_shared/` or `commands/`** — `.sh`/`.py` files there are misplaced; `_shared/` is for markdown reference docs; `commands/` is Claude Code's legacy name for flat skill `.md` files.
+  Fix: move to plugin's `bin/` directory; update caller to `${CLAUDE_PLUGIN_ROOT}/bin/<script>`; inline `python3 -c` blocks > ~20 lines also belong in `bin/*.py`.
+  Severity: P2.
 
 - **Hallucinating issues on clean files** — do not report problem unless evidence explicit in file content.
   If file passes all checks, say so plainly ("No issues found — all sections present, refs valid, steps sequential").

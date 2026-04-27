@@ -3,7 +3,7 @@ name: distill
 description: One-time snapshot that extracts patterns from work history and accumulated lessons, then distills them into concrete improvements — new agent/skill suggestions, roster quality review, memory pruning, or consolidating lessons and feedback into rules and agent/skill updates.
 argument-hint: '[review | prune | lessons | "external <url-or-path>" | "<recurring task description>"]'
 disable-model-invocation: true
-allowed-tools: Read, Edit, Bash, Glob, Grep, Write, AskUserQuestion, Agent
+allowed-tools: Read, Edit, Bash, Glob, Grep, Write, AskUserQuestion, Agent, WebFetch
 effort: high
 ---
 
@@ -33,9 +33,13 @@ MEMORY_DIR=".claude/agent-memory"
 
 ## Step 1: Inventory existing agents and skills
 
-Use the Glob tool to enumerate agents (pattern `agents/*.md`, path `.claude/`) and skills (pattern `skills/*/SKILL.md`, path `.claude/`).
+Use the Glob tool to enumerate agents and skills across all sources — project-local AND plugin-namespaced — to avoid false-gap findings when a candidate already exists in a plugin:
 
-For each agent/skill found, extract: name, description, tools, purpose.
+- **Project-local**: pattern `agents/*.md`, path `.claude/`; pattern `skills/*/SKILL.md`, path `.claude/`
+- **Plugin source** (workspace): pattern `*/agents/*.md`, path `plugins/`; pattern `*/skills/*/SKILL.md`, path `plugins/`
+- **Installed plugin cache** (if accessible): pattern `*/agents/*.md`, path `~/.claude/plugins/cache/borda-ai-rig/`; pattern `*/skills/*/SKILL.md`, path `~/.claude/plugins/cache/borda-ai-rig/`
+
+For each agent/skill found, extract: name, description, tools, purpose. Tag each entry with its plugin namespace (e.g. `foundry:sw-engineer`, `oss:resolve`) — used in Step 3 gap analysis to prevent recommending duplicates of plugin-namespaced agents/skills.
 
 ## Step 2: Analyze work patterns
 
@@ -148,7 +152,7 @@ Locate, evaluate, and trim the project memory file.
 
 **Find the memory file:**
 
-<!-- Note: this slug derivation is also used in audit/SKILL.md Check 11. If the auto-memory path convention changes, update both files. -->
+<!-- Note: if the auto-memory path convention changes, update this slug derivation. -->
 
 ```bash
 # timeout: 3000
@@ -165,11 +169,27 @@ Read the memory file with the Read tool. Also read `.claude/CLAUDE.md` to identi
 - **Trim**: sections still accurate but containing implementation history or rationale no longer needed day-to-day — keep operational facts (what/where), drop the why-it-was-built backstory
 - **Keep**: rules actively applied every session; project-specific facts absent from CLAUDE.md; anything the model needs to act correctly
 
-Before applying edits, print a brief summary of what will be trimmed to terminal so the user can review before any changes are made.
+**Memory-write gate** — project CLAUDE.md `Memory Policy` prohibits auto-writes to MEMORY.md. Prune mode therefore runs read-only by default and produces an advisory diff/report rather than applying edits silently:
 
-Apply changes with the Edit tool — targeted replacements for trimmed sections, full section removal for dropped ones.
+1. Read the memory file and analyse for stale, redundant, and verbose entries.
+2. Print the proposed prune report to terminal (sections to drop + sections to trim, with line ranges and reasoning):
 
-Print a compact summary:
+   ```text
+   Prune proposals (apply manually unless explicitly approved below):
+     Drop  — <section name>: <reason>
+     Trim  — <section name>: <what to remove vs keep>
+     ...
+   ```
+
+3. Call `AskUserQuestion` — do NOT write the question as plain text. Map options directly into the tool call:
+   - question: "Apply prune edits to MEMORY.md?"
+   - (a) label: `Apply now` — description: use Edit tool to apply all proposals to the memory file
+   - (b) label: `Show diff first` — description: print line-by-line preview before applying any change
+   - (c) label: `Skip` — description: leave MEMORY.md untouched; user will edit manually
+
+Only after the user picks (a) (or (b) followed by approval) may Edit be invoked on the memory file. **Never apply prune edits silently.**
+
+Print a compact summary after applying (or after the user declines):
 
 ```text
 Pruned MEMORY.md — <date>

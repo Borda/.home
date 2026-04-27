@@ -10,6 +10,7 @@ Use `/caveman` compression for all agent, skill, rule file edits — drop articl
 
 - `.claude-plugin/plugin.json` — version + metadata
 - `agents/`, `skills/`, `README.md`, `CLAUDE.md` (optional)
+- `bin/` — optional: standalone executables (`.sh`, `.py`) auto-added to Bash `PATH` by Claude Code; invoked via `${CLAUDE_PLUGIN_ROOT}/bin/<script>` inside skills
 - `rules/`, `hooks/` — foundry only
 
 ## Installability
