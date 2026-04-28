@@ -12,6 +12,8 @@ Three arms run the same import-graph navigation tasks:
   semble   — same skill extended with mcp__semble__search; uses the MCP tool for hybrid
              semantic + lexical search for import-graph questions instead of grepping
              (Skill tool blocked via --disallowed-tools)
+  combined — both /codemap:query and mcp__semble__search available; agent selects whichever
+             tool is best suited for each question; no tools blocked
 
 Core claim under test: one /codemap:query or mcp__semble__search call replaces many Grep passes,
 reducing tool call count, elapsed time, and context consumption.
@@ -74,6 +76,7 @@ reducing tool call count, elapsed time, and context consumption.
 
     delta = erec - rrec — information gap (agent saw it but did not report it)
     deff = erec_tp / max(tool_calls, 1) — discovery efficiency (rdeps found per tool call)
+    erec_top10 — erec restricted to top-10 most-central rdeps by dep_count (meaningful for tasks with ≥5 rdeps)
 
     sc (skill coverage, codemap only) — index completeness:
       Parsed from the codemap:query rdeps skill result; measures whether the index contained the answer.
@@ -112,6 +115,7 @@ reducing tool call count, elapsed time, and context consumption.
     codemap no-call  — codemap arm completed without ever invoking the Skill tool; this means the agent fell
                        back to grep/bash entirely, defeating the purpose of the codemap arm
     semble no-call   — semble arm completed without ever calling mcp__semble__search or mcp__semble__find_related
+    combined no-call  — combined arm completed without ever calling Skill or any semble MCP tool
 
   Cross-arm tool contamination is blocked at the CLI level (not just by instruction) via --disallowed-tools:
     codemap arm      — mcp__semble__search and mcp__semble__find_related are hard-blocked
@@ -132,6 +136,7 @@ reducing tool call count, elapsed time, and context consumption.
     yellow  — plain arm
     cyan    — codemap arm
     blue    — semble arm
+    green   — combined arm (both tools available, agent chooses)
     red     — any arm where success=False (overrides arm colour)
 
 ## JSON output schema (benchmarks/results/code-YYYY-MM-DD.json)
@@ -148,7 +153,7 @@ reducing tool call count, elapsed time, and context consumption.
     },
     "results": [
       {
-        "arm": "plain" | "codemap" | "semble",
+        "arm": "plain" | "codemap" | "semble" | "combined",
         "task_id": "T01",
         "task_type": "fix" | "feature" | "refactor" | "review",
         "model": "haiku" | "sonnet" | "opus",
@@ -169,6 +174,8 @@ reducing tool call count, elapsed time, and context consumption.
           "rrec": N.N,                  ← report recall: rdeps found in final answer text
           "rrec_tp": N, "rrec_fn": N,   ← multi-form true positives / false negatives on report corpus
           "delta": N.N,                 ← erec - rrec: information seen but not reported
+          "erec_top10": N.N,            ← erec on top-10 most-central rdeps by dep_count; equals erec when |rdeps|≤10
+          "erec_top10_k": N,            ← k used: min(10, |expected|)
           "deff": N.N,                  ← erec_tp / max(tool_calls, 1): discovery efficiency
           "skill_coverage": N.N | null, ← codemap arm: fraction of expected rdeps in skill result; null for plain
           "skill_returned": N | null,   ← count of modules the skill call returned; null for plain
@@ -262,6 +269,8 @@ class QualityScore:
     rrec_fn: int = 0
     delta: float = 0.0  # erec - rrec: information the agent saw but did not report
     deff: float = 0.0  # discovery efficiency: erec_tp / max(tool_calls, 1)
+    erec_top10: float = 0.0  # erec restricted to top-10 rdeps by dep_count centrality
+    erec_top10_k: int = 0  # actual k used (min(10, |expected|)); equals |expected| when ≤10
 
     # ── Skill result coverage (codemap arm only; None when not applicable) ──
     skill_coverage: Optional[float] = None
@@ -287,6 +296,7 @@ class ToolCounts:
     bash: int = 0
     skill: int = 0  # /codemap:query and other skill invocations via the Skill tool
     semble: int = 0  # mcp__semble__search and mcp__semble__find_related calls
+    blocked: int = 0  # tool_use events that returned <tool_use_error> (permission-denied or disallowed)
 
     @property
     def total(self) -> int:
@@ -478,6 +488,15 @@ class GroundTruth:
                 if pm in m.get("direct_imports", []) and m.get("status") == "ok"
             }
             self.expected[task.id] = rdeps
+        # dep_count = forward import count per module (proxy for centrality; always populated)
+        _dep_counts: dict[str, int] = {m["name"]: m.get("dep_count", 0) for m in index.get("modules", [])}
+        # Top-10 most-central rdeps per task (by dep_count descending); k=min(10, |rdeps|)
+        self.top10_expected: dict[str, frozenset[str]] = {}
+        for task in tasks:
+            rdeps = self.expected.get(task.id, set())
+            if rdeps:
+                ranked = sorted(rdeps, key=lambda m: _dep_counts.get(m, 0), reverse=True)[:10]
+                self.top10_expected[task.id] = frozenset(ranked)
         self.all_leaf_names: set[str] = {m.split(".")[-1] for m in self.all_modules}
         # Precompute multi-form match patterns for every module in the index
         self._match_patterns: dict[str, list[re.Pattern]] = {m: self._generate_match_set(m) for m in self.all_modules}
@@ -553,17 +572,30 @@ class GroundTruth:
         delta = erec - rrec
         deff = erec_tp / max(tool_calls, 1)
 
+        # erec@10 — exposure recall on top-10 most-central rdeps
+        top10 = self.top10_expected.get(task_id)
+        if top10:
+            top10_tp = sum(1 for r in top10 if self._rdep_found(r, exposure_corpus))
+            erec_top10 = top10_tp / len(top10)
+            erec_top10_k = len(top10)
+        else:
+            erec_top10 = erec
+            erec_top10_k = n_exp
+
         # ── Skill coverage (codemap arm only) ──
+        # Only scored when skill returned valid scan-query JSON with "imported_by" key.
+        # Prose error text (skill failed, permission denied) → None (unscored), not sc=0%.
         skill_coverage: Optional[float] = None
         skill_returned: Optional[int] = None
         if skill_result_text:
             try:
                 data = json.loads(skill_result_text)
-                returned = set(data.get("imported_by", []))
-            except (json.JSONDecodeError, AttributeError):
-                returned = set(self._MODULE_RE.findall(skill_result_text))
-            skill_returned = len(returned)
-            skill_coverage = len(returned & exp) / n_exp
+                if "imported_by" in data:
+                    returned = set(data["imported_by"])
+                    skill_returned = len(returned)
+                    skill_coverage = len(returned & exp) / n_exp
+            except (json.JSONDecodeError, AttributeError, TypeError):
+                pass  # prose error or unexpected format — leave skill_coverage=None
 
         # ── Legacy: leaf-name matching on output_text ──
         expected_leaves = {m.split(".")[-1] for m in exp}
@@ -592,6 +624,8 @@ class GroundTruth:
             rrec_fn=n_exp - rrec_tp,
             delta=delta,
             deff=deff,
+            erec_top10=erec_top10,
+            erec_top10_k=erec_top10_k,
             # Skill coverage
             skill_coverage=skill_coverage,
             skill_returned=skill_returned,
@@ -644,7 +678,14 @@ class ModelRunner:
     _ARM_DISALLOWED: dict[str, list[str]] = {
         "codemap": ["--disallowed-tools", "mcp__semble__search,mcp__semble__find_related"],
         "semble": ["--disallowed-tools", "Skill"],
-        "plain": [],
+        "plain": ["--disallowed-tools", "Skill,mcp__semble__search,mcp__semble__find_related"],
+        "combined": [],
+    }
+
+    # Tools pre-approved per arm via --allowedTools (semble/combined need MCP pre-approved in -p mode)
+    _ARM_ALLOWED: dict[str, list[str]] = {
+        "semble": ["--allowedTools", "mcp__semble__search,mcp__semble__find_related"],
+        "combined": ["--allowedTools", "mcp__semble__search,mcp__semble__find_related"],
     }
 
     # Arm system prompts -------------------------------------------------------
@@ -739,6 +780,35 @@ Use mcp__semble__search for ALL structural questions:
 
 Grep/Glob/Bash are permitted only for reading source code (finding a literal string)."""
 
+    _COMBINED_SUPPLEMENT = """
+
+## Two structural tools available — choose the best one per question
+
+You have BOTH tools available. Select whichever is best for each question:
+
+### /codemap:query  (Skill tool, name: codemap:query)
+Fast, deterministic import-graph index. Best for:
+  - Exact reverse-dependency lookups: /codemap:query rdeps <module>
+  - Forward dependency lookups: /codemap:query deps <module>
+  - Ranked blast radius: /codemap:query central --top 10
+  - Import path tracing: /codemap:query path <from> <to>
+
+### mcp__semble__search
+Hybrid semantic + lexical search across code. Best for:
+  - Fuzzy or conceptual questions where the exact module name is unknown
+  - Finding usage patterns across the codebase
+  - Cross-cutting concerns that cut across module boundaries
+
+  Parameters: query (str), repo="{repo_path}" (required), top_k=20 (use for thorough coverage)
+
+**Hard rules — no exceptions:**
+1. NEVER use Grep, Glob, or Bash to investigate import relationships, including
+   running grep/rg/find via Bash shell commands.
+2. NEVER spawn sub-agents for import-graph questions.
+3. Always set repo="{repo_path}" in every mcp__semble__search call.
+
+Grep/Glob/Bash are permitted only for reading source code (finding a literal string)."""
+
     def _system_prompt(self, task_type: str, arm: str) -> str:
         """Build the system prompt for one arm × task-type combination."""
         base = self._PLAIN_SKILLS.get(task_type, self._PLAIN_SKILLS["fix"])
@@ -746,6 +816,8 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
             supplement = self._CODEMAP_SUPPLEMENT
         elif arm == "semble":
             supplement = self._SEMBLE_SUPPLEMENT.format(repo_path=self.repo_path)
+        elif arm == "combined":
+            supplement = self._COMBINED_SUPPLEMENT.format(repo_path=self.repo_path)
         else:
             supplement = self._PLAIN_SUPPLEMENT
         return base + supplement
@@ -767,7 +839,17 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
         system_prompt = self._system_prompt(task.type, arm)
         result = BenchmarkRun(arm=arm, task_id=task.id, task_type=task.type, model=self.model_short, success=False)
         disallow_flags = self._ARM_DISALLOWED.get(arm, [])
-        cmd = [*self._CMD, "--model", self.model_id, *disallow_flags, "--system-prompt", system_prompt, task.prompt]
+        allow_flags = self._ARM_ALLOWED.get(arm, [])
+        cmd = [
+            *self._CMD,
+            "--model",
+            self.model_id,
+            *disallow_flags,
+            *allow_flags,
+            "--system-prompt",
+            system_prompt,
+            task.prompt,
+        ]
         self._stream_events(cmd, result)
         return result
 
@@ -905,6 +987,14 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
                     pending_rdeps_ids.discard(tool_id)
                 if is_semble:
                     pending_semble_ids.discard(tool_id)
+                # Detect blocked/permission-denied results and track separately
+                _content_str = (
+                    content_raw
+                    if isinstance(content_raw, str)
+                    else " ".join(c.get("text", "") if isinstance(c, dict) else str(c) for c in content_raw)
+                )
+                if "<tool_use_error>" in _content_str and (is_semble or is_codemap):
+                    result.tools.blocked += 1
                 self._on_tool_result(content_raw, result, is_codemap=is_codemap, is_rdeps=is_rdeps, is_semble=is_semble)
             if has_tool_result:
                 result.last_tool_text_offset = len(result.output_text)
@@ -1031,7 +1121,7 @@ class Report:
     """
 
     _BASELINE = "plain"
-    _INJECTED_ARMS = ("codemap", "semble")
+    _INJECTED_ARMS = ("codemap", "semble", "combined")
     _NO_PAIRS_MD = "_(no completed plain + injected arm pairs)_"
 
     # Limitations appended verbatim to every report
@@ -1187,14 +1277,20 @@ class Report:
 # ---------------------------------------------------------------------------
 
 
-# ANSI colors for run-line output — arm colors make plain/codemap/semble trios easy to scan
+# ANSI colors for run-line output — arm colors make plain/codemap/semble/combined quads easy to scan
 _COLOR_PLAIN = "\033[33m"  # yellow
 _COLOR_CODEMAP = "\033[36m"  # cyan
 _COLOR_SEMBLE = "\033[34m"  # blue
+_COLOR_COMBINED = "\033[32m"  # green
 _COLOR_FAIL = "\033[31m"  # red — overrides arm color on failure
 _COLOR_RESET = "\033[0m"
 
-_ARM_COLOR = {"plain": _COLOR_PLAIN, "codemap": _COLOR_CODEMAP, "semble": _COLOR_SEMBLE}
+_ARM_COLOR = {
+    "plain": _COLOR_PLAIN,
+    "codemap": _COLOR_CODEMAP,
+    "semble": _COLOR_SEMBLE,
+    "combined": _COLOR_COMBINED,
+}
 
 
 def _run_line(run_n: int, total_runs: int, task: Task, model_short: str, arm: str, result: BenchmarkRun) -> str:
@@ -1205,7 +1301,8 @@ def _run_line(run_n: int, total_runs: int, task: Task, model_short: str, arm: st
     if q.scored:
         erec_part = f"erec={q.erec:4.0%} rrec={q.rrec:4.0%}"
         sc_part = f"  sc={q.skill_coverage:4.0%}" if q.skill_coverage is not None else ""
-        quality_suffix = f"\t| {erec_part}{sc_part}"
+        top10_part = f"  e@10={q.erec_top10:4.0%}" if q.erec_top10_k >= 5 else ""
+        quality_suffix = f"\t| {erec_part}{sc_part}{top10_part}"
     else:
         quality_suffix = "\t| quality=n/a"
     return (
@@ -1213,7 +1310,7 @@ def _run_line(run_n: int, total_runs: int, task: Task, model_short: str, arm: st
         f"\t| elapsed={result.elapsed_s:7.1f}s"
         f" | tokens={result.input_tokens / 1000:7.1f}k"
         f" | calls={result.tools.total:3}"
-        f" (grep={tc.grep:3}; glob={tc.glob:2}; bash={tc.bash:3}; skill={tc.skill:2}; semble={tc.semble:2})"
+        f" (grep={tc.grep:3}; glob={tc.glob:2}; bash={tc.bash:3}; skill={tc.skill:2}; semble={tc.semble:2}; blk={tc.blocked:2})"
         f"{quality_suffix}"
         f"{error_suffix}"
     )
@@ -1284,10 +1381,24 @@ class Benchmark:
                     if arm == "codemap" and result.tools.skill == 0 and result.success:
                         result.success = False
                         result.error = "codemap skill never called"
-                    # Semble arm that never called any semble MCP tool is a failure.
-                    if arm == "semble" and result.tools.semble == 0 and result.success:
-                        result.success = False
-                        result.error = "semble tool never called"
+                    # Semble arm: failure if never called semble, or all calls were permission-blocked.
+                    if arm == "semble" and result.success:
+                        effective_semble = result.tools.semble - result.tools.blocked
+                        if result.tools.semble == 0:
+                            result.success = False
+                            result.error = "semble tool never called"
+                        elif effective_semble <= 0:
+                            result.success = False
+                            result.error = "semble tool called but all invocations were blocked (permission denied)"
+                    # Combined arm: failure if no structural tool was ever called or all semble were blocked.
+                    if arm == "combined" and result.success:
+                        effective_semble = result.tools.semble - result.tools.blocked
+                        if result.tools.skill == 0 and result.tools.semble == 0:
+                            result.success = False
+                            result.error = "combined arm: neither codemap skill nor semble tool called"
+                        elif result.tools.skill == 0 and effective_semble <= 0:
+                            result.success = False
+                            result.error = "combined arm: all semble calls were blocked (permission denied)"
                     self.results.append(result)
                     self._write_tool_log(result)
                     color = _COLOR_FAIL if not result.success else _ARM_COLOR.get(arm, "")
@@ -1344,8 +1455,8 @@ def main() -> None:
     )
     parser.add_argument(
         "--arm",
-        choices=["plain", "codemap", "semble"],
-        help="Run only one arm (default: all three)",
+        choices=["plain", "codemap", "semble", "combined"],
+        help="Run only one arm (default: all four)",
     )
     parser.add_argument("--all", action="store_true", help="Run all tasks in both arms")
     parser.add_argument("--tasks", nargs="+", metavar="ID", help="Run specific task IDs only")
@@ -1374,9 +1485,9 @@ def main() -> None:
     repo_path = args.repo_path.resolve()
     index_path = find_index(repo_path, args.index)
 
-    arms = [args.arm] if args.arm else ["plain", "codemap", "semble"]
+    arms = [args.arm] if args.arm else ["plain", "codemap", "semble", "combined"]
 
-    if "semble" in arms:
+    if "semble" in arms or "combined" in arms:
         check_semble_mcp()
     models_to_run: list[tuple[str, str]] = [(args.model, MODELS[args.model])] if args.model else list(MODELS.items())
     total_runs = len(all_tasks) * len(arms) * len(models_to_run)
@@ -1409,6 +1520,10 @@ def main() -> None:
         _sample_runner = ModelRunner("haiku", MODELS["haiku"], repo_path)
         _sample = _sample_runner._system_prompt("fix", "codemap")
         print(f"[→ codemap arm:  skill + /codemap:query available ({len(_sample)} chars for fix type)]")
+    if "combined" in arms:
+        _sample_runner = ModelRunner("haiku", MODELS["haiku"], repo_path)
+        _sample = _sample_runner._system_prompt("fix", "combined")
+        print(f"[→ combined arm: both codemap + semble available ({len(_sample)} chars for fix type)]")
     output_path = _unique_path(output_path)
     output_path.parent.mkdir(parents=True, exist_ok=True)
 
