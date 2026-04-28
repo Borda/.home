@@ -5,14 +5,14 @@ Empirical validation for the `codemap` plugin — two independent benchmarks, sh
 <details>
 <summary><strong>Files</strong></summary>
 
-| File | Purpose |
+| File                        | Purpose                                                                                                                 |
 | --------------------------- | ----------------------------------------------------------------------------------------------------------------------- |
-| `run-codemap-agentic.py` | 3-arm agentic benchmark — measures how much structural context (codemap / semble) reduces Claude's exploration overhead |
-| `run-codemap-scan-query.py` | Query-level benchmark — measures scan-query correctness, coverage, and latency against a real repo |
-| `tasks-agentic.json` | 8 import-graph navigation tasks (T01–T08) used by the agentic benchmark |
-| `tasks-code.json` | 15 code-level tasks used by the scan-query benchmark |
-| `requirements.txt` | Python dependencies for both benchmarks |
-| `results/` | JSON snapshots and markdown reports from past runs |
+| `run-codemap-agentic.py`    | 3-arm agentic benchmark — measures how much structural context (codemap / semble) reduces Claude's exploration overhead |
+| `run-codemap-scan-query.py` | Query-level benchmark — measures scan-query correctness, coverage, and latency against a real repo                      |
+| `tasks-agentic.json`        | 8 import-graph navigation tasks (T01–T08) used by the agentic benchmark                                                 |
+| `tasks-code.json`           | 15 code-level tasks used by the scan-query benchmark                                                                    |
+| `requirements.txt`          | Python dependencies for both benchmarks                                                                                 |
+| `results/`                  | JSON snapshots and markdown reports from past runs                                                                      |
 
 </details>
 
@@ -20,27 +20,27 @@ Empirical validation for the `codemap` plugin — two independent benchmarks, sh
 
 Runs the same 8 import-graph tasks under three arms:
 
-| Arm | What the agent has |
+| Arm       | What the agent has                                                  |
 | --------- | ------------------------------------------------------------------- |
-| `plain` | Grep / Glob / Bash only |
-| `codemap` | + `/codemap:query` skill (structural AST index) |
-| `semble` | + `mcp__semble__search` MCP tool (hybrid semantic + lexical search) |
+| `plain`   | Grep / Glob / Bash only                                             |
+| `codemap` | + `/codemap:query` skill (structural AST index)                     |
+| `semble`  | + `mcp__semble__search` MCP tool (hybrid semantic + lexical search) |
 
 **Metrics**: tool call count, elapsed time, input tokens, exposure recall (erec), report recall (rrec), discovery efficiency (deff).
 
 <details>
 <summary><strong>Tasks</strong></summary>
 
-| ID | Type | Primary module | Scenario |
+| ID  | Type     | Primary module          | Scenario                                                                                           |
 | --- | -------- | ----------------------- | -------------------------------------------------------------------------------------------------- |
-| T01 | fix | `checkpoint_connector` | Final epoch skipped when `max_epochs` divisible by check interval — map blast radius before fixing |
-| T02 | fix | `slurm` (environments) | SLURM jobs requeued twice on preemption — identify all callers before tightening the guard |
-| T03 | feature | `callback` | Adding `on_before_predict_epoch` hook — find all callback implementers that must be updated |
-| T04 | feature | `fsdp` (strategies) | Adding new distributed strategy modelled on FSDP — assess coupling before hooking in |
-| T05 | refactor | `rank_zero` (utilities) | Moving `rank_zero` to standalone package — scope all importers before extraction |
-| T06 | refactor | `cloud_io` (utilities) | Async I/O refactor changing call interface — map every direct caller before changing signatures |
-| T07 | review | `fsdp` (strategies) | API surface change review — quantify risk by mapping second-order importers |
-| T08 | review | `model_checkpoint` | Changing save-decision logic — map full impact chain before merging |
+| T01 | fix      | `checkpoint_connector`  | Final epoch skipped when `max_epochs` divisible by check interval — map blast radius before fixing |
+| T02 | fix      | `slurm` (environments)  | SLURM jobs requeued twice on preemption — identify all callers before tightening the guard         |
+| T03 | feature  | `callback`              | Adding `on_before_predict_epoch` hook — find all callback implementers that must be updated        |
+| T04 | feature  | `fsdp` (strategies)     | Adding new distributed strategy modelled on FSDP — assess coupling before hooking in               |
+| T05 | refactor | `rank_zero` (utilities) | Moving `rank_zero` to standalone package — scope all importers before extraction                   |
+| T06 | refactor | `cloud_io` (utilities)  | Async I/O refactor changing call interface — map every direct caller before changing signatures    |
+| T07 | review   | `fsdp` (strategies)     | API surface change review — quantify risk by mapping second-order importers                        |
+| T08 | review   | `model_checkpoint`      | Changing save-decision logic — map full impact chain before merging                                |
 
 </details>
 
@@ -83,16 +83,16 @@ claude mcp add semble -s user -- uvx --from "semble[mcp]" semble
 <details>
 <summary><strong>CLI flags</strong></summary>
 
-| Flag | Default | Description |
+| Flag                           | Default       | Description                                                     |
 | ------------------------------ | ------------- | --------------------------------------------------------------- |
-| `--repo-path PATH` | required | Absolute path to the repo under test |
-| `--index PATH` | auto-detected | Override index path (default: `<repo>/.cache/scan/<name>.json`) |
-| `--arm plain\|codemap\|semble` | all three | Run a single arm only |
-| `--model haiku\|sonnet\|opus` | all three | Run a single model tier only |
-| `--tasks T01 T02 …` | all 8 | Run specific task IDs |
-| `--all` | off | Run all tasks (required unless `--tasks` given) |
-| `--report` | off | Write markdown report to `results/` after run |
-| `--dry-run` | off | Print system prompts, skip actual claude invocations |
+| `--repo-path PATH`             | required      | Absolute path to the repo under test                            |
+| `--index PATH`                 | auto-detected | Override index path (default: `<repo>/.cache/scan/<name>.json`) |
+| `--arm plain\|codemap\|semble` | all three     | Run a single arm only                                           |
+| `--model haiku\|sonnet\|opus`  | all three     | Run a single model tier only                                    |
+| `--tasks T01 T02 …`            | all 8         | Run specific task IDs                                           |
+| `--all`                        | off           | Run all tasks (required unless `--tasks` given)                 |
+| `--report`                     | off           | Write markdown report to `results/` after run                   |
+| `--dry-run`                    | off           | Print system prompts, skip actual claude invocations            |
 
 </details>
 
@@ -110,12 +110,12 @@ JSON snapshot written to `results/agentic-YYYY-MM-DD[-N].json` after every run (
 
 ### Failure conditions
 
-| Condition | Meaning |
+| Condition         | Meaning                                                                      |
 | ----------------- | ---------------------------------------------------------------------------- |
-| `timeout` | claude subprocess exceeded 300 s |
-| `non-zero exit` | claude returned non-success subtype |
-| `codemap no-call` | codemap arm never called the Skill tool |
-| `semble no-call` | semble arm never called `mcp__semble__search` or `mcp__semble__find_related` |
+| `timeout`         | claude subprocess exceeded 300 s                                             |
+| `non-zero exit`   | claude returned non-success subtype                                          |
+| `codemap no-call` | codemap arm never called the Skill tool                                      |
+| `semble no-call`  | semble arm never called `mcp__semble__search` or `mcp__semble__find_related` |
 
 ______________________________________________________________________
 
@@ -125,12 +125,12 @@ Validates `scan-query` directly — no LLM involved. Requires a pre-built index.
 
 Suites:
 
-| Suite | What it measures |
+| Suite         | What it measures                                                           |
 | ------------- | -------------------------------------------------------------------------- |
-| **Coverage** | Fraction of known importers found by codemap vs cold grep |
-| **Accuracy** | Precision / recall / F1 on rdeps queries against grep ground truth |
-| **Latency** | Wall-clock time for `central`, `rdeps`, index build, vs cold grep baseline |
-| **Injection** | Verifies that develop/oss skills inject `has_rdeps` + `has_deps` fields |
+| **Coverage**  | Fraction of known importers found by codemap vs cold grep                  |
+| **Accuracy**  | Precision / recall / F1 on rdeps queries against grep ground truth         |
+| **Latency**   | Wall-clock time for `central`, `rdeps`, index build, vs cold grep baseline |
+| **Injection** | Verifies that develop/oss skills inject `has_rdeps` + `has_deps` fields    |
 
 ### Quick start
 
@@ -149,10 +149,10 @@ ______________________________________________________________________
 
 `results/` holds all past run outputs:
 
-| Pattern | Source |
+| Pattern                       | Source                            |
 | ----------------------------- | --------------------------------- |
-| `agentic-YYYY-MM-DD[-N].json` | Agentic benchmark JSON snapshot |
-| `agentic-YYYY-MM-DD[-N].md` | Agentic benchmark markdown report |
-| `code-YYYY-MM-DD[-N].md` | Query benchmark markdown report |
+| `agentic-YYYY-MM-DD[-N].json` | Agentic benchmark JSON snapshot   |
+| `agentic-YYYY-MM-DD[-N].md`   | Agentic benchmark markdown report |
+| `code-YYYY-MM-DD[-N].md`      | Query benchmark markdown report   |
 
 Latest full result: `results/agentic-2026-04-17-5.md` (pytorch-lightning, 85% pass rate, 11/13 scenarios).

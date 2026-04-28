@@ -131,7 +131,7 @@ reducing tool call count, elapsed time, and context consumption.
   Colour coding:
     yellow  — plain arm
     cyan    — codemap arm
-    green   — semble arm
+    blue    — semble arm
     red     — any arm where success=False (overrides arm colour)
 
 ## JSON output schema (benchmarks/results/code-YYYY-MM-DD.json)
@@ -1190,7 +1190,7 @@ class Report:
 # ANSI colors for run-line output — arm colors make plain/codemap/semble trios easy to scan
 _COLOR_PLAIN = "\033[33m"  # yellow
 _COLOR_CODEMAP = "\033[36m"  # cyan
-_COLOR_SEMBLE = "\033[32m"  # green
+_COLOR_SEMBLE = "\033[34m"  # blue
 _COLOR_FAIL = "\033[31m"  # red — overrides arm color on failure
 _COLOR_RESET = "\033[0m"
 
