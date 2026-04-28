@@ -1,18 +1,30 @@
-/**
- * commit-guard.js — PreToolUse hook
- *
- * Blocks `git commit` unless a sentinel file exists at:
- *   /tmp/claude-commit-auth-<repo-slug>-<branch-slug>
- *
- * Skills that legitimately commit (oss:resolve, research:run) create this file
- * at the start of their commit phase and delete it afterwards via bash:
- *   touch /tmp/claude-commit-auth-<repo-slug>-<branch-slug>
- *   rm -f /tmp/claude-commit-auth-<repo-slug>-<branch-slug>
- *
- * TTL: 15 min — auto-expires if a skill crashes without cleanup.
- *
- * Exit 0 = allow  |  Exit 2 = block (Claude Code shows stderr as feedback)
- */
+// commit-guard.js — PreToolUse hook
+//
+// PURPOSE
+//   Claude must never commit autonomously. The commit discipline rule
+//   ("never commit without explicit user request in same message") lives in
+//   a prompt instruction — not enforced at runtime. This hook enforces it
+//   at the tool level: every `git commit` Bash call is blocked unless a
+//   skill explicitly opted in via a sentinel file for that repo+branch.
+//
+//   Skills that legitimately commit as part of their workflow (oss:resolve,
+//   research:run) create the sentinel at the start of their commit phase and
+//   delete it immediately after. Ad-hoc Claude behavior — pattern-matching
+//   from conversation context, "finishing a task" — never creates the sentinel,
+//   so those commits are blocked and the user sees clear feedback.
+//
+//   Sentinel path: /tmp/claude-commit-auth-<repo-slug>-<branch-slug>
+//   TTL: 15 min — auto-expires if a skill crashes before cleanup.
+//
+// HOW IT WORKS
+//   1. Only fires on Bash tool calls containing `git commit`.
+//   2. Derives repo slug (basename of git root) and branch slug.
+//   3. Checks sentinel path exists and is younger than TTL.
+//   4. Sentinel valid → exit 0 (allow). Missing or expired → exit 2 (block).
+//
+// EXIT CODES
+//   0  Sentinel present and fresh — commit allowed.
+//   2  No sentinel or expired — commit blocked; stderr shown to Claude.
 
 "use strict";
 

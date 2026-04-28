@@ -2,19 +2,25 @@
 // lint-on-save.js — PostToolUse hook
 //
 // PURPOSE
-//   Automatically lint every file Claude writes or edits, using the project's
-//   own pre-commit configuration.  This closes the gap between "Claude edits a
-//   file" and "a human runs pre-commit" — catching style violations, spell errors,
-//   JSON/YAML syntax issues, and auto-fixable formatting problems the moment
-//   they're introduced rather than at commit time.
+//   Closes the gap between Claude editing a file and pre-commit running at
+//   commit time. Auto-fixable violations are applied the moment they're
+//   introduced. Pairs with md-compress.js: after the first Edit on any .md
+//   file, this hook permanently normalizes it via pre-commit (mdformat,
+//   trailing-whitespace). From that point, md-compress.js finds the file
+//   already normalized and skips the write — both hooks converge to steady
+//   state after first edit.
+//
+// WHY EXPLICIT --config
+//   Hook fires globally across all projects. Passing --config with the
+//   project-root .pre-commit-config.yaml ensures pre-commit uses the correct
+//   project config, not one found by walking parent directories.
 //
 // HOW IT WORKS
 //   1. Fires on every PostToolUse event for the Write and Edit tools.
 //   2. Checks whether .pre-commit-config.yaml exists in the project root.
-//      If absent, exits 0 silently — the hook is a no-op in repos without
-//      pre-commit, so it is safe to keep active globally.
-//   3. Runs `pre-commit run --files <file_path>` targeting only the changed
-//      file, which is fast (no full-repo scan).
+//      If absent, exits 0 silently — safe no-op in repos without pre-commit.
+//   3. Runs `pre-commit run --config <configPath> --files <file_path>`
+//      targeting only the changed file (no full-repo scan).
 //   4. On success (exit 0) → silent, no output.
 //      On failure (exit 1 or 2) → writes hook output to stderr and exits 2,
 //      which causes Claude Code to surface the message as feedback so Claude
@@ -38,9 +44,6 @@
 //   should be configured with `--show-diff-on-failure` or `pass_filenames: false`
 //   in .pre-commit-config.yaml to avoid slow single-file runs.
 //
-// ADDING TO SETTINGS
-//   Register under PostToolUse in .claude/settings.json:
-//     { "command": "node .claude/hooks/lint-on-save.js", "type": "command" }
 
 const fs = require("fs");
 const path = require("path");
@@ -92,7 +95,7 @@ process.stdin.on("end", () => {
     } catch (_) {}
 
     // Run pre-commit on the specific file
-    const result = spawnSync("pre-commit", ["run", "--files", filePath], {
+    const result = spawnSync("pre-commit", ["run", "--config", configPath, "--files", filePath], {
       cwd: root,
       encoding: "utf8",
       timeout: 60_000, // 60s max — some hooks (mypy, eslint) can be slow

@@ -2,31 +2,38 @@
 // md-compress.js — PreToolUse hook
 //
 // PURPOSE
-//   Intercepts Read tool calls on .md/.markdown files and compresses
-//   token-wasteful whitespace before Claude sees the content. Three
-//   compressions are applied (all outside fenced code blocks):
-//     1. Table column padding: collapses 2+ spaces on pipe-table lines to 1.
-//     2. Multiple consecutive blank lines: collapses runs of 2+ blank lines
-//        to a single blank line (identical rendering in all markdown parsers).
-//     3. Trailing whitespace: strips trailing spaces on every non-fence line
-//        (double-space <br> markers are not used in .claude/ config files).
-//   Compressed content is written back to the actual source file in-place.
-//   This preserves Claude Code's Edit tool read-tracking (which keys on
-//   file_path) — no temp-file redirect, no path mismatch.
-//   Source files get whitespace-normalized during session (lossless).
+//   MD files (config, reports, plans, handover, skills) are dense with
+//   pipe-table column padding that wastes tokens without adding meaning.
+//   This hook is one leg of a two-hook system keeping file state consistent
+//   between what Claude reads and what it edits:
 //
-// HOW IT WORKS
-//   1. Parse stdin JSON for tool_name and tool_input.
-//   2. Skip non-Read tools or files that are not .md/.markdown (exit 0).
-//   3. Read the source file synchronously; skip on any error (exit 0).
-//   4. Walk lines, tracking fenced code block state (``` / ~~~).
-//   5. Outside a fence: strip trailing whitespace, compress table padding,
-//      and track consecutive blank lines — flush only one blank per run.
-//   6. Compare compressed output to original content.
-//   7. If identical (already compressed or no wasteful whitespace), exit 0
-//      as passthrough — no file write, no updatedInput needed.
-//   8. Write compressed content to actual source path; keep file_path
-//      unchanged in updatedInput so Edit tool read-tracking is satisfied.
+//   Read path (this hook): normalizes source file in-place before Claude
+//     reads it. Claude sees compressed content; disk matches — no mismatch.
+//
+//   Edit path (this hook): normalizes source file in-place before Edit runs.
+//     Ensures old_string from a prior compressed read still finds its match
+//     even if the file was modified with padding between Read and Edit.
+//
+//   Post-edit (lint-on-save.js): runs pre-commit after every Write/Edit,
+//     applying mdformat + trailing-whitespace. File stays normalized.
+//
+// COMPRESSIONS (outside fenced code blocks only)
+//     1. Table column padding: collapses 2+ spaces on pipe-table lines to 1.
+//     2. Consecutive blank lines: collapses runs of 2+ blanks to 1.
+//     3. Trailing whitespace: strips trailing spaces on every non-fence line.
+//
+// HOW IT WORKS — Read path
+//   1. Parse stdin JSON; skip non-Read/Edit tools or non-.md files (exit 0).
+//   2. Read source file; skip on error (exit 0).
+//   3. Run compressMarkdown; if unchanged, exit 0 (no write needed).
+//   4. Write compressed content back to source path in-place.
+//   5. Emit updatedInput with original file_path unchanged.
+//
+// HOW IT WORKS — Edit path
+//   1. Detect Edit tool on a .md/.markdown file.
+//   2. Read source file; if unreadable or empty, exit 0.
+//   3. Run compressMarkdown; if unchanged, exit 0.
+//   4. Write normalized content back to source file in place; exit 0.
 //
 // EXIT CODES
 //   0  passthrough (non-.md file, read error, no-op, or successful rewrite)
@@ -111,8 +118,30 @@ process.stdin.on("end", () => {
   try {
     const data = JSON.parse(raw);
 
-    // Only handle Read tool calls
-    if (data.tool_name !== "Read") {
+    // Only handle Read and Edit tool calls
+    if (data.tool_name !== "Read" && data.tool_name !== "Edit") {
+      process.exit(0);
+    }
+
+    // Edit path: normalize file in-place before Edit runs so old_string matches
+    if (data.tool_name === "Edit") {
+      const editInput = data.tool_input || {};
+      const editPath = editInput.file_path || "";
+      if (!/\.(?:md|markdown)$/i.test(editPath)) process.exit(0);
+      const editAbs = path.resolve(editPath);
+      let editContent;
+      try {
+        editContent = fs.readFileSync(editAbs, "utf8");
+      } catch (_) {
+        process.exit(0);
+      }
+      if (!editContent) process.exit(0);
+      const editNorm = compressMarkdown(editContent);
+      if (editNorm !== editContent) {
+        try {
+          fs.writeFileSync(editAbs, editNorm, "utf8");
+        } catch (_) {}
+      }
       process.exit(0);
     }
 
