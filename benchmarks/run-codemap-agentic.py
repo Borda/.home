@@ -49,8 +49,8 @@ reducing tool call count, elapsed time, and context consumption.
   (its "reverse dependencies", or rdeps). This is a proxy for blast-radius awareness — the core skill under test.
 
   Ground truth (deterministic, index-derived):
-    expected = { m.name for m in index.modules
-                 if primary_module in m.direct_imports }
+    expected = { m.name for m in index.modules if primary_module in m.direct_imports and not m.name.startswith("tests.") }
+    Test modules excluded — blast-radius analysis targets production callers only.
     Reproducible across runs as long as the index does not change.
 
   Matching strategy — multi-form surface matching (v2):
@@ -235,6 +235,9 @@ MODELS: dict[str, str] = {
     "opus": "claude-opus-4-6",
 }
 
+# Per-model wall-clock timeout (seconds). Opus needs more time for complex reasoning.
+_MODEL_TIMEOUT: dict[str, int] = {"haiku": 210, "sonnet": 420, "opus": 600}
+
 
 # ---------------------------------------------------------------------------
 # Data classes
@@ -297,6 +300,7 @@ class ToolCounts:
     skill: int = 0  # /codemap:query and other skill invocations via the Skill tool
     semble: int = 0  # mcp__semble__search and mcp__semble__find_related calls
     blocked: int = 0  # tool_use events that returned <tool_use_error> (permission-denied or disallowed)
+    bash_for_imports: int = 0  # bash calls matching import-discovery patterns (grep/rg for import)
 
     @property
     def total(self) -> int:
@@ -332,13 +336,14 @@ class BenchmarkRun:
     elapsed_s: float = 0.0
     tool_elapsed_s: float = 0.0  # time inside tool execution only
     error: str = ""
+    error_type: str = ""  # subtype from result event: error_max_turns | error_non_zero_exit | error_timeout | ""
     # Per-call log for post-run investigation: ["Bash: grep -r 'import'", "Skill: /codemap:query rdeps ..."]
     tool_log: list[str] = field(default_factory=list)
     # Full agent output text — captured for quality scoring
     output_text: str = ""
     quality: QualityScore = field(default_factory=QualityScore)
     # Internal fields excluded from JSON serialisation (see _save_snapshot)
-    skill_result_text: str = field(default="", repr=False)  # first codemap:query rdeps result (for sc)
+    skill_result_text: str = field(default="", repr=False)  # all codemap:query rdeps results joined (for sc)
     codemap_results: list[str] = field(default_factory=list, repr=False)  # ALL codemap skill results (for erec)
     semble_results: list[str] = field(default_factory=list, repr=False)  # ALL semble MCP tool results (for erec)
     last_tool_text_offset: int = field(default=0, repr=False)  # output_text offset after last tool event
@@ -485,7 +490,7 @@ class GroundTruth:
             rdeps = {
                 m["name"]
                 for m in index.get("modules", [])
-                if pm in m.get("direct_imports", []) and m.get("status") == "ok"
+                if pm in m.get("direct_imports", []) and m.get("status") == "ok" and not m["name"].startswith("tests.")
             }
             self.expected[task.id] = rdeps
         # dep_count = forward import count per module (proxy for centrality; always populated)
@@ -671,21 +676,22 @@ class ModelRunner:
     """
 
     # Base claude CLI invocation
-    _CMD = ["claude", "-p", "--verbose", "--output-format", "stream-json", "--max-turns", "25"]
+    _CMD = ["claude", "-p", "--verbose", "--output-format", "stream-json", "--max-turns", "40"]
     # Tools counted as exploration overhead
     EXPLORATION_TOOLS = {"Grep", "Glob", "Bash", "Skill", "mcp__semble__search", "mcp__semble__find_related"}
     # Tools blocked per arm via --disallowed-tools to enforce mutual exclusion
     _ARM_DISALLOWED: dict[str, list[str]] = {
         "codemap": ["--disallowed-tools", "mcp__semble__search,mcp__semble__find_related"],
-        "semble": ["--disallowed-tools", "Skill"],
+        "semble": ["--disallowed-tools", "Skill,Bash"],
         "plain": ["--disallowed-tools", "Skill,mcp__semble__search,mcp__semble__find_related"],
         "combined": [],
     }
 
     # Tools pre-approved per arm via --allowedTools (semble/combined need MCP pre-approved in -p mode)
     _ARM_ALLOWED: dict[str, list[str]] = {
+        "codemap": ["--allowedTools", "Bash(scan-query:*)"],
         "semble": ["--allowedTools", "mcp__semble__search,mcp__semble__find_related"],
-        "combined": ["--allowedTools", "mcp__semble__search,mcp__semble__find_related"],
+        "combined": ["--allowedTools", "Bash(scan-query:*),mcp__semble__search,mcp__semble__find_related"],
     }
 
     # Arm system prompts -------------------------------------------------------
@@ -744,14 +750,18 @@ Commands:
   /codemap:query coupled --top 10  — most-coupled modules
   /codemap:query path <from> <to>  — shortest import path between two modules
 
-The result includes an "exhaustive": true field — the index is complete, no
-grep verification pass is needed or useful.
+The result includes an "exhaustive": true field. When present, the index is
+complete and authoritative — the list is final. Stop. Do NOT run any grep,
+bash, or Glob verification pass after seeing exhaustive: true.
 
 **Hard rules — no exceptions:**
 1. NEVER use Grep, Glob, or Bash to investigate import relationships, including
    running grep/rg/find via Bash shell commands.
 2. NEVER spawn sub-agents (no Agent tool calls) for import-graph questions.
    Sub-agents do not have this skill — call /codemap:query directly yourself.
+3. If /codemap:query returns <tool_use_error>, that is a test-harness permission
+   gap — NOT a broken index. Do NOT call codemap:scan or codemap:integration check.
+   Fall back to Grep for that one question only. The index itself is intact.
 
 Grep/Glob/Bash are permitted only for reading source code (finding a literal string)."""
 
@@ -777,37 +787,104 @@ Use mcp__semble__search for ALL structural questions:
    running grep/rg/find via Bash shell commands.
 2. NEVER spawn sub-agents for import-graph questions.
 3. Always set repo="{repo_path}" in every mcp__semble__search call.
+4. Maximum 12 semble calls total. After your semble calls are complete, do NOT
+   make any additional Bash or Read calls before writing the report.
 
-Grep/Glob/Bash are permitted only for reading source code (finding a literal string)."""
+Grep and Glob are permitted for reading source code. Bash is NOT available in this arm.
+
+## Required answer format
+
+After your tool calls, your final answer MUST end with this section:
+
+## Reverse Dependencies Found
+
+Count: <N> distinct modules found across all semble results.
+
+- lightning.pytorch.trainer.trainer
+- lightning.pytorch.loops.fit_loop
+- ... (one line per module)
+
+Rules:
+- Write "Count: N distinct modules found across all semble results." first, where N is the
+  exact number of unique dotted paths you collected across ALL semble calls (not just the last)
+- Full dotted paths only — no shortened names, no file paths, no aliases
+- Copy EVERY module path from ALL your tool results, even if already mentioned in prose above
+- Union all results: if call 1 found A,B,C and call 2 found B,D — list A, B, C, D (not just D)
+- If nothing found: write "Count: 0" and "(none found)"
+- This section must be the LAST thing in your answer"""
 
     _COMBINED_SUPPLEMENT = """
 
-## Two structural tools available — choose the best one per question
+## Two structural tools — follow this protocol exactly
 
-You have BOTH tools available. Select whichever is best for each question:
+You have /codemap:query (deterministic index) and mcp__semble__search (semantic search).
+Follow the three steps below in order. Do NOT reorder or skip steps.
 
-### /codemap:query  (Skill tool, name: codemap:query)
-Fast, deterministic import-graph index. Best for:
-  - Exact reverse-dependency lookups: /codemap:query rdeps <module>
-  - Forward dependency lookups: /codemap:query deps <module>
-  - Ranked blast radius: /codemap:query central --top 10
-  - Import path tracing: /codemap:query path <from> <to>
+### STEP 1 — Codemap anchor (always first; max 2 codemap calls)
 
-### mcp__semble__search
-Hybrid semantic + lexical search across code. Best for:
-  - Fuzzy or conceptual questions where the exact module name is unknown
-  - Finding usage patterns across the codebase
-  - Cross-cutting concerns that cut across module boundaries
+Call codemap:query rdeps on the primary module:
+  /codemap:query rdeps <module>
 
-  Parameters: query (str), repo="{repo_path}" (required), top_k=20 (use for thorough coverage)
+Read the result:
+  - If it contains "exhaustive": true → the list is complete and authoritative.
+    Count the number of entries returned (e.g. "rdeps contains 14 entries").
+    Your final list MUST contain exactly that many modules.
+    Go directly to STEP 3. Do NOT call semble. Do NOT validate with grep or bash.
+  - If it does NOT contain "exhaustive": true → record the returned modules as your
+    anchor set and go to STEP 2.
+
+If the result was non-exhaustive, you may make one additional codemap call (deps or central)
+for task context — skip this if codemap was exhaustive (you are going directly to STEP 3).
+Maximum 2 codemap calls in STEP 1.
+
+If /codemap:query returns <tool_use_error>: skip to STEP 2 with an empty anchor set.
+
+### STEP 2 — Semble gap-fill (only if codemap was non-exhaustive)
+
+Call mcp__semble__search to find modules NOT already in your codemap anchor set:
+  query: "<primary_module> import" or the task description rephrased, top_k=20
+  repo: "{repo_path}"  ← required on every call
+
+After each call, count how many NEW modules (not yet in your set) the result added.
+Keep calling semble with varied queries (e.g. "from <module> import", "<module> usage",
+"<module> caller", task description rephrased) — each query may surface different files.
+
+**Convergence rule — stop semble when**: two consecutive calls each add 0 new modules.
+That signals saturation; proceed to STEP 3 immediately.
+
+Do NOT alternate back to codemap. Merge after each call: running set = codemap anchor ∪ all semble finds so far.
+
+### STEP 3 — Write the report (no more tool calls)
+
+Once you reach STEP 3, do NOT call any tool. Write the answer immediately.
 
 **Hard rules — no exceptions:**
-1. NEVER use Grep, Glob, or Bash to investigate import relationships, including
-   running grep/rg/find via Bash shell commands.
+1. NEVER use Grep, Glob, or Bash to investigate import relationships.
 2. NEVER spawn sub-agents for import-graph questions.
 3. Always set repo="{repo_path}" in every mcp__semble__search call.
+4. NEVER alternate between tools after STEP 1 completes (no codemap → semble → codemap loops).
 
-Grep/Glob/Bash are permitted only for reading source code (finding a literal string)."""
+Grep/Glob/Bash are permitted only for reading source code (literal string search).
+
+## Required answer format
+
+Your final answer MUST end with this section:
+
+## Reverse Dependencies Found
+
+Count: <N> distinct modules found.
+
+- lightning.pytorch.trainer.trainer
+- lightning.pytorch.loops.fit_loop
+- ... (one line per module)
+
+Rules:
+- Write "Count: N distinct modules found." where N = exact number of unique dotted paths
+  in your list (must equal the codemap entry count if codemap was exhaustive)
+- Full dotted paths only — no shortened names, no file paths, no aliases
+- Copy EVERY module path from ALL tool results — union of codemap + all semble calls
+- If nothing found: write "Count: 0" and "(none found)"
+- This section must be the LAST thing in your answer"""
 
     def _system_prompt(self, task_type: str, arm: str) -> str:
         """Build the system prompt for one arm × task-type combination."""
@@ -837,7 +914,6 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
     def run(self, task: Task, arm: str) -> BenchmarkRun:
         """Run one task in one arm; parse stream-json for tool + token metrics."""
         system_prompt = self._system_prompt(task.type, arm)
-        result = BenchmarkRun(arm=arm, task_id=task.id, task_type=task.type, model=self.model_short, success=False)
         disallow_flags = self._ARM_DISALLOWED.get(arm, [])
         allow_flags = self._ARM_ALLOWED.get(arm, [])
         cmd = [
@@ -850,7 +926,16 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
             system_prompt,
             task.prompt,
         ]
-        self._stream_events(cmd, result)
+        _MAX_API_RETRIES = 2
+        for attempt in range(_MAX_API_RETRIES + 1):
+            result = BenchmarkRun(arm=arm, task_id=task.id, task_type=task.type, model=self.model_short, success=False)
+            self._stream_events(cmd, result)
+            # 0-token result = API connectivity failure (ConnectionRefused / FailedToOpenSocket);
+            # retry up to 2 times before surfacing as error.
+            if result.input_tokens == 0 and result.output_tokens == 0 and attempt < _MAX_API_RETRIES:
+                result.error = f"api_failure_retry_{attempt + 1}"
+                continue
+            break
         return result
 
     @staticmethod
@@ -930,14 +1015,14 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
         etype = event.get("type", "")
 
         if etype == "assistant":
-            has_tool_use = False
+            event_text_start = len(result.output_text)
+            event_has_tool_use = any(b.get("type") == "tool_use" for b in event.get("message", {}).get("content", []))
             for block in event.get("message", {}).get("content", []):
                 self._on_tool_use(block, result, pending, ts)
                 if block.get("type") == "text":
                     result.output_text += block.get("text", "")
                 # Track codemap skill calls for erec corpus + skill_coverage
                 if block.get("type") == "tool_use" and block.get("name") == "Skill":
-                    has_tool_use = True
                     tool_id = block.get("id", "")
                     skill_str = block.get("input", {}).get("skill", "")
                     args_str = block.get("input", {}).get("args", "")
@@ -946,7 +1031,6 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
                         if "rdeps" in args_str or "rdeps" in skill_str:
                             pending_rdeps_ids.add(tool_id)
                 elif block.get("type") == "tool_use" and block.get("name") == "Bash":
-                    has_tool_use = True
                     tool_id = block.get("id", "")
                     cmd = block.get("input", {}).get("command", "")
                     # In claude -p mode the skill sub-model never spawns; capture scan-query rdeps
@@ -959,21 +1043,16 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
                     "mcp__semble__search",
                     "mcp__semble__find_related",
                 ):
-                    has_tool_use = True
                     tool_id = block.get("id", "")
                     result.tools.semble += 1
                     pending_semble_ids.add(tool_id)
-                elif block.get("type") == "tool_use":
-                    has_tool_use = True
-            if has_tool_use:
-                result.last_tool_text_offset = len(result.output_text)
+            if not event_has_tool_use and len(result.output_text) > event_text_start:
+                result.last_tool_text_offset = event_text_start
         elif etype == "user":
             # Tool results arrive as {"type":"user","message":{"content":[{"type":"tool_result",...}]}}
-            has_tool_result = False
             for block in event.get("message", {}).get("content", []):
                 if block.get("type") != "tool_result":
                     continue
-                has_tool_result = True
                 tool_id = block.get("tool_use_id", "")
                 if tool_id in pending:
                     result.tool_elapsed_s += ts - pending.pop(tool_id)
@@ -995,8 +1074,14 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
                 )
                 if "<tool_use_error>" in _content_str and (is_semble or is_codemap):
                     result.tools.blocked += 1
+                    if not result.error_type:
+                        result.error_type = "skill_blocked"
                 self._on_tool_result(content_raw, result, is_codemap=is_codemap, is_rdeps=is_rdeps, is_semble=is_semble)
-            if has_tool_result:
+            # Advance report boundary: anything the model writes AFTER this tool_result event is the
+            # final answer.  Without this, last_tool_text_offset stays 0 when the model emits no
+            # pure-text event after its last tool call (Scenario-2 bug), making rrec corpus = full
+            # output_text preamble and producing misleading rrec values.
+            if any(b.get("type") == "tool_result" for b in event.get("message", {}).get("content", [])):
                 result.last_tool_text_offset = len(result.output_text)
         elif etype == "result":
             usage = event.get("usage", {})
@@ -1007,7 +1092,10 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
                 + usage.get("cache_read_input_tokens", 0)
             )
             result.output_tokens = usage.get("output_tokens", 0)
-            result.success = event.get("subtype") == "success"
+            subtype = event.get("subtype", "")
+            result.success = subtype == "success"
+            if not result.success:
+                result.error_type = subtype  # e.g. "error_max_turns", "error_non_zero_exit"
 
     def _on_tool_use(
         self,
@@ -1028,6 +1116,11 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
         result.tool_log.append(f"{name}: {_tool_key_arg(name, inp)}")
         if name in self.EXPLORATION_TOOLS and tool_id:
             pending[tool_id] = ts
+        if name == "Bash":
+            cmd = inp.get("command", "")
+            # Patterns typical of manual import graph discovery (not file-reading)
+            if re.search(r"\b(grep|rg)\b.*\bimport\b|\bgrep\b.*\bfrom\b|\bimport\b.*-r\b", cmd):
+                result.tools.bash_for_imports += 1
 
     @staticmethod
     def _on_tool_result(
@@ -1052,10 +1145,9 @@ Grep/Glob/Bash are permitted only for reading source code (finding a literal str
             # Skip error responses and skill executor status placeholders
             if "<tool_use_error>" in text or text.startswith("Launching skill:"):
                 return
-            if is_codemap:
+            if is_rdeps:
                 result.codemap_results.append(text)
-            if is_rdeps and not result.skill_result_text:
-                result.skill_result_text = text
+                result.skill_result_text += ("\n" if result.skill_result_text else "") + text
             if is_semble:
                 result.semble_results.append(text)
 
@@ -1295,7 +1387,11 @@ _ARM_COLOR = {
 
 def _run_line(run_n: int, total_runs: int, task: Task, model_short: str, arm: str, result: BenchmarkRun) -> str:
     """Format the one-line progress summary printed after each run."""
-    error_suffix = f" | ✗ {result.error or 'failed'}" if not result.success else ""
+    if not result.success:
+        label = result.error_type or result.error or "failed"
+        error_suffix = f" | ✗ {label}"
+    else:
+        error_suffix = ""
     tc = result.tools
     q = result.quality
     if q.scored:
@@ -1305,14 +1401,20 @@ def _run_line(run_n: int, total_runs: int, task: Task, model_short: str, arm: st
         quality_suffix = f"\t| {erec_part}{sc_part}{top10_part}"
     else:
         quality_suffix = "\t| quality=n/a"
+    # Flag possibly-degenerate codemap runs (very few total calls with 0% quality)
+    degenerate_note = ""
+    if arm == "codemap" and result.tools.total < 6 and result.tools.skill > 0 and q.scored and q.erec == 0.0:
+        degenerate_note = " ⚑degenerate?"
+    task_num = task.id.lstrip("T")
+    task_type = task.type.replace("feature", "feat").replace("refactor", "refac").replace("review", "rev")
     return (
-        f"[{run_n:0{len(str(total_runs))}}/{total_runs}] {task.id} ({task.type}) | {model_short:<6} | {arm:<7}"
+        f"[{run_n:0{len(str(total_runs))}}/{total_runs}] {task_num} ({task_type:<5}) | {model_short:<6} | {arm:<8}"
         f"\t| elapsed={result.elapsed_s:7.1f}s"
         f" | tokens={result.input_tokens / 1000:7.1f}k"
         f" | calls={result.tools.total:3}"
-        f" (grep={tc.grep:3}; glob={tc.glob:2}; bash={tc.bash:3}; skill={tc.skill:2}; semble={tc.semble:2}; blk={tc.blocked:2})"
+        f" (grep={tc.grep:3}; glob={tc.glob:2}; bash={tc.bash:3}; skill={tc.skill:2}; semble={tc.semble:2}; blk={tc.blocked:2}; bfi={tc.bash_for_imports:2})"
         f"{quality_suffix}"
-        f"{error_suffix}"
+        f"{error_suffix}{degenerate_note}"
     )
 
 
@@ -1357,7 +1459,9 @@ class Benchmark:
                 for arm in self.arms:
                     run_n += 1
                     pbar.set_description(f"{task.id} | {model_short} | {arm}")
-                    runner = ModelRunner(model_short, model_id, self.repo_path)
+                    runner = ModelRunner(
+                        model_short, model_id, self.repo_path, timeout=_MODEL_TIMEOUT.get(model_short, 300)
+                    )
                     result = runner.run(task, arm)
                     # Build corpora for v2 quality scoring
                     exposure_corpus = (

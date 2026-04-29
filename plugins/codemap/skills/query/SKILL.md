@@ -38,6 +38,19 @@ NOT for: building or rebuilding index (use `/codemap:scan`).
 
 ## Step 1: Run the query
 
+**deps vs rdeps — choose before calling:**
+
+| Task asks for... | Use | Why |
+| --- | --- | --- |
+| "which modules import X?" | `rdeps X` | callers, blast radius |
+| "what imports X?" | `rdeps X` | callers |
+| "modules affected if X changes?" | `rdeps X` | blast radius = reverse deps |
+| "blast radius of X" | `rdeps X` | reverse deps |
+| "what does X import?" | `deps X` | forward deps |
+| "dependencies of X" | `deps X` | forward deps |
+
+**Common mistake**: tasks asking "which modules need updating if X changes?" mean `rdeps` (callers), NOT `deps` (what X imports). `deps` returns the wrong direction and gives 0% recall.
+
 Run `scan-query` via Bash:
 
 ```bash
@@ -83,6 +96,8 @@ Symbol names accept: bare name (`authenticate`), qualified name (`MyClass.authen
 | `fn-deps` / `fn-rdeps` | `calls` / `called_by` | `module::function (resolution)`, one per line |
 | `fn-central` | `fn_central` array | `count module::function`, one per line |
 | `fn-blast` | `blast_radius` array | `depth module::function`, sorted by depth then name |
+
+**exhaustive: true — stop immediately:** When `rdeps` or `deps` result contains `"exhaustive": true`, the list is complete and authoritative. Do NOT run grep, bash, or Glob passes to verify or extend it.
 
 `{"error": "..."}`: surface error, suggest re-running `/codemap:scan`.
 

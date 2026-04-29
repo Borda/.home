@@ -388,21 +388,29 @@ def _coverage(index: dict) -> dict:
     star_modules = sum(1 for m in modules if m.get("status") == "ok" and m.get("has_star_imports"))
     has_call_graph = _has_call_graph(index)
 
-    scan_sha: str | None = index.get("git_sha")
-    current_sha = _get_current_sha_cached()
-
-    if scan_sha and current_sha:
-        stale = scan_sha != current_sha
-        sha_info = {"scan_sha": scan_sha[:12], "current_sha": current_sha[:12]}
+    stored_shas = index.get("file_shas")
+    if stored_shas:
+        # v3 index: precise file-SHA comparison (works correctly for subdirectory repos
+        # that share a host repo git history — avoids false-positive stale on unrelated commits)
+        current_shas = _get_current_file_shas()
+        if current_shas:
+            changed = [p for p in current_shas if stored_shas.get(p) != current_shas[p]]
+            added = [p for p in current_shas if p not in stored_shas]
+            deleted = [p for p in stored_shas if p not in current_shas]
+            stale = bool(changed + added + deleted)
+        else:
+            stale = False
     else:
-        stale = False  # can't determine without git
-        sha_info = {}
+        # v2 index fallback: timestamp-based check (mirrors warn_if_stale behaviour; avoids
+        # false-positive stale when index lives in a subdirectory of a larger host repo whose
+        # HEAD SHA changes on every unrelated commit)
+        scanned_at: str = index.get("scanned_at", "")
+        stale = bool(scanned_at and check_staleness(scanned_at))
 
     if stale:
         note = (
             f"All {total} indexed modules were searched. "
-            f"⚠ Index may be stale — built at {scan_sha[:12]}, "
-            f"HEAD is now {current_sha[:12]}. "  # type: ignore[index]
+            "⚠ Index may be stale — source files changed since last scan. "
             "Re-run /codemap:scan to update before relying on this result."
         )
         exhaustive = False
@@ -429,7 +437,6 @@ def _coverage(index: dict) -> dict:
         "has_call_graph": has_call_graph,
         "exhaustive": exhaustive if not stale else False,
         "stale": stale,
-        **sha_info,
         "note": note,
     }
     return _coverage_cache
