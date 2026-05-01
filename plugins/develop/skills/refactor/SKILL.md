@@ -1,7 +1,7 @@
 ---
 name: refactor
 description: Test-first refactoring — audit coverage, add characterization tests, apply changes with safety net, run quality stack and review loop.
-argument-hint: <target file or directory> <goal> [--plan <path>] [--no-challenge]
+argument-hint: <target file or directory> <goal> [--plan <path>] [--no-challenge] [--codemap] [--semble]
 effort: high
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true
@@ -87,6 +87,8 @@ Increment `TOTAL_CYCLES` each time a Step 4 change-test cycle completes. Check a
 ## Flag parsing
 
 **Set `CHALLENGE_ENABLED=true`**. If `--no-challenge` present in `$ARGUMENTS`, set `CHALLENGE_ENABLED=false`.
+**Set `CODEMAP_ENABLED=false`**. If `--codemap` present in `$ARGUMENTS`, set `CODEMAP_ENABLED=true`.
+**Set `SEMBLE_ENABLED=false`**. If `--semble` present in `$ARGUMENTS`, set `SEMBLE_ENABLED=true`.
 
 ## Step 1: Scope and understand
 
@@ -99,9 +101,9 @@ If `<target>` is directory: use Glob tool (pattern `**/*.py`, path `<target>`) t
 find <target> -name '*.py' -exec wc -l {} + 2>/dev/null | tail -1
 ```
 
-Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent. If target maps to module in index, also include `scan-query deps <target_module>` (coupling) and `scan-query rdeps <target_module>` (blast radius). Derive `<target_module>` from target path: strip project root prefix, replace `/` with `.`, drop `.py` extension.
+**If `CODEMAP_ENABLED=true` or `SEMBLE_ENABLED=true`**: read `$_DEV_SHARED/codemap-context.md` and follow the enabled sections (codemap block if `CODEMAP_ENABLED`, semble companion if `SEMBLE_ENABLED`). Skip if both flags false.
 
-**Multi-file / API-change scope — extended codemap scan**: if target is a directory, spans multiple files, or the goal mentions renaming/restructuring public API (i.e., refactoring is NOT limited to internals of a single function or class with unchanged public interface):
+**Multi-file / API-change scope — extended codemap scan** (only when `CODEMAP_ENABLED=true`): if target is a directory, spans multiple files, or the goal mentions renaming/restructuring public API (i.e., refactoring is NOT limited to internals of a single function or class with unchanged public interface):
 
 ```bash
 # Derive project name and affected modules
@@ -119,7 +121,7 @@ if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ] &&
 fi
 ```
 
-Include `## Scope & Reusability (codemap)` block in foundry:sw-engineer spawn prompt. If `rdeps` returns callers **outside** the refactoring scope: flag them explicitly — those callers must be updated or the refactoring silently breaks the public contract. If codemap not installed / index missing **and** scope is multi-file: warn user: "codemap unavailable — blast radius unknown; run `/codemap:scan` before proceeding with cross-module refactoring".
+Include `## Scope & Reusability (codemap)` block in foundry:sw-engineer spawn prompt. If `rdeps` returns callers **outside** the refactoring scope: flag them explicitly — those callers must be updated or the refactoring silently breaks the public contract. If `CODEMAP_ENABLED=false` and scope is multi-file: skip silently — do not warn user about missing codemap.
 
 Spawn **foundry:sw-engineer** agent to analyze code and identify:
 

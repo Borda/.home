@@ -1,7 +1,7 @@
 ---
 name: plan
 description: Analysis-only planning — classify and scope a task without writing code; outputs a structured plan to .plans/active/.
-argument-hint: <goal> [--no-challenge]
+argument-hint: <goal> [--no-challenge] [--codemap] [--semble]
 effort: medium
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion, WebFetch
 disable-model-invocation: true
@@ -44,12 +44,14 @@ Read `$_DEV_SHARED/task-hygiene.md`.
 ## Flag parsing
 
 **Set `CHALLENGE_ENABLED=true`**. If `--no-challenge` present in `$ARGUMENTS`, set `CHALLENGE_ENABLED=false`.
+**Set `CODEMAP_ENABLED=false`**. If `--codemap` present in `$ARGUMENTS`, set `CODEMAP_ENABLED=true`.
+**Set `SEMBLE_ENABLED=false`**. If `--semble` present in `$ARGUMENTS`, set `SEMBLE_ENABLED=true`.
 
 ## Step 1: Classify and scope
 
 Determine task type and affected surface.
 
-Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
+**If `CODEMAP_ENABLED=true` or `SEMBLE_ENABLED=true`**: read `$_DEV_SHARED/codemap-context.md` and follow the enabled sections (codemap block if `CODEMAP_ENABLED`, semble companion if `SEMBLE_ENABLED`). Skip entirely if both flags are false.
 
 Spawn **foundry:sw-engineer** agent with full goal text from `$ARGUMENTS`. Agent should:
 

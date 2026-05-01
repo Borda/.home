@@ -1,7 +1,7 @@
 ---
 name: fix
 description: Reproduce-first bug resolution — capture bug in failing regression test, apply minimal fix, run quality stack and review loop.
-argument-hint: <symptom or issue # (plain 123 or #123)> [--plan <path>] [--diagnosis <path>] [--no-challenge]
+argument-hint: <symptom or issue # (plain 123 or #123)> [--plan <path>] [--diagnosis <path>] [--no-challenge] [--codemap] [--semble]
 effort: medium
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion
 disable-model-invocation: true
@@ -92,6 +92,8 @@ Diagnosis file format (`.plans/active/debug_<slug>.md`):
 ## Flag parsing
 
 **Set `CHALLENGE_ENABLED=true`**. If `--no-challenge` present in `$ARGUMENTS`, set `CHALLENGE_ENABLED=false`.
+**Set `CODEMAP_ENABLED=false`**. If `--codemap` present in `$ARGUMENTS`, set `CODEMAP_ENABLED=true`.
+**Set `SEMBLE_ENABLED=false`**. If `--semble` present in `$ARGUMENTS`, set `SEMBLE_ENABLED=true`.
 
 ## Step 1: Understand the problem
 
@@ -116,7 +118,7 @@ If error message or pattern provided: use Grep tool (pattern `<error_pattern>`, 
 $PYTEST_CMD --tb=long <test_path> -v 2>&1 | tail -40
 ```
 
-Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
+**If `CODEMAP_ENABLED=true` or `SEMBLE_ENABLED=true`**: read `$_DEV_SHARED/codemap-context.md` and follow the enabled sections (codemap block if `CODEMAP_ENABLED`, semble companion if `SEMBLE_ENABLED`). Skip entirely if both flags are false.
 
 Spawn **foundry:sw-engineer** agent to analyze failing code path and identify:
 

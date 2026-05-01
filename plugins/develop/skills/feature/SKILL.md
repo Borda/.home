@@ -1,7 +1,7 @@
 ---
 name: feature
 description: TDD-first feature development — crystallise API as a demo test, drive implementation to pass it, run quality stack and progressive review loop.
-argument-hint: <goal> [--plan <path>] [--no-challenge]
+argument-hint: <goal> [--plan <path>] [--no-challenge] [--codemap] [--semble]
 effort: high
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion, WebFetch
 disable-model-invocation: true
@@ -72,6 +72,8 @@ fi
 ## Flag parsing
 
 **Set `CHALLENGE_ENABLED=true`**. If `--no-challenge` present in `$ARGUMENTS`, set `CHALLENGE_ENABLED=false`.
+**Set `CODEMAP_ENABLED=false`**. If `--codemap` present in `$ARGUMENTS`, set `CODEMAP_ENABLED=true`.
+**Set `SEMBLE_ENABLED=false`**. If `--semble` present in `$ARGUMENTS`, set `SEMBLE_ENABLED=true`.
 
 ## Step 1: Understand purpose and scope
 
@@ -91,7 +93,7 @@ gh issue view <number> --comments
 
 If free-text description provided: use Grep tool (pattern `<keyword>`, glob `**/*.py`) to search related code. Path hint: use `src/` if that directory exists, otherwise search from project root (`.`).
 
-Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
+**If `CODEMAP_ENABLED=true` or `SEMBLE_ENABLED=true`**: read `$_DEV_SHARED/codemap-context.md` and follow the enabled sections (codemap block if `CODEMAP_ENABLED`, semble companion if `SEMBLE_ENABLED`). Skip entirely if both flags are false.
 
 Spawn **foundry:sw-engineer** agent to analyse codebase and produce:
 

@@ -1,7 +1,7 @@
 ---
 name: review
 description: Multi-agent code review of GitHub Pull Requests (Python PRs only) covering architecture, tests, performance, docs, lint, security, and API design.
-argument-hint: '[PR number|path/to/report.md] [--reply] [--no-challenge]'
+argument-hint: '[PR number|path/to/report.md] [--reply] [--no-challenge] [--codemap] [--semble]'
 allowed-tools: Read, Write, Edit, Bash, Grep, Agent, Skill, TaskCreate, TaskUpdate, AskUserQuestion
 model: opus
 effort: high
@@ -20,6 +20,8 @@ Spawn specialized sub-agents in parallel. Consolidate findings into structured f
   - `--reply`: spawn oss:shepherd to draft contributor-facing PR comment. Path ending in `.md` → spawn oss:shepherd from that report, skip new review.
   - **Scope**: Python source only. Non-Python file → state out of scope, suggest tool, no findings.
   - **Local files**: use `/develop:review` for local files or current git diff.
+  - `--codemap`: enable structural context from codemap index (off by default; requires codemap plugin installed)
+  - `--semble`: enable semble semantic search companion (off by default; requires semble MCP server configured)
 - **--plan handoff not supported** — this skill does not accept plan-mode output from `/develop:plan`.
 
 </inputs>
@@ -35,6 +37,8 @@ Spawn specialized sub-agents in parallel. Consolidate findings into structured f
 <constants>
 
 CHALLENGE_ENABLED=true  # set to false via --no-challenge
+CODEMAP_ENABLED=false   # set to true via --codemap
+SEMBLE_ENABLED=false    # set to true via --semble
 <!-- Background agent health monitoring (CLAUDE.md §8) — applies to Step 3 parallel agent spawns -->
 MONITOR_INTERVAL=300   # 5 minutes between polls
 HARD_CUTOFF=900        # 15 minutes of no file activity → declare timed out
@@ -93,6 +97,21 @@ fi
 if [[ "$CLEAN_ARGS" == *"--no-challenge"* ]]; then
     CHALLENGE_ENABLED=false
     CLEAN_ARGS="${CLEAN_ARGS//--no-challenge/}"
+    CLEAN_ARGS="${CLEAN_ARGS#"${CLEAN_ARGS%%[![:space:]]*}"}"
+fi
+```
+
+```bash
+# Parse --codemap flag
+if [[ "$CLEAN_ARGS" == *"--codemap"* ]]; then
+    CODEMAP_ENABLED=true
+    CLEAN_ARGS="${CLEAN_ARGS//--codemap/}"
+    CLEAN_ARGS="${CLEAN_ARGS#"${CLEAN_ARGS%%[![:space:]]*}"}"
+fi
+# Parse --semble flag
+if [[ "$CLEAN_ARGS" == *"--semble"* ]]; then
+    SEMBLE_ENABLED=true
+    CLEAN_ARGS="${CLEAN_ARGS//--semble/}"
     CLEAN_ARGS="${CLEAN_ARGS#"${CLEAN_ARGS%%[![:space:]]*}"}"
 fi
 ```
@@ -158,7 +177,9 @@ Use classification to skip optional agents:
 - REFACTOR scope → skip Agent 6 (solution-architect)
 - FEATURE/MIXED → spawn all agents
 
-### Structural context (codemap, if installed)
+### Structural context (codemap — only if `CODEMAP_ENABLED=true`)
+
+**Skip this entire section if `CODEMAP_ENABLED=false`.**
 
 ```bash
 PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
@@ -175,9 +196,9 @@ Codemap returns results: prepend `## Structural Context (codemap)` block to **Ag
 - Each changed module's `rdep_count` — label as **high risk** (>20), **moderate** (5–20), or **low** (\<5)
 - `central --top 5` for project-wide blast-radius reference
 
-Agent 1 uses this to prioritize: high `rdep_count` modules warrant deeper scrutiny on API compat, error handling, correctness — downstream callers outside diff not otherwise visible. Codemap absent → skip silently.
+Agent 1 uses this to prioritize: high `rdep_count` modules warrant deeper scrutiny on API compat, error handling, correctness — downstream callers outside diff not otherwise visible.
 
-**Semble companion** (in-agent, optional): include this in Agent 1 spawn prompt:
+**Semble companion** (only if `SEMBLE_ENABLED=true`): include this in Agent 1 spawn prompt:
 
 > If `mcp__semble__search` is available in your tools and any changed module's codemap result was non-exhaustive (`"exhaustive": false`) or codemap was absent: call `mcp__semble__search` with `query="<module> import"` and `repo=<git_root>`, `top_k=20` for each such module. Stop per module when two consecutive queries return no new importers. Merge with codemap results. Skip entirely if all codemap results were exhaustive.
 

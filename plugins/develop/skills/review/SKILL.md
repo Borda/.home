@@ -1,7 +1,7 @@
 ---
 name: review
 description: Multi-agent code review of local Python files, directories, or the current git diff covering architecture, tests, performance, docs, lint, security, and API design. Python files only — non-Python files are out of scope.
-argument-hint: '[python-file|dir] [--no-challenge]'
+argument-hint: '[python-file|dir] [--no-challenge] [--codemap] [--semble]'
 allowed-tools: Read, Write, Edit, Bash, Grep, Glob, Agent, TaskCreate, TaskUpdate, AskUserQuestion
 context: fork
 model: opus
@@ -18,10 +18,13 @@ NOT for: GitHub PR review (use `/oss:review <PR#>`); GitHub thread analysis or P
 
 <inputs>
 
-- **$ARGUMENTS**: optional file path or directory to review. Supports `--no-challenge` flag to skip adversarial review (challenger runs by default).
+- **$ARGUMENTS**: optional file path or directory to review.
   - Path given: review those files
   - Omitted: review current git diff (`git diff HEAD` — staged + unstaged vs HEAD)
   - **Scope**: reviews Python source only. Non-Python file (YAML, JSON, shell script, etc.) → state out of scope, suggest appropriate tool. No findings.
+  - `--no-challenge`: skip adversarial review (challenger runs by default)
+  - `--codemap`: enable structural context from codemap index (off by default)
+  - `--semble`: enable semble semantic search companion (off by default)
 
 **Integer detection gate** (execute BEFORE Step 1): if `$ARGUMENTS` is a positive integer or matches `#\d+`:
 
@@ -38,6 +41,8 @@ Call `AskUserQuestion` tool: "Looks like you passed a PR/issue number. Did you m
 <constants>
 
 CHALLENGE_ENABLED=true  # set to false via --no-challenge
+CODEMAP_ENABLED=false   # set to true via --codemap
+SEMBLE_ENABLED=false    # set to true via --semble
 <!-- Note: timeout thresholds below are reference values for documentation and health-monitoring
      guidance only — the skill cannot actively poll between synchronous Agent calls. These are
      NOT active enforcement timers. If an agent appears stalled, read $RUN_DIR/<agent-name>.md
@@ -68,12 +73,26 @@ Read `$_DEV_SHARED/agent-resolution.md`. Contains: foundry check + fallback tabl
 
 Read `$_DEV_SHARED/task-hygiene.md`.
 
+## Flag parsing
+
+Strip flags from `$ARGUMENTS` before using as path:
+
+```bash
+REVIEW_ARGS="$ARGUMENTS"
+[[ "$REVIEW_ARGS" == *"--no-challenge"* ]] && { CHALLENGE_ENABLED=false; REVIEW_ARGS="${REVIEW_ARGS//--no-challenge/}"; }
+[[ "$REVIEW_ARGS" == *"--codemap"* ]]      && { CODEMAP_ENABLED=true;    REVIEW_ARGS="${REVIEW_ARGS//--codemap/}"; }
+[[ "$REVIEW_ARGS" == *"--semble"* ]]       && { SEMBLE_ENABLED=true;     REVIEW_ARGS="${REVIEW_ARGS//--semble/}"; }
+REVIEW_ARGS="${REVIEW_ARGS#"${REVIEW_ARGS%%[![:space:]]*}"}"  # trim leading whitespace
+```
+
+Use `$REVIEW_ARGS` (not `$ARGUMENTS`) as the path for the rest of the workflow.
+
 ## Step 1: Identify scope
 
 ```bash
-if [ -n "$ARGUMENTS" ]; then
+if [ -n "$REVIEW_ARGS" ]; then
     # Path given directly — collect Python files under it
-    TARGET="$ARGUMENTS"
+    TARGET="$REVIEW_ARGS"
     echo "Reviewing: $TARGET"
 else
     # No argument — review current working-tree diff vs HEAD
@@ -105,11 +124,11 @@ Use classification to skip optional agents:
 - REFACTOR → skip Agent 6 (solution-architect)
 - FEATURE/MIXED → spawn all agents
 
-### Structural context (codemap, if installed)
+### Structural context (codemap — only if `CODEMAP_ENABLED=true`)
 
-Read `$_DEV_SHARED/codemap-context.md` — structural context from codemap if installed; skip silently if absent.
+**Skip this entire section if `CODEMAP_ENABLED=false`.**
 
-Extended scan for changed modules (review-specific):
+Extended scan for changed modules:
 
 ```bash
 PROJ=$(basename "$(git rev-parse --show-toplevel 2>/dev/null)" 2>/dev/null) || PROJ=$(basename "$PWD")
@@ -124,9 +143,6 @@ if command -v scan-query >/dev/null 2>&1 && [ -f ".cache/scan/${PROJ}.json" ]; t
         [ -n "$OUT" ] && CODEMAP_CONTEXT="${CODEMAP_CONTEXT}${OUT}"$'\n'
     done
 fi
-if [ -z "$CODEMAP_CONTEXT" ]; then
-    : # No codemap context — proceed silently per codemap-context.md contract
-fi
 ```
 
 Codemap returns results → prepend `## Structural Context (codemap)` block to **Agent 1 (foundry:sw-engineer)** spawn prompt. Include:
@@ -134,7 +150,11 @@ Codemap returns results → prepend `## Structural Context (codemap)` block to *
 - Each changed module's `rdep_count` — label **high risk** (>20), **moderate** (5–20), **low** (\<5)
 - `central --top 5` for project-wide blast-radius reference
 
-Agent 1 uses this to prioritize: high `rdep_count` modules warrant deeper scrutiny on API compatibility, error handling, behavioural correctness — downstream callers outside diff not otherwise visible. Codemap absent or index missing → skip silently.
+Agent 1 uses this to prioritize: high `rdep_count` modules warrant deeper scrutiny on API compatibility, error handling, behavioural correctness — downstream callers outside diff not otherwise visible.
+
+**Semble companion** (only if `SEMBLE_ENABLED=true`): include this in Agent 1 spawn prompt:
+
+> If `mcp__semble__search` is available in your tools and any changed module's codemap result was non-exhaustive (`"exhaustive": false`) or no codemap index was found: call `mcp__semble__search` with varied queries and `repo=<git_root>`, `top_k=20`. Stop per module when two consecutive queries return no new importers. Merge with codemap results.
 
 ## Step 2: Codex co-review
 
