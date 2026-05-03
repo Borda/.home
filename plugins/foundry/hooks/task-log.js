@@ -29,9 +29,10 @@
 //   8. PreCompact: scan transcript tail for Write/Edit tool_use blocks and write modified
 //      file paths to state/session-context.md as a compaction breadcrumb
 //   9. UserPromptSubmit: write a queue marker to state/queue/ (deduplicated via 500ms lock)
-//  10. Stop: clear state/tools/ and remove oldest queue marker (deduplicated); agents left intact;
-//      delete any orphaned timing start markers (tool calls that never got a PostToolUse)
-//  11. SessionEnd: delete entire /tmp/claude-state-<session_id>/ subtree; prune stale git worktrees
+//  10. Stop: clear state/tools/ and queue markers (deduplicated); agents left intact;
+//      delete orphaned timing start markers and accumulated lock-Pre-*.lock dedup files
+//  11. SessionEnd: delete own /tmp/claude-state-<session_id>/ subtree; clean other sessions'
+//      stale dirs older than 24h (orphaned by crashes); prune stale git worktrees
 //
 // HOOK EVENT RESPONSIBILITIES
 //
@@ -85,9 +86,13 @@
 //       and stale markers accumulated. Agents are intentionally NOT cleared here.
 //     • Deletes any remaining files in state/timings/ (orphaned start markers from tool
 //       calls that never received a PostToolUse/PostToolUseFailure event).
+//     • Deletes lock-Pre-*.lock dedup files from tmpDir root (accumulate across turns;
+//       functionally inert after 500ms TTL but never otherwise cleaned).
 //
 //   SessionEnd  (full session teardown)
 //     • Clears state/agents/, state/tools/, state/codex/, and state/queue/ completely.
+//     • Scans /tmp and removes claude-state-* dirs from OTHER sessions older than 24h
+//       (orphaned by crashed sessions that never fired their own SessionEnd).
 //     • Runs `git worktree prune` to remove stale worktree refs.
 //     • Removes any worktrees under .claude/worktrees/ older than 2 hours
 //       (orphaned by crashed agents or interrupted sessions).
@@ -400,6 +405,16 @@ process.stdin.on("end", () => {
           } catch (_) {}
         }
       } catch (_) {}
+      // Clean dedup lock files that accumulate in tmpDir root across turns.
+      try {
+        for (const f of fs.readdirSync(tmpDir)) {
+          if (f.startsWith("lock-Pre-") && f.endsWith(".lock")) {
+            try {
+              fs.unlinkSync(path.join(tmpDir, f));
+            } catch (_) {}
+          }
+        }
+      } catch (_) {}
     } else if (hook_event_name === "TaskCreated") {
       // Log task creation for audit trail. Payload fields vary by Claude Code version — safe fallbacks.
       const subject = data.subject || data.task?.subject || "";
@@ -410,6 +425,34 @@ process.stdin.on("end", () => {
       // All ephemeral state (agents, tools, codex, queue, dedup locks) lives there.
       try {
         fs.rmSync(tmpDir, { recursive: true, force: true });
+      } catch (_) {}
+      // Remove stale tmpDirs from other sessions that crashed without firing SessionEnd.
+      // Only delete dirs older than 24h; skip current session (already removed above).
+      // Guard assumption: session_id in SessionEnd payload is consistent with other events.
+      // The ownDirName is precomputed from tmpDir (not re-derived from sid) so guard and
+      // the rmSync target above are always in sync.
+      const ownDirName = path.basename(tmpDir); // "claude-state-<sid>"
+      try {
+        const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+        for (const entry of fs.readdirSync("/tmp")) {
+          if (!entry.startsWith("claude-state-") || entry === ownDirName) continue;
+          const p = path.join("/tmp", entry);
+          try {
+            const stat = fs.statSync(p);
+            if (!stat.isDirectory()) continue;
+            // Use lock-Stop.lock mtime as last-activity indicator — written by isDuplicateEvent
+            // on every Stop event (end of each user turn). More reliable than dir mtime, which
+            // only updates when files are added/removed at top-level (not inside subdirs).
+            // Fallback to dir mtime if lock file absent (new session or crashed before first turn).
+            let lastActivity = stat.mtimeMs;
+            try {
+              lastActivity = fs.statSync(path.join(p, "lock-Stop.lock")).mtimeMs;
+            } catch (_) {}
+            if (lastActivity < cutoff) {
+              fs.rmSync(p, { recursive: true, force: true });
+            }
+          } catch (_) {}
+        }
       } catch (_) {}
       // Prune stale worktrees (orphaned by crashed agents or interrupted sessions)
       try {

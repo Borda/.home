@@ -12,6 +12,8 @@
 //   3. Build Line 1: model name, project dir, billing (API key = yellow; OAuth = cyan plan name),
 //      context bar (10-char block bar; green <50% · yellow <75% · red ≥75% used), and 💬 [N]
 //      badge while Claude is processing the current turn; N shown only when >1 messages queued
+//   3a. /clear detection: remaining_percentage === 0 → wipe state/agents/ and state/codex/ before
+//       rendering so agent/codex badges reset immediately after /clear
 //   4. Build Line 2 agent segment (🕵): read state/agents/*.json; skip codex:* agents and entries
 //      older than 10 min (safety net); group by type; color from agent frontmatter COLOR_MAP
 //   5. Build Line 2 codex segment (🤖): read state/codex/*.json; skip entries older than 30 min;
@@ -158,6 +160,22 @@ process.stdin.on("end", () => {
       const bar = "█".repeat(filled) + "░".repeat(10 - filled);
       const color = pct < 50 ? 32 : pct < 75 ? 33 : 31; // green / yellow / red
       parts.push(`\x1b[${color}m${bar} ${Math.round(pct)}%\x1b[0m`);
+    }
+
+    // Wipe fires on every render while remaining===0 (not one-shot). In practice benign:
+    // remaining===0 at session start (before first turn) has no agents yet; after /clear
+    // remaining becomes nonzero after the first response. Narrow window, no data loss.
+    if (remaining === 0) {
+      for (const sub of ["agents", "codex"]) {
+        try {
+          const d = path.join(tmpDir, sub);
+          for (const f of fs.readdirSync(d)) {
+            try {
+              fs.unlinkSync(path.join(d, f));
+            } catch (_) {}
+          }
+        } catch (_) {}
+      }
     }
 
     const now = Date.now(); // shared by agents, tools, and queue sections

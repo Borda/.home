@@ -194,12 +194,11 @@ process.stdin.on("end", async () => {
     if (result.status !== 0) {
       const raw = [result.stdout, result.stderr].filter(Boolean).join("\n");
       if (!raw.trim()) process.exit(0); // no hooks apply to this file type — silent pass
-      // Strip dot-padded "Passed"/"Skipped" lines — only show failures and their sub-lines.
-      // This prevents the narrow Claude Code blocking pane from wrapping hundreds of passing
-      // hook lines and obscuring the actual failure.
+      // Strip dot-padded progress header lines (Passed/Skipped/Failed) — only show error details.
+      // Removes the long "hookname.....Result" lines that wrap in Claude Code's narrow blocking pane.
       const filtered = raw
         .split("\n")
-        .filter((line) => !/(Passed|Skipped)\s*$/.test(line))
+        .filter((line) => !/\.{10,}\s*(Passed|Skipped|Failed)\s*$/.test(line))
         .join("\n")
         .trim();
       if (!filtered) process.exit(0);
